@@ -216,6 +216,20 @@ void AMazeBallPawn::Tick(float DeltaSeconds)
 	{
 		if (USprBoxSubsystem* SprBox = GetGameInstance()->GetSubsystem<USprBoxSubsystem>())
 		{
+			if (CalibPhase == 1 || CalibPhase == 3)
+			{
+				const FSprBoxImuData Imu = SprBox->GetImuData();
+				if (Imu.Sequence != LastCalibCheckSequence)
+				{
+					LastCalibCheckSequence = Imu.Sequence;
+					LastCalibDataTime = GetWorld()->GetTimeSeconds();
+				}
+				bCalibDataFlowing = (GetWorld()->GetTimeSeconds() - LastCalibDataTime) < CalibDataStallSeconds;
+			}
+			else
+			{
+				bCalibDataFlowing = false;
+			}
 			const float Elapsed = GetWorld()->GetTimeSeconds() - CalibPhaseStart;
 			if ((CalibPhase == 1 || CalibPhase == 3) && Elapsed >= CalibStepSeconds)
 			{
@@ -588,6 +602,9 @@ void AMazeBallPawn::StartCalibration(bool bFullReset)
 	{
 		CalibPhase = 1;
 		CalibPhaseStart = GetWorld()->GetTimeSeconds();
+		LastCalibCheckSequence = -1;
+		LastCalibDataTime = -100.f;
+		bCalibDataFlowing = false;
 	}
 }
 
@@ -604,6 +621,9 @@ void AMazeBallPawn::ContinueCalibration()
 		{
 			CalibPhase = 3;
 			CalibPhaseStart = GetWorld()->GetTimeSeconds();
+			LastCalibCheckSequence = -1;
+			LastCalibDataTime = -100.f;
+			bCalibDataFlowing = false;
 			return;
 		}
 	}

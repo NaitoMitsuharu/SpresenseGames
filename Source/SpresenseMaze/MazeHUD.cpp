@@ -477,14 +477,25 @@ void AMazeHUD::DrawHomeScreen(AMazeGenerator* Maze)
 	DrawButton(TEXT("Tutorial"), TEXT("チュートリアル"), CX - BW * 0.5f, BY + (BH + Gap), BW, BH, false);
 	DrawButton(TEXT("Calibrate"), TEXT("キャリブレーション"), CX - BW * 0.5f, BY + (BH + Gap) * 2.f, BW, BH, false);
 
-	// Connection status
+	// Connection status. bBoard only means the USB handshake completed - it
+	// says nothing about whether the IMU-Adv stream is actually delivering
+	// samples (seen firsthand: board connected, zero samples ever arrived).
+	// Imu.bValid (Sequence > 0) is the only honest "will actually use SPR-BOX"
+	// signal, so that - not bBoard - decides what this screen promises.
 	bool bService = false, bBoard = false;
+	bool bImuValid = false;
 	if (USprBoxSubsystem* SprBox = GetGameInstance()->GetSubsystem<USprBoxSubsystem>())
 	{
 		SprBox->GetConnectionStatus(bService, bBoard);
+		bImuValid = SprBox->GetImuData().bValid;
 	}
-	const bool bSprBoxReady = bService && bBoard;
-	const FString InputName = bSprBoxReady ? TEXT("SPRBOX") : TEXT("TOUCH");
+	const bool bSprBoxReady = bService && bBoard && bImuValid;
+#if PLATFORM_ANDROID || PLATFORM_IOS
+	const bool bHasFallbackSensor = true;
+#else
+	const bool bHasFallbackSensor = false;
+#endif
+	const FString InputName = bSprBoxReady ? TEXT("SPRBOX") : (bHasFallbackSensor ? TEXT("ANDROID") : TEXT("TOUCH"));
 	const FVector2D InputSize = JSize(InputName, 18);
 	const float SY = BY + (BH + Gap) * 3.f + 12.f;
 	const float StatusX = CX - (InputSize.X + 28.f) * 0.5f;
@@ -497,6 +508,12 @@ void AMazeHUD::DrawHomeScreen(AMazeGenerator* Maze)
 		DrawRect(FLinearColor(0.22f, 0.82f, 1.f, 0.9f), StatusX, SY + 2.f, 10.f, 10.f);
 	}
 	JText(InputName, FLinearColor(1.f, 1.f, 1.f, 0.8f), StatusX + 20.f, SY - 3.f, 18);
+	if (bService && bBoard && !bImuValid)
+	{
+		const FString Waiting = TEXT("ボード接続済み・データ待ち");
+		const FVector2D WS = JSize(Waiting, 14);
+		JText(Waiting, FLinearColor(1.f, 0.75f, 0.3f, 0.85f), CX - WS.X * 0.5f, SY + 22.f, 14);
+	}
 }
 
 void AMazeHUD::DrawClearChoice(AMazeGenerator* Maze)
@@ -536,53 +553,78 @@ void AMazeHUD::DrawAllClearRanking(AMazeGenerator* Maze)
 	{
 		if (Seconds < 0.f)
 		{
-			return TEXT("--:--.-");
+			return TEXT("--分--秒--");
 		}
-		const int32 Minutes = FMath::FloorToInt(Seconds / 60.f);
+		int32 Minutes = FMath::FloorToInt(Seconds / 60.f);
 		const float Remainder = Seconds - static_cast<float>(Minutes) * 60.f;
-		return FString::Printf(TEXT("%d:%04.1f"), Minutes, Remainder);
+		int32 WholeSec = FMath::FloorToInt(Remainder);
+		int32 Centi = FMath::RoundToInt((Remainder - static_cast<float>(WholeSec)) * 100.f);
+		if (Centi >= 100)
+		{
+			Centi = 0;
+			++WholeSec;
+		}
+		if (WholeSec >= 60)
+		{
+			WholeSec = 0;
+			++Minutes;
+		}
+		return FString::Printf(TEXT("%d分%02d秒%02d"), Minutes, WholeSec, Centi);
 	};
 
 	const int32 StageCount = Maze->GetStageCount();
 	const float ListTop = TitleY + TS.Y + 56.f;
 	const float BottomMargin = Canvas->SizeY * 0.16f;
-	const float RowH = FMath::Clamp((Canvas->SizeY - BottomMargin - ListTop) / FMath::Max(StageCount, 1), 46.f, 74.f);
-	const float PanelW = FMath::Min(Canvas->SizeX * 0.86f, 940.f);
+	const float RowH = FMath::Clamp((Canvas->SizeY - BottomMargin - ListTop) / FMath::Max(StageCount, 1), 96.f, 150.f);
+	const float PanelW = FMath::Min(Canvas->SizeX * 0.86f, 1100.f);
 	const float PanelX = CX - PanelW * 0.5f;
 
 	for (int32 i = 0; i < StageCount; ++i)
 	{
 		const float RowY = ListTop + i * RowH;
-		DrawGlassPanel(PanelX, RowY, PanelW, RowH - 6.f);
+		const float PanelH = RowH - 8.f;
+		DrawGlassPanel(PanelX, RowY, PanelW, PanelH);
 
-		JText(FString::Printf(TEXT("Stage%02d"), i + 1), FLinearColor::White, PanelX + 16.f, RowY + 6.f, 19);
+		const FString StageLabel = FString::Printf(TEXT("Stage%02d"), i + 1);
+		JText(StageLabel, FLinearColor::White, PanelX + 16.f, RowY + 8.f, 19);
+		const FVector2D StageLabelSize = JSize(StageLabel, 19);
 
 		const float RunTime = Maze->RunStageTimes.IsValidIndex(i) ? Maze->RunStageTimes[i] : -1.f;
-		JText(FString::Printf(TEXT("今回 %s"), *FormatTime(RunTime)),
-			FLinearColor(0.6f, 0.85f, 1.f, 1.f), PanelX + 16.f, RowY + 30.f, 15);
+		const FString RunTimeStr = FString::Printf(TEXT("今回 %s"), *FormatTime(RunTime));
+		const FVector2D RunTS = JSize(RunTimeStr, 16);
+		JText(RunTimeStr, FLinearColor(0.6f, 0.85f, 1.f, 1.f), PanelX + PanelW - RunTS.X - 16.f, RowY + 10.f, 16);
 
-		FString RankLine;
 		bool bIsNewBest = false;
 		if (Maze->SaveGameData && Maze->SaveGameData->StageBestTimes.IsValidIndex(i))
 		{
 			const TArray<float>& Times = Maze->SaveGameData->StageBestTimes[i].Times;
+
+			// 3 columns x 2 rows (fits the top 5 ranked times with one spare cell)
+			const float GridTop = RowY + 38.f;
+			const float ColW = (PanelW - 32.f) / 3.f;
+			const float GridRowH = (PanelH - 46.f) * 0.5f;
 			for (int32 Rank = 0; Rank < Times.Num(); ++Rank)
 			{
-				if (Rank > 0)
-				{
-					RankLine += TEXT("   ");
-				}
-				RankLine += FString::Printf(TEXT("%d.%s"), Rank + 1, *FormatTime(Times[Rank]));
+				const int32 Col = Rank % 3;
+				const int32 GridRow = Rank / 3;
+				const float CellX = PanelX + 16.f + Col * ColW;
+				const float CellY = GridTop + GridRow * GridRowH;
+
+				const bool bIsThisRun = RunTime >= 0.f && FMath::IsNearlyEqual(Times[Rank], RunTime, 0.001f);
+				const FLinearColor Color = bIsThisRun
+					? FLinearColor(1.f, 0.9f, 0.15f)
+					: FLinearColor(1.f, 1.f, 1.f, 0.85f);
+				JText(FString::Printf(TEXT("%d位 %s"), Rank + 1, *FormatTime(Times[Rank])),
+					Color, CellX, CellY, 16);
 			}
 			if (Times.Num() > 0 && RunTime >= 0.f && FMath::IsNearlyEqual(Times[0], RunTime, 0.001f))
 			{
 				bIsNewBest = true;
 			}
 		}
-		JText(RankLine, FLinearColor(1.f, 1.f, 1.f, 0.85f), PanelX + 210.f, RowY + 18.f, 15);
 		if (bIsNewBest)
 		{
-			JText(TEXT("NEW!"), Accent, PanelX + PanelW - 84.f, RowY + 18.f, 18);
+			JText(TEXT("NEW!"), Accent, PanelX + 16.f + StageLabelSize.X + 14.f, RowY + 9.f, 18);
 		}
 	}
 
@@ -611,7 +653,7 @@ void AMazeHUD::DrawCalibrationOverlay()
 
 	const FVector2D TS = JSize(Msg, 26);
 	const float PW = FMath::Max(TS.X + 60.f, 460.f);
-	const float PH = Phase == 2 ? 130.f : 74.f;
+	const float PH = Phase == 2 ? 130.f : 106.f;
 	DrawGlassPanel(CX - PW * 0.5f, CY - 18.f, PW, PH);
 	JText(Msg, FLinearColor::White, CX - TS.X * 0.5f, CY - 6.f, 26);
 
@@ -626,6 +668,16 @@ void AMazeHUD::DrawCalibrationOverlay()
 		const float Progress = Ball->GetCalibrationProgress();
 		DrawRect(FLinearColor(1.f, 1.f, 1.f, 0.15f), CX - BarW * 0.5f, CY + TS.Y + 8.f, BarW, 8.f);
 		DrawRect(Accent, CX - BarW * 0.5f, CY + TS.Y + 8.f, BarW * Progress, 8.f);
+
+		// Live "is real board data actually arriving" readout, so a dead
+		// stream is obvious well before the 5s step ends and silently fails.
+		const bool bFlowing = Ball->IsCalibDataFlowing();
+		const FString DataMsg = bFlowing ? TEXT("データ受信中") : TEXT("データが届いていません");
+		const FLinearColor DataColor = bFlowing
+			? FLinearColor(0.4f, 1.f, 0.55f)
+			: FLinearColor(1.f, 0.35f, 0.3f);
+		DrawStatusDot(CX - BarW * 0.5f, CY + TS.Y + 30.f, bFlowing);
+		JText(DataMsg, DataColor, CX - BarW * 0.5f + 18.f, CY + TS.Y + 24.f, 16);
 	}
 }
 

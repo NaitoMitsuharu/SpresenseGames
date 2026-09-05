@@ -177,6 +177,17 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SprBox")
 	float GetCalibrationProgress() const;
 
+	/**
+	 * True while a calibration sampling step (phase 1 or 3) is running AND
+	 * the SPR-BOX IMU sequence counter has advanced within the last
+	 * CalibDataStallSeconds - i.e. real samples are actually arriving right
+	 * now, not just that the board handshake completed. Lets the wizard show
+	 * the difference between "collecting" and "connected but no data" while
+	 * it is still happening, instead of only failing silently at the end.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SprBox")
+	bool IsCalibDataFlowing() const { return bCalibDataFlowing; }
+
 	/** Set by the maze each tick: 1=normal, lower on ice/mud (control authority) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SprBox")
 	float SurfaceControlScale = 1.f;
@@ -308,4 +319,9 @@ private:
 	int32 CalibPhase = 0;                 // 0 idle / 1 step1 / 2 await user / 3 step2
 	float CalibPhaseStart = 0.f;
 	static constexpr float CalibStepSeconds = 5.f; // per SDK demo (IMU_ADV_CALIBRATION_DURATION_MS)
+
+	bool bCalibDataFlowing = false;
+	int64 LastCalibCheckSequence = -1;
+	float LastCalibDataTime = -100.f;
+	static constexpr float CalibDataStallSeconds = 0.3f;
 };
