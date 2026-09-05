@@ -1,0 +1,18 @@
+# Unreal Engine generated files
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/Android/gradle/
+Package/
+.vs/
+
+# Local IDE/user files
+*.suo
+*.user
+*.userprefs
+
+# Packaged binaries and archives
+*.apk
+*.obb
+*.ipa

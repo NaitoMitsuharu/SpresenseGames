@@ -1,0 +1,19 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1.0",
+	"FriendlyName": "SprBox Bridge",
+	"Description": "Bridge to SPR-BOX SDK (Spresense IMU/CAN over USB) via sprboxlib-std .aar",
+	"Category": "Input",
+	"CreatedBy": "Lati",
+	"CanContainContent": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "SprBoxBridge",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [ "Android", "Win64", "Mac", "Linux" ]
+		}
+	]
+}

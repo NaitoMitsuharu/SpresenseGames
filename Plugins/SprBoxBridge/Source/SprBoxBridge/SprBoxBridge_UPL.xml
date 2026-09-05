@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SprBoxBridge UPL (IMU-Adv edition)
+  - packages sprboxlib-std + sprboxlib-imuadv (high-precision attitude via native iml2,
+    InertialMotionLib2) - accel/gyro raw stream now comes from TARGET_IMU instead of the
+    deprecated TARGET_OWN_POS: current Spresense firmware never advertises
+    V3_FEATURE_OWN_POS_STREAM (see sprbox-SDK examples/serial_controller/tests/
+    cmd_decoder_test.cxx test_capabilities_are_consistent), so own_pos never received
+    samples. TARGET_IMU supports the same rates (incl. 480/960/1920 Hz) with an identical
+    sample byte layout, so sprboxlib-imuadv 0.3.1 streams from TARGET_IMU while feeding
+    the same raw samples into iml2 for calibration/attitude estimation - unchanged.
+  - adds Kotlin/coroutines/androidx dependencies
+  - adds <queries> for the SPR-BOX Service (Android 11+ package visibility)
+  - injects a Java bridge into GameActivity: ImuAdvController + 2-step calibration + lightReset
+-->
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+
+	<resourceCopies>
+		<copyFile src="$S(PluginDir)/../../ThirdParty/Android/sprboxlib-std-0.3.0-release.aar"
+		          dst="$S(BuildDir)/gradle/app/libs/sprboxlib-std-0.3.0-release.aar" />
+		<copyFile src="$S(PluginDir)/../../ThirdParty/Android/sprboxlib-imuadv-0.3.5-release.aar"
+		          dst="$S(BuildDir)/gradle/app/libs/sprboxlib-imuadv-0.3.5-release.aar" />
+	</resourceCopies>
+
+	<buildGradleAdditions>
+		<insert>
+dependencies {
+    implementation files('libs/sprboxlib-std-0.3.0-release.aar')
+    implementation files('libs/sprboxlib-imuadv-0.3.5-release.aar')
+    // sprboxlib-std 0.3.0 uses protobuf (protocol v3); flat aar has no POM, so declare it here
+    implementation 'com.google.protobuf:protobuf-javalite:4.29.3'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.24'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0'
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+}
+		</insert>
+	</buildGradleAdditions>
+
+	<androidManifestUpdates>
+		<addElements tag="manifest">
+			<queries>
+				<package android:name="jp.co.sony.sprbox.service" />
+			</queries>
+		</addElements>
+	</androidManifestUpdates>
+
+	<gameActivityImportAdditions>
+		<insert>
+import jp.co.sony.sprbox.imuadv.ImuAdvController;
+import jp.co.sony.sprbox.imuadv.ImuAdvEstimateData;
+import jp.co.sony.sprbox.imuadv.ImuAdvCalibrationResult;
+import jp.co.sony.sprbox.std.ServiceConnector;
+import jp.co.sony.sprbox.service.IUsbDeviceExt;
+		</insert>
+	</gameActivityImportAdditions>
+
+	<gameActivityClassAdditions>
+		<insert>
+	// ===== SprBoxBridge (IMU-Adv) =====
+	private ImuAdvController sprboxImuController = null;
+	private final Object sprboxLock = new Object();
+	private final double[] sprboxImu = new double[10]; // ax,ay,az,gx,gy,gz,rollDeg,pitchDeg,yawDeg,seq
+	private volatile boolean sprboxSpresenseConnected = false;
+	private volatile boolean sprboxServiceConnected = false;
+	private long sprboxSeq = 0;
+
+	private final ServiceConnector.ConnectorListener sprboxConnectorListener = new ServiceConnector.ConnectorListener() {
+		@Override public void onServiceConnected() { sprboxServiceConnected = true; }
+		@Override public void onServiceDisconnected() { sprboxServiceConnected = false; sprboxSpresenseConnected = false; }
+		@Override public void onUsbConnected(IUsbDeviceExt device) {}
+		@Override public void onUsbDisconnected(IUsbDeviceExt device) {}
+	};
+
+	private final ImuAdvController.Listener sprboxImuListener = new ImuAdvController.Listener() {
+		@Override
+		public void onImuAdvEvent(ImuAdvEstimateData e) {
+			synchronized (sprboxLock) {
+				sprboxImu[0] = e.getRaw().getAx();
+				sprboxImu[1] = e.getRaw().getAy();
+				sprboxImu[2] = e.getRaw().getAz();
+				sprboxImu[3] = e.getRaw().getGx();
+				sprboxImu[4] = e.getRaw().getGy();
+				sprboxImu[5] = e.getRaw().getGz();
+				sprboxImu[6] = Math.toDegrees(e.getAttitude().getRoll());
+				sprboxImu[7] = Math.toDegrees(e.getAttitude().getPitch());
+				sprboxImu[8] = Math.toDegrees(e.getAttitude().getYaw());
+				sprboxImu[9] = (double)(++sprboxSeq);
+			}
+		}
+		@Override
+		public void onSpresenseConnected() {
+			sprboxSpresenseConnected = true;
+			if (sprboxImuController != null) {
+				sprboxImuController.start();
+			}
+		}
+		@Override
+		public void onSpresenseDisconnected() {
+			sprboxSpresenseConnected = false;
+		}
+	};
+
+	public boolean AndroidThunkJava_SprBoxInit(final int rate, final int accelRange, final int gyroRange, final double beta) {
+		try {
+			if (sprboxImuController == null) {
+				sprboxImuController = new ImuAdvController();
+				ServiceConnector.INSTANCE.addConnectorListener(sprboxConnectorListener);
+			}
+			sprboxImuController.setParam(rate, accelRange, gyroRange);
+			sprboxImuController.addListener(sprboxImuListener);
+			boolean ok = sprboxImuController.open(this);
+			if (ok &amp;&amp; sprboxImuController.isSpresenseConnected()) {
+				sprboxSpresenseConnected = true;
+				sprboxImuController.start();
+			}
+			return ok;
+		} catch (Throwable t) {
+			android.util.Log.e("SprBoxBridge", "Init failed", t);
+			return false;
+		}
+	}
+
+	public void AndroidThunkJava_SprBoxShutdown() {
+		try {
+			if (sprboxImuController != null) {
+				sprboxImuController.stop();
+				sprboxImuController.close();
+				sprboxImuController = null;
+			}
+			sprboxSpresenseConnected = false;
+		} catch (Throwable t) {
+			android.util.Log.e("SprBoxBridge", "Shutdown failed", t);
+		}
+	}
+
+	public double[] AndroidThunkJava_SprBoxGetImu() {
+		synchronized (sprboxLock) {
+			return sprboxImu.clone();
+		}
+	}
+
+	public boolean AndroidThunkJava_SprBoxIsConnected() {
+		return sprboxSpresenseConnected;
+	}
+
+	/** Start one calibration step (SDK collects samples until finish is called). */
+	public boolean AndroidThunkJava_SprBoxCalibStart(final boolean reuseRunningStream) {
+		try {
+			if (sprboxImuController != null &amp;&amp; sprboxSpresenseConnected) {
+				return sprboxImuController.startCalibration(ImuAdvController.DEFAULT_CALIBRATION_KIND, reuseRunningStream);
+			}
+		} catch (Throwable t) {
+			android.util.Log.e("SprBoxBridge", "CalibStart failed", t);
+		}
+		return false;
+	}
+
+	/** Finish the current calibration step. Returns true on success. */
+	public boolean AndroidThunkJava_SprBoxCalibFinish() {
+		try {
+			if (sprboxImuController != null) {
+				ImuAdvCalibrationResult r = sprboxImuController.finishCalibration(false, true);
+				return r != null;
+			}
+		} catch (Throwable t) {
+			android.util.Log.e("SprBoxBridge", "CalibFinish failed", t);
+		}
+		return false;
+	}
+
+	/** Quick attitude reset (drift fix) - SDK lightReset. */
+	public boolean AndroidThunkJava_SprBoxLightReset() {
+		try {
+			if (sprboxImuController != null) {
+				return sprboxImuController.lightReset();
+			}
+		} catch (Throwable t) {
+			android.util.Log.e("SprBoxBridge", "LightReset failed", t);
+		}
+		return false;
+	}
+
+	/** Kept for compatibility: maps to lightReset in IMU-Adv mode. */
+	public void AndroidThunkJava_SprBoxRecalibrate() {
+		AndroidThunkJava_SprBoxLightReset();
+	}
+
+	/** bit0 = SPR-BOX Service bound, bit1 = Spresense board connected */
+	public int AndroidThunkJava_SprBoxGetStatus() {
+		int status = 0;
+		if (sprboxServiceConnected) status |= 1;
+		if (sprboxSpresenseConnected) status |= 2;
+		return status;
+	}
+		</insert>
+	</gameActivityClassAdditions>
+
+	<gameActivityOnDestroyAdditions>
+		<insert>
+		AndroidThunkJava_SprBoxShutdown();
+		</insert>
+	</gameActivityOnDestroyAdditions>
+
+</root>
