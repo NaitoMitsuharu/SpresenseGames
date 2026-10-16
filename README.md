@@ -19,19 +19,22 @@ SpresenseMaze/
 ├─ SpresenseMaze.uproject
 ├─ Config/
 │   ├─ DefaultEngine.ini                     … GameMode / Android 設定
+│   ├─ DefaultDeviceProfiles.ini             … Xperia 1 VI 向け描画ターゲット
 │   └─ DefaultEditorPerProjectUserSettings.ini … UE の MCP サーバ自動起動
 ├─ Content/
 │   ├─ Maps/MainMaze                         … 唯一のレベル(World Partition)
 │   ├─ Materials/M_MazeTile, M_MazeGlow      … 単色 / 発光の2枚だけ
 │   └─ Materials/M_Ball, Textures/T_SoccerBall
+├─ Build/Android/IconSource/                 … アプリアイコンの原画
 ├─ Source/SpresenseMaze/
 │   ├─ MazeGenerator.h/.cpp   … 迷路生成・ステージ管理・全ギミック・ゲームフロー
 │   ├─ MazeBallPawn.h/.cpp    … ボール物理・IMU入力・ジャンプ・振動
-│   ├─ MazeHUD.h/.cpp         … Canvas HUD(日本語表示・ミニマップ・チュートリアル)
+│   ├─ MazeHUD.h/.cpp         … Canvas HUD(日本語表示・ミニマップ・操作ガイド・ランキング)
+│   ├─ MazeSaveGame.h/.cpp    … ステージ別タイムランキングの永続化
 │   └─ MazeGameMode.h/.cpp    … Pawn と HUD を差すだけ
 └─ Plugins/SprBoxBridge/                     … SPR-BOX SDK 連携(再利用可能)
     ├─ ThirdParty/Android/sprboxlib-std-0.3.0-release.aar
-    ├─ ThirdParty/Android/sprboxlib-imuadv-0.3.2-release.aar
+    ├─ ThirdParty/Android/sprboxlib-imuadv-0.3.5-release.aar
     └─ Source/SprBoxBridge/
         ├─ SprBoxBridge_UPL.xml … .aar組込み・Manifest追記・Javaブリッジ注入
         └─ SprBoxSubsystem      … Blueprint/C++から呼べるAPI
@@ -82,6 +85,20 @@ Details パネルの `MazeLayout` / `Stages` を編集すると即座に形が�
 `TutorialStages` にはギミック1つにつき1本、計9本のガイドが入っています
 (移動 / ジャンプ / 落下 / 氷床 / 泥床 / 加速 / ガラス床 / スイッチ / ワープ)。
 ホーム画面の「操作」から開始し、完了後は自動で次のガイドへ進みます。
+
+## タイムランキング
+
+ステージごとのクリアタイムを端末に保存し、全ステージクリア後に一覧表示します。
+
+- 保存先: SaveGame スロット `MazeTimes`(`UMazeSaveGame`)
+- 各ステージ **上位5件**を昇順で保持(`UMazeSaveGame::MaxRankedTimes`)
+- 画面には「今回」のタイムと `1位`〜`5位` を3列×2段で並べ、今回の記録に当たる行を
+  アンバーでハイライトします
+- **全ステージを通しでクリアしたときだけ**ディスクへ書き込みます。途中でホームへ
+  戻った場合は記録されません(`AMazeGenerator::HandleGoalOverlap`)
+
+展示では「記録が残る」ことが並ぶ動機になるので、周回のたびに消えないよう端末側へ
+永続化しています。
 
 ## アートディレクション — KINETIC INSTRUMENT
 
@@ -172,10 +189,10 @@ HUD は Canvas 直描きで、ボタンはタッチ対応です。プレイ中�
 SPR-BOX Service にバインドします。Spresense 接続済みなら自動で IMU ストリーミングが
 始まり、端末上の仮想コントローラーに代わって IMU で操作できます。
 
-Android/iOSで有効なIMUデータが来ていない間は、画面左下に仮想スティック、右下に
-SPR-BOX接続中はその姿勢・加速度を優先し、未接続時はAndroid端末の姿勢・加速度へ
-自動で切り替わります。端末IMUも利用できない場合だけ仮想スティックとジャンプボタンを
-表示します。PCエディタでは従来どおりWASD/矢印キー + Spaceへフォールバックします。
+入力は3段のフォールバックになっています。SPR-BOX接続中はその姿勢・加速度を最優先し、
+未接続ならAndroid端末内蔵IMUの姿勢・加速度へ自動で切り替わります。どちらのIMUも
+使えない場合にだけ、画面左下に仮想スティック、右下にジャンプボタンを表示します。
+PCエディタでは従来どおりWASD/矢印キー + Spaceへフォールバックします。
 
 Androidアプリアイコンは `Build/Android/IconSource/SpresenseMazeIcon.png` を原画として、
 LDPIからXXXHDPIまでドットの輪郭を保った解像度別PNGを収録しています。
@@ -267,8 +284,13 @@ LDPIからXXXHDPIまでドットの輪郭を保った解像度別PNGを収録し
 - `IsSpresenseConnected()` / `GetConnectionStatus()`
 - `StartImuCalibration()` / `FinishImuCalibration()` / `RecalibrateImu()`
 
-エフェクトや音は以下の BlueprintImplementableEvent にフックできます。
-**現状どれも未実装です**(Blueprint サブクラスを作れば C++ を触らずに追加できます)。
+エフェクトと効果音は**すべて C++ 側で実装済み**です。音は外部アセットを持たず、
+`USoundWaveProcedural` に波形を書き込んで `PlaySoundAtLocation` で鳴らしています
+(Content にサウンドアセットはありません)。
+
+拡張用に以下の BlueprintImplementableEvent も公開してあります。**Blueprint 側は
+未実装**(Content に Blueprint が1つもない)なので、Blueprint サブクラスを作れば
+C++ を触らずに演出を足せます。
 
 - `MazeBallPawn::OnJumped`
 - `MazeGenerator::OnGoalReached` / `OnStageStarted` / `OnAllStagesCleared` / `OnButtonPressed`
@@ -289,9 +311,9 @@ implementation 'com.google.protobuf:protobuf-javalite:4.29.3'
 `sprboxlib-imuadv` は `std.protocol.v3` を参照するので、**std と imuadv は必ず
 セットで更新**してください。
 
-`sprboxlib-imuadv` は **v0.3.2** から `TARGET_OWN_POS` ではなく `TARGET_IMU` で
-IMUストリームを取得します。現行ファームウェアは `V3_FEATURE_OWN_POS_STREAM` を
-一切advertiseしないため(`sprbox-SDK` の
+`sprboxlib-imuadv` は現在 **v0.3.5** を使用しています。v0.3.2 以降は
+`TARGET_OWN_POS` ではなく `TARGET_IMU` でIMUストリームを取得します。現行ファーム
+ウェアは `V3_FEATURE_OWN_POS_STREAM` を一切advertiseしないため(`sprbox-SDK` の
 `examples/serial_controller/tests/cmd_decoder_test.cxx` 参照)、`own_pos` は
 接続はできてもサンプルが一切届きませんでした。`TARGET_IMU` は同じサンプル形式・
 同じレート(480/960/1920Hz含む)に対応しているため、姿勢計算(iml2 /
