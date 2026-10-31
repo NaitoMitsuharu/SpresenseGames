@@ -10,6 +10,8 @@
 #include "MazeBallPawn.h"
 #include "MazeGenerator.h"
 #include "MazeSaveGame.h"
+#include "Kismet/GameplayStatics.h"
+#include "TitleGameMode.h"
 #include "SprBoxSubsystem.h"
 #include "Styling/CoreStyle.h"
 
@@ -277,6 +279,15 @@ void AMazeHUD::DrawHUD()
 		DrawTutorialHint(Maze);
 		DrawOrientationWarning();
 		DrawTouchController();
+		if (AMazeBallPawn* Ball = Cast<AMazeBallPawn>(GetOwningPawn()); Ball && Ball->IsAwaitingNeutral())
+		{
+			const FString Msg = TEXT("入力切替：持ち方を整えて「姿勢リセット」");
+			const FVector2D MS = JSize(Msg, 26);
+			const float MX = (Canvas->SizeX - MS.X) * 0.5f;
+			const float MY = Canvas->SizeY * 0.72f;
+			DrawGlassPanel(MX - 24.f, MY - 14.f, MS.X + 48.f, MS.Y + 28.f);
+			JText(Msg, FLinearColor(1.f, 0.82f, 0.45f), MX, MY, 26);
+		}
 		break;
 	}
 
@@ -431,6 +442,10 @@ void AMazeHUD::NotifyHitBoxClick(FName BoxName)
 	{
 		Maze->GoHome();
 	}
+	else if (BoxName == TEXT("Top"))
+	{
+		UGameplayStatics::OpenLevel(this, ATitleGameMode::TitleMapName);
+	}
 }
 
 void AMazeHUD::DrawButton(FName Id, const FString& Label, float X, float Y, float W, float H, bool bPrimary)
@@ -469,6 +484,9 @@ void AMazeHUD::DrawHomeScreen(AMazeGenerator* Maze)
 	JText(Title, FLinearColor::White, CX - TS.X * 0.5f, TitleY, 68);
 	const float LineW = TS.X * (0.8f + 0.05f * FMath::Sin(T * 2.f));
 	DrawRect(Accent, CX - LineW * 0.5f, TitleY + TS.Y + 8.f, LineW, 4.f);
+
+	// Back to the game-select screen
+	DrawButton(TEXT("Top"), TEXT("トップ"), LeftHudMargin(Canvas), 20.f, 140.f, 60.f, false);
 
 	// Buttons
 	const float BW = 340.f, BH = 64.f, Gap = 14.f;

@@ -14,6 +14,7 @@ public class SpresenseMaze : ModuleRules
 			"InputCore",
 			"Slate",
 			"SlateCore",
+			"ProceduralMeshComponent",
 			"SprBoxBridge"
 		});
 	}

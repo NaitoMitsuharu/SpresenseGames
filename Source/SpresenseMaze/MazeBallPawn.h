@@ -1,7 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "AttitudeInputSubsystem.h"
 #include "MazeBallPawn.generated.h"
 
 class UStaticMeshComponent;
@@ -227,6 +228,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void SetControlEnabled(bool bEnabled) { bControlEnabled = bEnabled; }
 
+	/** True after the input source changed mid-play, until 姿勢リセット re-centres it. */
+	bool IsAwaitingNeutral() const { return bAwaitingNeutral; }
+
 	/** True when the Android on-screen fallback controller is being used. */
 	bool IsTouchControllerActive() const { return bTouchControllerActive; }
 
@@ -273,16 +277,13 @@ private:
 	int64 LastImuSequence = 0;
 	float MotionShock = 0.f;
 
-	// Phone motion is used only while an online SPR-BOX sample is unavailable.
+	// Source flags mirrored from UAttitudeInputSubsystem for the HUD.
 	bool bUsingDeviceMotion = false;
 	bool bUsingSprBoxInput = false;
-	bool bDeviceMotionCalibrated = false;
-	float DeviceRollOffsetDeg = 0.f;
-	float DevicePitchOffsetDeg = 0.f;
-	float DeviceYawOffsetDeg = 0.f;
-	float LastRawDeviceRollDeg = 0.f;
-	float LastRawDevicePitchDeg = 0.f;
-	float LastRawDeviceYawDeg = 0.f;
+	bool bAwaitingNeutral = false;
+	int32 SeenSourceEpoch = INDEX_NONE;
+	EAttitudeSource LastSourceSeen = EAttitudeSource::None;
+	void ResetAttitudeNeutral();
 	TArray<FImpactSparkAnim> ImpactSparkPool;
 	int32 NextImpactSpark = 0;
 	TArray<FImpactSparkAnim> JumpBurstPool;

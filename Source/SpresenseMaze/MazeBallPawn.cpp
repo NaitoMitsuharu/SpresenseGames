@@ -1,5 +1,6 @@
-#include "MazeBallPawn.h"
+﻿#include "MazeBallPawn.h"
 
+#include "AttitudeInputSubsystem.h"
 #include "Camera/CameraComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
@@ -162,10 +163,11 @@ void AMazeBallPawn::BeginPlay()
 		}
 	}
 
-	if (USprBoxSubsystem* SprBox = GetGameInstance()->GetSubsystem<USprBoxSubsystem>())
+	// The shared attitude service owns the SPR-BOX link so the maze and the
+	// flight game never bind it twice when switching levels.
+	if (UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>())
 	{
-		// IMU-Adv recommended ranges (from the SDK demo): 480Hz / 16g / 2000dps
-		SprBox->InitSprBox(ImuRate, /*AccelRange=*/16, /*GyroRange=*/2000, /*Beta=*/0.1f);
+		Attitude->EnsureSprBox(ImuRate);
 	}
 }
 
@@ -261,6 +263,7 @@ void AMazeBallPawn::Tick(float DeltaSeconds)
 	float TiltY = 0.f; // right(+)/left(-), from roll
 	bool bHasImu = false;
 	bUsingSprBoxInput = false;
+	bUsingDeviceMotion = false;
 	auto MapTilt = [this](float AngleDeg) -> float
 	{
 		if (FMath::Abs(AngleDeg) < TiltDeadZoneDeg)
@@ -270,109 +273,97 @@ void AMazeBallPawn::Tick(float DeltaSeconds)
 		return FMath::Clamp(AngleDeg / MaxTiltDeg, -1.f, 1.f);
 	};
 
-	if (USprBoxSubsystem* SprBox = GetGameInstance()->GetSubsystem<USprBoxSubsystem>())
+	// Attitude comes from the shared service (fresh SPR-BOX samples first, then
+	// the phone sensor, then the keyboard). It is already neutral-relative and
+	// smoothed, so the HUD readout below is exactly what moves the ball.
+	bool bForceTouchForReview = false;
+#if !UE_BUILD_SHIPPING && (PLATFORM_ANDROID || PLATFORM_IOS)
+	bForceTouchForReview = FParse::Param(FCommandLine::Get(), TEXT("MazeForceTouch"));
+#endif
+	UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>();
+	if (Attitude && !bForceTouchForReview)
 	{
-		const FSprBoxImuData Imu = SprBox->GetImuData();
-		bool bServiceOnline = false;
-		bool bBoardOnline = false;
-		SprBox->GetConnectionStatus(bServiceOnline, bBoardOnline);
-		if (bBoardOnline && Imu.bValid)
+		const FAttitudeState& Att = Attitude->GetState();
+		if (Att.bAvailable)
 		{
 			bHasImu = true;
-			bUsingDeviceMotion = false;
-			bUsingSprBoxInput = true;
+			bUsingSprBoxInput = Att.Source == EAttitudeSource::SprBox;
+			bUsingDeviceMotion = Att.Source == EAttitudeSource::DeviceMotion;
+			CurrentRollDeg = Att.RollDeg;
+			CurrentPitchDeg = Att.PitchDeg;
+			CurrentYawDeg = Att.YawDeg;
 
-			CurrentRollDeg = Imu.Roll;
-			CurrentPitchDeg = Imu.Pitch;
-			CurrentYawDeg = Imu.Yaw;
+			// A different source has a different neutral pose: hold the ball
+			// until the player re-centres with 姿勢リセット instead of letting the
+			// ball lurch toward whatever the new sensor happens to read.
+			const int32 Epoch = Attitude->GetSourceEpoch();
+			if (SeenSourceEpoch != INDEX_NONE && Epoch != SeenSourceEpoch &&
+				LastSourceSeen != EAttitudeSource::None)
+			{
+				bAwaitingNeutral = true;
+			}
+			SeenSourceEpoch = Epoch;
+			LastSourceSeen = Att.Source;
 
 			// Over-tilt guard with hysteresis: block input past ~95deg, release under 80deg
-			const float MaxAngle = FMath::Max(FMath::Abs(CurrentRollDeg), FMath::Abs(CurrentPitchDeg));
-			if (!bOrientationWarning && MaxAngle > 95.f)
+			if (bUsingSprBoxInput)
 			{
-				bOrientationWarning = true;
+				const float MaxAngle = FMath::Max(FMath::Abs(Att.RawRollDeg), FMath::Abs(Att.RawPitchDeg));
+				if (!bOrientationWarning && MaxAngle > 95.f)
+				{
+					bOrientationWarning = true;
+				}
+				else if (bOrientationWarning && MaxAngle < 80.f)
+				{
+					bOrientationWarning = false;
+				}
 			}
-			else if (bOrientationWarning && MaxAngle < 80.f)
+			else
 			{
 				bOrientationWarning = false;
 			}
-			if (bOrientationWarning)
+			if (bOrientationWarning || bAwaitingNeutral)
 			{
 				// Freeze tilt input (physics keeps running so the ball settles naturally)
+				ResetTouchControls();
 				return;
 			}
 
 			TiltX = MapTilt(CurrentPitchDeg); // tilt away from you -> ball rolls forward
 			TiltY = MapTilt(CurrentRollDeg);  // tilt right -> ball rolls right
 
-			// Jump: total acceleration spike (lifting the board quickly).
-			// At rest |a| ~= 9.8 m/s^2 (gravity).
-			if (Imu.Sequence != LastImuSequence)
+			// Jump: a sharp acceleration spike from lifting the device quickly.
+			if (Att.SampleCount != LastImuSequence)
 			{
-				LastImuSequence = Imu.Sequence;
-				const float AccelMag = FVector(Imu.Ax, Imu.Ay, Imu.Az).Size();
+				LastImuSequence = Att.SampleCount;
+				const float AccelMag = Att.Accel.Size();
 				MotionShock = FMath::Max(MotionShock, FMath::Abs(AccelMag - 9.80665f));
-				if (AccelMag > JumpAccelThreshold)
+				if (bUsingSprBoxInput)
 				{
-					TryJump();
+					// At rest |a| ~= 9.8 m/s^2 (gravity).
+					if (AccelMag > JumpAccelThreshold)
+					{
+						TryJump();
+					}
+				}
+				else if (bUsingDeviceMotion)
+				{
+					if (FMath::Abs(AccelMag - 9.80665f) > FMath::Max(JumpAccelThreshold - 9.80665f, 5.f))
+					{
+						TryJump();
+					}
 				}
 			}
-		}
-	}
-
-#if PLATFORM_ANDROID || PLATFORM_IOS
-	// UE supplies a screen-orientation-corrected attitude from the phone sensors.
-	// It is lower-rate than the SPR-BOX stream, but makes the physical tilt game
-	// fully playable without showing a virtual stick when the board is absent.
-	bool bForceTouchForReview = false;
-#if !UE_BUILD_SHIPPING
-	bForceTouchForReview = FParse::Param(FCommandLine::Get(), TEXT("MazeForceTouch"));
-#endif
-	if (!bHasImu && !bForceTouchForReview)
-	{
-		if (APlayerController* PC = Cast<APlayerController>(GetController()))
-		{
-			FVector DeviceTilt = FVector::ZeroVector;
-			FVector DeviceRotationRate = FVector::ZeroVector;
-			FVector DeviceGravity = FVector::ZeroVector;
-			FVector DeviceAcceleration = FVector::ZeroVector;
-			PC->GetInputMotionState(DeviceTilt, DeviceRotationRate, DeviceGravity, DeviceAcceleration);
-			if (DeviceGravity.SizeSquared() > 0.2f)
+			if (Att.Source == EAttitudeSource::Keyboard)
 			{
-				bHasImu = true;
-				bUsingDeviceMotion = true;
-				LastRawDeviceRollDeg = FMath::RadiansToDegrees(DeviceTilt.Y);
-				LastRawDevicePitchDeg = FMath::RadiansToDegrees(DeviceTilt.Z);
-				LastRawDeviceYawDeg = FMath::RadiansToDegrees(DeviceTilt.X);
-				if (!bDeviceMotionCalibrated)
-				{
-					DeviceRollOffsetDeg = LastRawDeviceRollDeg;
-					DevicePitchOffsetDeg = LastRawDevicePitchDeg;
-					DeviceYawOffsetDeg = FMath::RadiansToDegrees(DeviceTilt.X);
-					bDeviceMotionCalibrated = true;
-				}
-
-				CurrentRollDeg = FMath::FindDeltaAngleDegrees(DeviceRollOffsetDeg, LastRawDeviceRollDeg);
-				CurrentPitchDeg = FMath::FindDeltaAngleDegrees(DevicePitchOffsetDeg, LastRawDevicePitchDeg);
-				CurrentYawDeg = FMath::FindDeltaAngleDegrees(DeviceYawOffsetDeg, FMath::RadiansToDegrees(DeviceTilt.X));
-				// UE's Android attitude vector is screen-oriented: its Y component
-				// follows the phone's long-axis tilt and Z follows the short-axis
-				// tilt. Swap them into the maze plane so right-edge-down rolls right
-				// and bottom-edge-down rolls toward the bottom of the screen.
-				TiltX = MapTilt(CurrentRollDeg);
-				TiltY = MapTilt(CurrentPitchDeg);
-
-				// Android's unified motion vector is linear acceleration in g.
-				const float DeviceJolt = DeviceAcceleration.Size() * 9.80665f;
-				MotionShock = FMath::Max(MotionShock, DeviceJolt);
-				if (DeviceJolt > FMath::Max(JumpAccelThreshold - 9.80665f, 5.f))
+				if (APlayerController* PC = Cast<APlayerController>(GetController());
+					PC && PC->WasInputKeyJustPressed(EKeys::SpaceBar))
 				{
 					TryJump();
 				}
 			}
 		}
 	}
-#endif
 
 	// Keyboard fallback for editor / desktop testing
 	if (!bHasImu)
@@ -565,26 +556,14 @@ void AMazeBallPawn::StartCalibration(bool bFullReset)
 	{
 		// Phone motion only needs a neutral-angle capture. Both the home-screen
 		// adjustment and the in-game reset intentionally complete instantly.
-		if (bUsingDeviceMotion || bDeviceMotionCalibrated)
-		{
-			DeviceRollOffsetDeg = LastRawDeviceRollDeg;
-			DevicePitchOffsetDeg = LastRawDevicePitchDeg;
-			DeviceYawOffsetDeg = LastRawDeviceYawDeg;
-			bDeviceMotionCalibrated = true;
-			CurrentRollDeg = 0.f;
-			CurrentPitchDeg = 0.f;
-			CurrentYawDeg = 0.f;
-		}
+		ResetAttitudeNeutral();
 		return;
 	}
 
 	if (!bFullReset)
 	{
-		// Instant drift fix (SDK lightReset)
-		if (SprBox)
-		{
-			SprBox->RecalibrateImu();
-		}
+		// Instant re-centre: the current hold becomes neutral for both games.
+		ResetAttitudeNeutral();
 		return;
 	}
 
@@ -606,6 +585,19 @@ void AMazeBallPawn::StartCalibration(bool bFullReset)
 		LastCalibDataTime = -100.f;
 		bCalibDataFlowing = false;
 	}
+}
+
+void AMazeBallPawn::ResetAttitudeNeutral()
+{
+	if (UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>())
+	{
+		Attitude->ResetNeutral();
+		SeenSourceEpoch = Attitude->GetSourceEpoch();
+	}
+	bAwaitingNeutral = false;
+	CurrentRollDeg = 0.f;
+	CurrentPitchDeg = 0.f;
+	CurrentYawDeg = 0.f;
 }
 
 void AMazeBallPawn::ContinueCalibration()

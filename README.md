@@ -1,6 +1,9 @@
-# SpresenseMaze — Spresenseを傾けて遊ぶコロコロ迷路
+# SpresenseMaze — Spresenseを傾けて遊ぶ迷路とフライト
 
-Spresense(SPR-BOX)のIMUで操作する UE 5.8 製 Android 迷路ゲームです。
+Spresense(SPR-BOX)のIMUで操作する UE 5.8 製 Android ゲームです。起動するとトップ画面で
+**迷路** と **フライト** を選べます(どちらも「トップ」からこの画面へ戻れます)。
+
+### 迷路
 
 - **傾ける** → ボールが転がる(IMU-Adv の roll/pitch を使用)
 - **瞬間的に持ち上げる** → ボールがジャンプ(加速度の合成値が閾値超えで検出)
@@ -12,6 +15,18 @@ Spresense(SPR-BOX)のIMUで操作する UE 5.8 製 Android 迷路ゲームです
 
 UIは短い日本語表記を基本とし、9本の操作ガイドを収録しています。
 
+### フライト
+
+自動で前進する機体を傾きで操縦し、敵を撃ちながらリングをくぐるゲームです。
+
+- **左右に傾ける(roll)** → 左右へ移動 / **奥へ傾ける(pitch)** → 下降、手前へ傾ける → 上昇
+- 機体の見た目には roll・pitch・yaw がそのまま出ます(yaw は基準から±15°に制限して機首へ反映)
+- **レーザーは自動連射**。2門の機銃は遠い照準で交わるので、照準 = 実際の射線です
+- **リング**を通過すると発光・効果音・翼端の光跡。5連続ごとにシールド回復。逃しても進行します
+- コースは **海上 → 峡谷 → 空中基地 → 大型機** の順。撃墜されると区間の頭から再開します
+- 開始時と入力元の切り替え時は一時停止し、「姿勢リセット」後のカウントダウンで再開します
+- 「一時停止」から 再開 / 姿勢リセット / トップへ。PCでは WASD・矢印(傾き)、Q/E(yaw)、P(一時停止)、R(姿勢リセット)
+
 ## 構成
 
 ```
@@ -22,8 +37,11 @@ SpresenseMaze/
 │   ├─ DefaultDeviceProfiles.ini             … Xperia 1 VI 向け描画ターゲット
 │   └─ DefaultEditorPerProjectUserSettings.ini … UE の MCP サーバ自動起動
 ├─ Content/
-│   ├─ Maps/MainMaze                         … 唯一のレベル(World Partition)
-│   ├─ Materials/M_MazeTile, M_MazeGlow      … 単色 / 発光の2枚だけ
+│   ├─ Maps/Title_Select                     … トップ画面(空のレベル、TitleGameMode)
+│   ├─ Maps/Flight_Course                    … フライト(空のレベル、FlightGameMode)
+│   ├─ Maps/MainMaze                         … 迷路(World Partition)
+│   ├─ Flight/M_FlightSurface, M_FlightAdditive … 金属・塗装・ガラス用 / 加算発光
+│   ├─ Materials/M_MazeTile, M_MazeGlow      … 単色 / 発光
 │   └─ Materials/M_Ball, Textures/T_SoccerBall
 ├─ Build/Android/IconSource/                 … アプリアイコンの原画
 ├─ Source/SpresenseMaze/
@@ -31,7 +49,14 @@ SpresenseMaze/
 │   ├─ MazeBallPawn.h/.cpp    … ボール物理・IMU入力・ジャンプ・振動
 │   ├─ MazeHUD.h/.cpp         … Canvas HUD(日本語表示・ミニマップ・操作ガイド・ランキング)
 │   ├─ MazeSaveGame.h/.cpp    … ステージ別タイムランキングの永続化
-│   └─ MazeGameMode.h/.cpp    … Pawn と HUD を差すだけ
+│   ├─ MazeGameMode.h/.cpp    … Pawn と HUD を差すだけ
+│   ├─ AttitudeInputSubsystem … 迷路とフライト共通の姿勢入力(入力元選択・基準姿勢・平滑化)
+│   ├─ TitleGameMode          … トップ画面(2枚のカード)、FlightGameMode、背景の機体
+│   ├─ FlightPawn             … 機体の操縦・自動射撃・シールド・カメラ・状態遷移
+│   ├─ FlightCourse           … コース経路・景観・敵・弾・リング・爆発・効果音
+│   ├─ FlightModels           … 機体・敵・リングの専用3Dモデル(コードで生成)
+│   ├─ FlightHUD / GameHudBase … フライトHUD / 日本語Canvas描画の共通部
+├─ Tools/CreateFlightAssets.py              … 上記マテリアルと2つのマップを生成するエディタスクリプト
 └─ Plugins/SprBoxBridge/                     … SPR-BOX SDK 連携(再利用可能)
     ├─ ThirdParty/Android/sprboxlib-std-0.3.0-release.aar
     ├─ ThirdParty/Android/sprboxlib-imuadv-0.3.5-release.aar
@@ -185,12 +210,13 @@ HUD は Canvas 直描きで、ボタンはタッチ対応です。プレイ中�
 
 ## 実機での動き
 
-`MazeBallPawn::BeginPlay()` が `InitSprBox(480Hz / ±16g / 2000dps)` を呼び、
-SPR-BOX Service にバインドします。Spresense 接続済みなら自動で IMU ストリーミングが
+共通の `UAttitudeInputSubsystem`(GameInstanceサブシステム)が一度だけ
+`InitSprBox(480Hz / ±16g / 2000dps)` を呼び、SPR-BOX Service にバインドします。Spresense 接続済みなら自動で IMU ストリーミングが
 始まり、端末上の仮想コントローラーに代わって IMU で操作できます。
 
-入力は3段のフォールバックになっています。SPR-BOX接続中はその姿勢・加速度を最優先し、
-未接続ならAndroid端末内蔵IMUの姿勢・加速度へ自動で切り替わります。どちらのIMUも
+入力は3段のフォールバックになっています。SPR-BOXの**新しいサンプルが届いている間**は
+その姿勢・加速度を最優先し、0.5秒以上サンプルが更新されなければ切断扱いとして
+Android端末内蔵IMUへ自動で切り替わります(接続表示だけでは使用中と判定しません)。どちらのIMUも
 使えない場合にだけ、画面左下に仮想スティック、右下にジャンプボタンを表示します。
 PCエディタでは従来どおりWASD/矢印キー + Spaceへフォールバックします。
 
@@ -203,11 +229,43 @@ LDPIからXXXHDPIまでドットの輪郭を保った解像度別PNGを収録し
 
 - ホーム画面の**「調整」** … SDK の2ステップ・ウィザード。
   5秒静止 → 姿勢を変える → 5秒静止。サンプリング中は入力を凍結します
-- プレイ中の**「姿勢リセット」** … SDK の `lightReset` を即時実行。
-  ゲーム中に基準姿勢がずれた場合の補正に使います
+- プレイ中の**「姿勢リセット」** … 現在の持ち方を中立にします(入力元ごとに保持)。
+  表示する角度とゲームに適用する角度は同じ値です。迷路とフライトで共有されます
+
+入力元が切り替わると、迷路はボールへの入力を止めて「姿勢リセット」を促し、
+フライトは一時停止します。持ち替え直後の急な傾き入力を防ぐためです。
+
+### 共通の姿勢入力 (`UAttitudeInputSubsystem`)
+
+`GetState()` が1フレームに1回だけ更新した `FAttitudeState` を返します。
+
+| 項目 | 内容 |
+|---|---|
+| `Source` | `SprBox` / `DeviceMotion` / `Keyboard` / `None` |
+| `RollDeg` / `PitchDeg` / `YawDeg` | 中立からの角度(平滑化後)。roll+ = 右下がり、pitch+ = 奥が下がる |
+| `Accel` | 重力込みの加速度 (m/s²)。静止時 |a| ≈ 9.8 |
+| `SampleTime` / `SampleCount` | 入力元が最後に新しいサンプルを出した時刻 / 通し番号 |
+| `bAvailable` | 新しいサンプルが届いているか |
+
+`ResetNeutral()` で中立を設定、`GetSourceEpoch()` は入力元が変わるたびに増えます。
 
 端末を95°以上傾けると入力を止めて警告を出し、80°を下回るまで解除しません
 (ヒステリシス付き)。
+
+## フライトのアセットと確認用撮影
+
+マテリアルとマップはC++から作れないため、エディタスクリプトで生成しています。
+
+```
+UnrealEditor-Cmd.exe SpresenseMaze.uproject -run=pythonscript -script=Tools/CreateFlightAssets.py -unattended
+```
+
+マップは空で、空・光・霧・景観・敵はすべて実行時にC++で生成します。各マップのGameModeは
+`DefaultEngine.ini` の `GameModeMapPrefixes`(`Title_` / `Flight_`)で決まります。
+
+開発ビルドでは `-TitleAutoShot -FlightAutoShot` を付けて起動すると、トップ画面と
+フライトの各区間(海上・峡谷・空中基地・大型機・一時停止)を自動で巡回して
+`Saved/AutoShots/` にスクリーンショットを保存し、終了します。
 
 ## 調整ポイント
 
