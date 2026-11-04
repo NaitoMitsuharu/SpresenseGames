@@ -9,7 +9,7 @@
 
 namespace
 {
-	constexpr float Gravity = 9.80665f;
+	constexpr float StandardGravity = 9.80665f;
 
 	// Time constants for the exponential smoother. The Spresense stream is
 	// 480 Hz and clean, the phone sensor arrives at frame rate with more jitter.
@@ -169,7 +169,7 @@ void UAttitudeInputSubsystem::Update()
 				RawRoll = FMath::RadiansToDegrees(Tilt.Z);
 				RawPitch = FMath::RadiansToDegrees(Tilt.Y);
 				RawYaw = FMath::RadiansToDegrees(Tilt.X);
-				Accel = (DeviceGravity + DeviceAcceleration) * Gravity;
+				Accel = (DeviceGravity + DeviceAcceleration) * StandardGravity;
 				FNeutral& N = Neutral[static_cast<int32>(EAttitudeSource::DeviceMotion)];
 				if (!N.bSet)
 				{
@@ -211,7 +211,7 @@ void UAttitudeInputSubsystem::Update()
 		RawRoll = KeyRoll;
 		RawPitch = KeyPitch;
 		RawYaw = KeyYaw;
-		Accel = FVector(0.f, 0.f, Gravity);
+		Accel = FVector(0.f, 0.f, StandardGravity);
 		bNewSample = true;
 	}
 #endif

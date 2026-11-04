@@ -4,6 +4,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/AudioComponent.h"
 #include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
 #include "FlightCourse.h"
@@ -16,6 +17,8 @@
 #include "HAL/PlatformMisc.h"
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
+#include "Sound/SoundWaveProcedural.h"
+#include "Misc/ConfigCacheIni.h"
 
 AFlightPawn::AFlightPawn()
 {
@@ -34,6 +37,11 @@ AFlightPawn::AFlightPawn()
 	Camera->SetUsingAbsoluteLocation(true);
 	Camera->SetUsingAbsoluteRotation(true);
 	Camera->FieldOfView = 80.f;
+	WindAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("Wind"));
+	WindAudio->SetupAttachment(Root);
+	WindAudio->bAutoActivate = false;
+	WindAudio->bAllowSpatialization = false;
+	WindAudio->bIsUISound = true;
 
 	EngineLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("EngineLight"));
 	EngineLight->SetupAttachment(ShipPivot);
@@ -99,10 +107,28 @@ void AFlightPawn::BeginPlay()
 
 #if !UE_BUILD_SHIPPING
 	bAutoShot = FParse::Param(FCommandLine::Get(), TEXT("FlightAutoShot"));
+	bUpgradeReview = FParse::Param(FCommandLine::Get(), TEXT("FlightUpgradeReview"));
+	bHudReview = FParse::Param(FCommandLine::Get(), TEXT("FlightHudReview"));
+	bAutoShot |= bUpgradeReview || bHudReview;
 #endif
 
 	// Start paused: the player settles the grip and confirms 姿勢リセット.
 	State = EFlightState::AwaitNeutral;
+	if (GConfig) { GConfig->GetBool(TEXT("/Script/SpresenseMaze.FlightControls"),TEXT("GestureDodge"),bGestureDodge,GGameUserSettingsIni); }
+	WindWave = NewObject<USoundWaveProcedural>(this);
+	WindWave->SetSampleRate(32000); WindWave->NumChannels = 1;
+	WindWave->Duration = INDEFINITELY_LOOPING_DURATION;
+	WindBuffer.SetNumUninitialized(32000 * sizeof(int16));
+	FRandomStream WindRandom(4811);
+	float Low = 0.f;
+	for (int32 I = 0; I < 32000; ++I)
+	{
+		Low = FMath::Lerp(Low, WindRandom.FRandRange(-1.f, 1.f), 0.075f);
+		const int16 Sample = int16(Low * 24000);
+		FMemory::Memcpy(WindBuffer.GetData() + I * sizeof(int16), &Sample, sizeof(int16));
+	}
+	WindWave->QueueAudio(WindBuffer.GetData(), WindBuffer.Num());
+	WindAudio->SetSound(WindWave); WindAudio->SetVolumeMultiplier(0.f); WindAudio->Play();
 	S = 0.0;
 	UpdateShip(0.f);
 	UpdateCamera(0.f, true);
@@ -132,7 +158,7 @@ FVector AFlightPawn::GetCameraLocation() const
 
 bool AFlightPawn::IsInvulnerable() const
 {
-	return GetWorld()->GetTimeSeconds() < InvulnerableUntil;
+	return DodgeTime > 0.035f || GetWorld()->GetTimeSeconds() < InvulnerableUntil;
 }
 
 void AFlightPawn::ShowBanner(const FString& Text, float Seconds)
@@ -170,6 +196,7 @@ void AFlightPawn::Tick(float DeltaSeconds)
 		{
 			State = EFlightState::AwaitNeutral;
 			bInputLost = true;
+			DodgeTime = 0; Flick.Reset();
 		}
 	}
 
@@ -182,6 +209,11 @@ void AFlightPawn::Tick(float DeltaSeconds)
 		if (PC->WasInputKeyJustPressed(EKeys::R))
 		{
 			RequestNeutralReset();
+		}
+		if (PC->WasInputKeyJustPressed(EKeys::SpaceBar))
+		{
+			const int32 Direction = PC->IsInputKeyDown(EKeys::A)||PC->IsInputKeyDown(EKeys::Left) ? -1 : PC->IsInputKeyDown(EKeys::D)||PC->IsInputKeyDown(EKeys::Right) ? 1 : LastSteerSide;
+			RequestDodge(Direction);
 		}
 	}
 
@@ -206,16 +238,13 @@ void AFlightPawn::Tick(float DeltaSeconds)
 	case EFlightState::Playing:
 	{
 		UpdateInput(Dt, true);
+		UpdateDodge(Dt);
 		const EFlightSection Before = Course->SectionAt(S);
 		S += AFlightCourse::ShipSpeed * Dt;
 		const EFlightSection After = Course->SectionAt(S);
 		if (After != Before)
 		{
 			ShowBanner(After == EFlightSection::Boss ? TEXT("警告：大型機接近") : AFlightCourse::SectionName(After), 2.6f);
-		}
-		while (CheckpointIndex + 1 < Course->Checkpoints.Num() && S >= Course->Checkpoints[CheckpointIndex + 1])
-		{
-			++CheckpointIndex;
 		}
 
 		// Automatic fire, alternating guns that converge on the far reticle.
@@ -232,10 +261,14 @@ void AFlightPawn::Tick(float DeltaSeconds)
 		}
 
 		Course->Simulate(Dt, this);
-		if (ClearAt > 0.f && Now >= ClearAt)
+		while (State == EFlightState::Playing && CheckpointIndex + 1 < Course->Checkpoints.Num() && S >= Course->Checkpoints[CheckpointIndex + 1])
 		{
-			ClearAt = -1.f;
-			State = EFlightState::Cleared;
+			++CheckpointIndex; Course->CommitCheckpoint();
+		}
+		if (ClearAt > 0.f)
+		{
+			ClearAt -= Dt;
+			if (ClearAt <= 0.f) { ClearAt = -1.f; State = EFlightState::Cleared; }
 		}
 		break;
 	}
@@ -261,6 +294,7 @@ void AFlightPawn::Tick(float DeltaSeconds)
 	}
 	UpdateShip(Dt);
 	UpdateCamera(Dt, false);
+	UpdateWind(Dt);
 
 	HitFlash = FMath::Max(HitFlash - Dt * 2.5f, 0.f);
 	HealFlash = FMath::Max(HealFlash - Dt * 1.5f, 0.f);
@@ -274,12 +308,7 @@ void AFlightPawn::UpdateInput(float Dt, bool bSteer)
 
 	auto Map = [this](float A)
 	{
-		const float Mag = FMath::Abs(A);
-		if (Mag < DeadZoneDeg)
-		{
-			return 0.f;
-		}
-		return FMath::Sign(A) * FMath::Clamp((Mag - DeadZoneDeg) / (MaxTiltDeg - DeadZoneDeg), 0.f, 1.f);
+		return FlightHandling::MapTilt(A, DeadZoneDeg, MaxTiltDeg);
 	};
 	const float PitchSign = bInvertPitch ? 1.f : -1.f;
 	const float RollDeg = bAutoShot ? AutoRoll : Att.RollDeg;
@@ -288,13 +317,22 @@ void AFlightPawn::UpdateInput(float Dt, bool bSteer)
 	const bool bHasInput = Att.bAvailable || bAutoShot;
 	CommandX = bHasInput ? Map(RollDeg) : 0.f;
 	CommandZ = bHasInput ? PitchSign * Map(PitchDeg) : 0.f;
+	if (FMath::Abs(CommandX) > 0.2f) { LastSteerSide = CommandX < 0 ? -1 : 1; }
+	const bool Physical = Att.Source == EAttitudeSource::SprBox || Att.Source == EAttitudeSource::DeviceMotion;
+	if (bSteer && State == EFlightState::Playing && bHasInput && Physical && bGestureDodge && !bAutoShot)
+	{
+		const int32 Gesture = Flick.Update(Map(Att.RawRollDeg), Dt);
+		if (Gesture) { RequestDodge(Gesture); }
+	}
+	else { Flick.Reset(); }
 
 	// The model shows the applied attitude directly: roll as bank, pitch on the
 	// nose (limited so the line of fire stays useful), yaw clamped to +-15.
-	const float TargetRoll = FMath::Clamp(RollDeg, -75.f, 75.f);
+	const float BaseRoll = FMath::Clamp(RollDeg * 1.25f + float(Vel.X) / LateralSpeed * 6.f, -43.f, 43.f);
+	const float TargetRoll = FMath::Clamp(BaseRoll + DodgeDirection * DodgePulse() * 55.f, -68.f, 68.f);
 	const float TargetPitch = FMath::Clamp(PitchSign * PitchDeg, -NosePitchLimitDeg, NosePitchLimitDeg);
 	const float TargetYaw = FMath::Clamp(YawDeg, -YawLimitDeg, YawLimitDeg);
-	const float Response = 14.f;
+	const float Response = 20.f;
 	ShipRoll = FMath::FInterpTo(ShipRoll, TargetRoll, Dt, Response);
 	ShipPitch = FMath::FInterpTo(ShipPitch, TargetPitch, Dt, Response);
 	ShipYaw = FMath::FInterpTo(ShipYaw, TargetYaw, Dt, Response);
@@ -305,8 +343,15 @@ void AFlightPawn::UpdateInput(float Dt, bool bSteer)
 		return;
 	}
 	const FVector2D Target(CommandX * LateralSpeed, CommandZ * VerticalSpeed);
-	Vel = FMath::Vector2DInterpTo(Vel, Target, Dt, 5.5f);
-	Off += Vel * Dt;
+	FVector2D Limited = Target;
+	if (Limited.X * Off.X > 0) { Limited.X *= FMath::SmoothStep(0.0, 160.0, AFlightCourse::LimitX - FMath::Abs(Off.X)); }
+	if (Limited.Y * Off.Y > 0) { Limited.Y *= FMath::SmoothStep(0.0, 120.0, AFlightCourse::LimitZ - FMath::Abs(Off.Y)); }
+	auto ResponseFor = [&](double Current, double Goal)
+	{
+		return Goal * Current < 0 || FMath::Abs(Goal) < FMath::Abs(Current) ? BrakingResponse : AccelerationResponse;
+	};
+	Off.X += FlightHandling::Step(Vel.X, Limited.X, Dt, FMath::Max(ResponseFor(Vel.X, Limited.X), 0.1f));
+	Off.Y += FlightHandling::Step(Vel.Y, Limited.Y, Dt, FMath::Max(ResponseFor(Vel.Y, Limited.Y), 0.1f));
 	if (FMath::Abs(Off.X) > AFlightCourse::LimitX)
 	{
 		Off.X = FMath::Sign(Off.X) * AFlightCourse::LimitX;
@@ -331,7 +376,7 @@ void AFlightPawn::UpdateShip(float Dt)
 	ShipPivot->SetWorldRotation(Q);
 
 	// Control surfaces follow the stick, not the airframe.
-	const float Aileron = CommandX * 20.f;
+	const float Aileron = FMath::Clamp(CommandX * 20.f + DodgeDirection * DodgePulse() * 16.f, -24.f, 24.f);
 	const float Elevator = -CommandZ * 16.f;
 	if (Parts.AileronL) { Parts.AileronL->SetRelativeRotation(AileronBaseL + FRotator(Aileron, 0.f, 0.f)); }
 	if (Parts.AileronR) { Parts.AileronR->SetRelativeRotation(AileronBaseR + FRotator(-Aileron, 0.f, 0.f)); }
@@ -364,8 +409,8 @@ void AFlightPawn::UpdateCamera(float Dt, bool bSnap)
 	}
 	// Chase camera: trails the ship's offset with lag but never rolls, so the
 	// horizon stays level however hard the player banks.
-	const FVector TargetOff(0.f, Off.X * 0.7f, Off.Y * 0.7f);
-	const FVector TargetLook(0.f, Off.X * 0.9f, Off.Y * 0.9f);
+	const FVector TargetOff(0.f, Off.X * 0.90f, Off.Y * 0.86f);
+	const FVector TargetLook(0.f, Off.X * 0.92f + Vel.X * 0.07, Off.Y * 0.9f + Vel.Y * 0.05);
 	if (bSnap)
 	{
 		CamOffsetSmoothed = TargetOff;
@@ -376,10 +421,26 @@ void AFlightPawn::UpdateCamera(float Dt, bool bSnap)
 		CamOffsetSmoothed = FMath::VInterpTo(CamOffsetSmoothed, TargetOff, Dt, 5.f);
 		CamLookSmoothed = FMath::VInterpTo(CamLookSmoothed, TargetLook, Dt, 7.f);
 	}
-	const FVector CamPos = Course->Path.Frame(S - 1150.0).ToWorld(0, CamOffsetSmoothed.Y, CamOffsetSmoothed.Z + 330.0);
+	const double CameraS = S - 1150 - DodgePulse() * 100;
+	const FVector2D ClearOff = Course->CameraClearance(CameraS, FVector2D(CamOffsetSmoothed.Y, CamOffsetSmoothed.Z + 330));
+	const FVector CamPos = Course->Path.Frame(CameraS).ToWorld(0, ClearOff.X, ClearOff.Y);
 	const FVector Look = Course->Path.Frame(S + 1800.0).ToWorld(0, CamLookSmoothed.Y, CamLookSmoothed.Z + 40.0);
 	const FRotator Rot = FRotationMatrix::MakeFromXZ(Look - CamPos, FVector::UpVector).Rotator();
 	Camera->SetWorldLocationAndRotation(CamPos, FRotator(Rot.Pitch, Rot.Yaw, 0.f));
+	const float TargetFOV = 78.f + FMath::Min(float(Vel.Size()) / 1300.f, 2.f) + NearSurface * 2.f + DodgePulse() * 4.f;
+	Camera->SetFieldOfView(bSnap ? TargetFOV : FMath::FInterpTo(Camera->FieldOfView, TargetFOV, Dt, 3.f));
+}
+
+void AFlightPawn::UpdateWind(float Dt)
+{
+	const bool bFlying = State == EFlightState::Playing || State == EFlightState::Cleared;
+	const float Target = bFlying ? Course->Proximity(S, Off) : 0.f;
+	NearSurface = FMath::FInterpTo(NearSurface, Target, Dt, 5.f);
+	if (!WindWave || !WindAudio) { return; }
+	if (WindWave->GetAvailableAudioByteCount() < WindBuffer.Num()) { WindWave->QueueAudio(WindBuffer.GetData(), WindBuffer.Num()); }
+	const float Volume = bFlying ? 0.045f + NearSurface * 0.20f + FMath::Min(float(Vel.Size()) / 2800.f, 1.f) * 0.04f + DodgePulse()*0.08f : 0.f;
+	WindAudio->SetVolumeMultiplier(Volume);
+	WindAudio->SetPitchMultiplier(0.92f + NearSurface * 0.15f);
 }
 
 void AFlightPawn::UpdateTrail(float Dt)
@@ -442,6 +503,7 @@ void AFlightPawn::ApplyDamage(float Amount, const FVector& FromWorld)
 		return;
 	}
 	Shield = FMath::Max(Shield - Amount, 0.f);
+	Course->NotifyDamage();
 	HitFlash = 1.f;
 	InvulnerableUntil = GetWorld()->GetTimeSeconds() + 1.f;
 	Course->PlayCue(FlightCue::Damage);
@@ -477,13 +539,16 @@ void AFlightPawn::OnRingMissed()
 
 void AFlightPawn::OnBossDefeated()
 {
-	ClearAt = GetWorld()->GetTimeSeconds() + 2.8f;
+	Course->CompleteRun(bAutoShot);
+	ClearAt = 2.8f;
 	ShowBanner(TEXT("大型機撃破"), 2.6f);
 	Vibrate(1.f, 0.6f);
 }
 
 void AFlightPawn::TickAutoShot(float Dt)
 {
+	if (bHudReview) { TickHudReview(Dt); return; }
+	if (bUpgradeReview) { TickUpgradeReview(Dt); return; }
 	AutoShotTime += Dt;
 	AutoRoll = FMath::Sin(AutoShotTime * 0.9f) * 24.f;
 	AutoPitch = FMath::Sin(AutoShotTime * 0.6f) * 10.f;
@@ -536,6 +601,8 @@ void AFlightPawn::Respawn()
 	Off = Vel = FVector2D::ZeroVector;
 	Shield = MaxShield;
 	Course->ResetFrom(S);
+	NearSurface = 0.f; bHaveLastTips = false; ClearAt = -1.f;
+	DodgeTime = DodgeCooldown = 0; Flick.Reset();
 	ShipPivot->SetVisibility(true, true);
 	InvulnerableUntil = GetWorld()->GetTimeSeconds() + 3.f;
 	UpdateCamera(0.f, true);
@@ -551,6 +618,7 @@ void AFlightPawn::BeginCountdown(float Seconds)
 
 void AFlightPawn::RequestNeutralReset()
 {
+	DodgeTime = 0; Flick.Reset();
 	if (UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>())
 	{
 		Attitude->ResetNeutral();

@@ -11,6 +11,7 @@
 #include "Engine/StaticMesh.h"
 #include "FlightModels.h"
 #include "FlightPawn.h"
+#include "FlightSaveGame.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "ProceduralMeshComponent.h"
@@ -170,8 +171,6 @@ AFlightCourse::AFlightCourse()
 	Sea->SetCastShadow(false);
 	Sea->SetMobility(EComponentMobility::Movable);
 
-	Rocks = MakeISM(this, Root, TEXT("Rocks"), true);
-	RockSpires = MakeISM(this, Root, TEXT("RockSpires"), true);
 	Clouds = MakeISM(this, Root, TEXT("Clouds"), false);
 	BaseHull = MakeISM(this, Root, TEXT("BaseHull"), true);
 	BaseDecks = MakeISM(this, Root, TEXT("BaseDecks"), true);
@@ -226,6 +225,12 @@ void AFlightCourse::BeginPlay()
 	BuildSchedule();
 	BuildRings();
 	BuildPools();
+	if (UGameplayStatics::DoesSaveGameExist(TEXT("FlightRecords_v1"), 0))
+	{
+		const UFlightSaveGame* Save = Cast<UFlightSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("FlightRecords_v1"), 0));
+		if (Save && Save->ScoreVersion == 1) { BestScore = FMath::Max(Save->BestScore, 0); }
+	}
+	CommitCheckpoint();
 }
 
 void FlightEnvironment::Build(AActor* Owner, USceneComponent* Root, bool bWithPlanet)
@@ -235,8 +240,8 @@ void FlightEnvironment::Build(AActor* Owner, USceneComponent* Root, bool bWithPl
 	Sun->SetupAttachment(Root);
 	Sun->SetMobility(EComponentMobility::Movable);
 	Sun->SetWorldRotation(FRotator(-24.f, 35.f, 0.f));
-	Sun->SetIntensity(7.5f);
-	Sun->SetLightColor(FLinearColor(1.f, 0.86f, 0.74f));
+	Sun->SetIntensity(5.5f);
+	Sun->SetLightColor(FLinearColor(1.f, 0.94f, 0.84f));
 	Sun->SetAtmosphereSunLight(true);
 	Sun->SetCastShadows(true);
 	Sun->SetDynamicShadowDistanceMovableLight(9000.f);
@@ -258,7 +263,7 @@ void FlightEnvironment::Build(AActor* Owner, USceneComponent* Root, bool bWithPl
 	SkyLight->SetupAttachment(Root);
 	SkyLight->SetMobility(EComponentMobility::Movable);
 	SkyLight->SetRealTimeCapture(false);
-	SkyLight->SetIntensity(1.2f);
+	SkyLight->SetIntensity(1.5f);
 	SkyLight->RegisterComponent();
 	Owner->AddInstanceComponent(SkyLight);
 	SkyLight->RecaptureSky();
@@ -286,11 +291,11 @@ void FlightEnvironment::Build(AActor* Owner, USceneComponent* Root, bool bWithPl
 	PS.bOverride_AutoExposureBias = true;
 	PS.AutoExposureBias = 0.f;
 	PS.bOverride_BloomIntensity = true;
-	PS.BloomIntensity = 0.9f;
+	PS.BloomIntensity = 0.35f;
 	PS.bOverride_VignetteIntensity = true;
-	PS.VignetteIntensity = 0.35f;
+	PS.VignetteIntensity = 0.22f;
 	PS.bOverride_ColorSaturation = true;
-	PS.ColorSaturation = FVector4(1.f, 1.f, 1.f, 1.08f);
+	PS.ColorSaturation = FVector4(1.f, 1.f, 1.f, 0.98f);
 	PP->RegisterComponent();
 	Owner->AddInstanceComponent(PP);
 
@@ -335,165 +340,8 @@ void AFlightCourse::BuildEnvironment()
 	{
 		Sea->SetStaticMesh(Plane);
 		Sea->SetWorldScale3D(FVector(6000.f, 6000.f, 1.f));
-		Sea->SetMaterial(0, FlightMaterials::Surface(this, FLinearColor(0.012f, 0.05f, 0.07f), 0.f, 0.06f, 0.9f));
-	}
-}
-
-void AFlightCourse::BuildScenery()
-{
-	UStaticMesh* Cube = EngineMesh(TEXT("/Engine/BasicShapes/Cube.Cube"));
-	UStaticMesh* Cone = EngineMesh(TEXT("/Engine/BasicShapes/Cone.Cone"));
-	UStaticMesh* Sphere = EngineMesh(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
-	UStaticMesh* Cylinder = EngineMesh(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
-
-	Rocks->SetStaticMesh(Cube);
-	Rocks->SetMaterial(0, FlightMaterials::Surface(this, FLinearColor(0.2f, 0.12f, 0.1f), 0.f, 0.85f, 0.35f));
-	RockSpires->SetStaticMesh(Cone);
-	RockSpires->SetMaterial(0, FlightMaterials::Surface(this, FLinearColor(0.15f, 0.1f, 0.11f), 0.f, 0.8f, 0.35f));
-	Clouds->SetStaticMesh(Sphere);
-	// Soft additive banks: no hard white rims, they just brighten the haze.
-	Clouds->SetMaterial(0, FlightMaterials::Additive(this, FLinearColor(0.11f, 0.12f, 0.15f)));
-	BaseHull->SetStaticMesh(Cylinder);
-	BaseHull->SetMaterial(0, FlightMaterials::Surface(this, FLinearColor(0.08f, 0.09f, 0.11f), 0.85f, 0.32f));
-	BaseDecks->SetStaticMesh(Cube);
-	BaseDecks->SetMaterial(0, FlightMaterials::Surface(this, FLinearColor(0.42f, 0.45f, 0.5f), 0.7f, 0.28f));
-	BaseLights->SetStaticMesh(Cube);
-	BaseLights->SetMaterial(0, FlightMaterials::Glow(this, FLinearColor(0.25f, 0.85f, 1.f) * 5.f));
-	Whitecaps->SetStaticMesh(Sphere);
-	Whitecaps->SetMaterial(0, FlightMaterials::Additive(this, FLinearColor(0.32f, 0.42f, 0.46f)));
-
-	FRandomStream Rng(20261101);
-	auto Place = [this](UInstancedStaticMeshComponent* ISM, const FPathFrame& Fr, double X, double Z,
-		const FRotator& LocalRot, const FVector& Scale)
-	{
-		const FQuat Q = Fr.Rotation() * LocalRot.Quaternion();
-		ISM->AddInstance(FTransform(Q, Fr.P + Fr.R * X + Fr.U * Z, Scale), true);
-	};
-
-	// --- Sea: rock spires and islands well outside the flight box ---
-	for (double S = 6000.0; S < CanyonS - 4000.0; S += 2600.0)
-	{
-		const FPathFrame Fr = Path.Frame(S);
-		for (const double Side : { -1.0, 1.0 })
-		{
-			if (Rng.FRand() < 0.45f)
-			{
-				continue;
-			}
-			const double X = Side * Rng.FRandRange(4200.f, 22000.f);
-			const float Hgt = Rng.FRandRange(18.f, 60.f);
-			const float Rad = Rng.FRandRange(8.f, 22.f);
-			Place(RockSpires, Fr, X, -Fr.P.Z - 200.0, FRotator(Rng.FRandRange(-6.f, 6.f), Rng.FRandRange(0.f, 360.f), Rng.FRandRange(-6.f, 6.f)),
-				FVector(Rad, Rad * Rng.FRandRange(0.7f, 1.2f), Hgt));
-			if (Rng.FRand() < 0.5f)
-			{
-				Place(Rocks, Fr, X + Rng.FRandRange(-900.f, 900.f), -Fr.P.Z,
-					FRotator(Rng.FRandRange(-20.f, 20.f), Rng.FRandRange(0.f, 90.f), Rng.FRandRange(-20.f, 20.f)),
-					FVector(Rng.FRandRange(10.f, 26.f), Rng.FRandRange(10.f, 26.f), Rng.FRandRange(4.f, 12.f)));
-			}
-		}
-	}
-
-	// --- Canyon: two layers of faceted cliffs, pillars and arches ---
-	for (double S = CanyonS - 6000.0; S < SkyBaseS - 12000.0; S += 1100.0)
-	{
-		const FPathFrame Fr = Path.Frame(S);
-		for (const double Side : { -1.0, 1.0 })
-		{
-			const float Thick = Rng.FRandRange(900.f, 1700.f);
-			const double X = Side * (LimitX + 800.0 + Thick * 0.5f + Rng.FRandRange(0.f, 500.f));
-			const float Tall = Rng.FRandRange(2600.f, 5200.f);
-			Place(Rocks, Fr, X, -Fr.P.Z + Tall * 0.5f - 300.0,
-				FRotator(Rng.FRandRange(-8.f, 8.f), Rng.FRandRange(-25.f, 25.f), Rng.FRandRange(-10.f, 10.f)),
-				FVector(Rng.FRandRange(14.f, 26.f), Thick / 100.f, Tall / 100.f));
-			const float Tall2 = Tall + Rng.FRandRange(1500.f, 4000.f);
-			Place(Rocks, Fr, X + Side * Rng.FRandRange(1600.f, 2600.f), -Fr.P.Z + Tall2 * 0.5f - 300.0,
-				FRotator(Rng.FRandRange(-6.f, 6.f), Rng.FRandRange(0.f, 90.f), Rng.FRandRange(-6.f, 6.f)),
-				FVector(Rng.FRandRange(18.f, 30.f), Rng.FRandRange(14.f, 24.f), Tall2 / 100.f));
-		}
-	}
-	const double PillarS[] = { 300000.0, 316000.0, 334000.0, 352000.0, 395000.0, 411000.0, 446000.0 };
-	const float PillarX[] = { 600.f, -650.f, 0.f, 700.f, -500.f, 450.f, -700.f };
-	for (int32 i = 0; i < UE_ARRAY_COUNT(PillarS); ++i)
-	{
-		const FPathFrame Fr = Path.Frame(PillarS[i]);
-		Hazards.Add({ PillarS[i], PillarX[i], 270.f });
-		Place(Rocks, Fr, PillarX[i], -Fr.P.Z + 2800.0, FRotator(0.f, 45.f, 0.f), FVector(4.6f, 4.6f, 62.f));
-		Place(Rocks, Fr, PillarX[i], -Fr.P.Z + 300.0, FRotator(8.f, 20.f, 5.f), FVector(8.f, 7.f, 6.f));
-	}
-	for (const double ArchS : { 268000.0, 342000.0, 378000.0, 428000.0 })
-	{
-		const FPathFrame Fr = Path.Frame(ArchS);
-		Place(Rocks, Fr, 0.0, 1700.0, FRotator(0.f, 0.f, Rng.FRandRange(-4.f, 4.f)), FVector(12.f, 70.f, 6.f));
-	}
-
-	// --- Sky base: floating platforms, gates, struts and beacons ---
-	auto Platform = [&](const FPathFrame& Fr, double X, double Z, float Radius)
-	{
-		Place(BaseHull, Fr, X, Z - 260.0, FRotator::ZeroRotator, FVector(Radius / 50.f, Radius / 50.f, 4.f));
-		Place(BaseDecks, Fr, X, Z, FRotator(0.f, 45.f, 0.f), FVector(Radius / 72.f, Radius / 72.f, 0.6f));
-		const int32 Towers = Rng.RandRange(1, 3);
-		for (int32 t = 0; t < Towers; ++t)
-		{
-			const double TX = X + Rng.FRandRange(-Radius * 0.5f, Radius * 0.5f);
-			const float TH = Rng.FRandRange(900.f, 2600.f);
-			Place(BaseDecks, Fr, TX, Z + TH * 0.5f, FRotator(0.f, Rng.FRandRange(0.f, 90.f), 0.f),
-				FVector(Rng.FRandRange(3.f, 6.f), Rng.FRandRange(3.f, 6.f), TH / 100.f));
-			Place(BaseLights, Fr, TX, Z + TH + 40.0, FRotator::ZeroRotator, FVector(1.6f, 1.6f, 0.4f));
-		}
-		Place(BaseLights, Fr, X, Z - 560.0, FRotator::ZeroRotator, FVector(Radius / 60.f, 0.25f, 0.25f));
-	};
-	for (double S = SkyBaseS + 4000.0; S < BossS; S += 5200.0)
-	{
-		const FPathFrame Fr = Path.Frame(S);
-		for (const double Side : { -1.0, 1.0 })
-		{
-			if (Rng.FRand() < 0.35f)
-			{
-				continue;
-			}
-			Platform(Fr, Side * Rng.FRandRange(3600.f, 9000.f), Rng.FRandRange(-2600.f, 900.f), Rng.FRandRange(1600.f, 3000.f));
-		}
-	}
-	for (double S = SkyBaseS + 9000.0; S < BossS; S += 15000.0)
-	{
-		// Gate frame outside the flight box: passing through them reads as speed.
-		const FPathFrame Fr = Path.Frame(S);
-		const float GX = LimitX + 900.f, GZ = LimitZ + 700.f;
-		Place(BaseDecks, Fr, -GX, 0.0, FRotator::ZeroRotator, FVector(2.2f, 2.2f, GZ * 2.f / 100.f + 2.f));
-		Place(BaseDecks, Fr, GX, 0.0, FRotator::ZeroRotator, FVector(2.2f, 2.2f, GZ * 2.f / 100.f + 2.f));
-		Place(BaseDecks, Fr, 0.0, GZ, FRotator::ZeroRotator, FVector(2.2f, GX * 2.f / 100.f + 2.f, 2.2f));
-		Place(BaseDecks, Fr, 0.0, -GZ, FRotator::ZeroRotator, FVector(2.2f, GX * 2.f / 100.f + 2.f, 2.2f));
-		Place(BaseLights, Fr, -GX + 120.0, 0.0, FRotator::ZeroRotator, FVector(0.3f, 0.3f, GZ * 2.f / 100.f));
-		Place(BaseLights, Fr, GX - 120.0, 0.0, FRotator::ZeroRotator, FVector(0.3f, 0.3f, GZ * 2.f / 100.f));
-		Place(BaseLights, Fr, 0.0, GZ - 120.0, FRotator::ZeroRotator, FVector(0.3f, GX * 2.f / 100.f, 0.3f));
-	}
-	// Arena: a ring of platforms around the loop so the circle reads as a place.
-	for (int32 i = 0; i < 18; ++i)
-	{
-		const FPathFrame Fr = Path.Frame(BossS + i * (2.0 * PI * ArenaRadius / 18.0));
-		Platform(Fr, -Rng.FRandRange(6000.f, 11000.f), Rng.FRandRange(-2800.f, 600.f), Rng.FRandRange(2200.f, 3600.f));
-		Platform(Fr, Rng.FRandRange(7000.f, 14000.f), Rng.FRandRange(-3500.f, 0.f), Rng.FRandRange(2000.f, 3000.f));
-	}
-
-	// Cloud deck under the sky base and arena.
-	for (double S = SkyBaseS + 8000.0; S < BossS + 2.0 * PI * ArenaRadius; S += 3200.0)
-	{
-		const FPathFrame Fr = Path.Frame(S);
-		for (int32 k = 0; k < 3; ++k)
-		{
-			const double X = Rng.FRandRange(-26000.f, 26000.f);
-			const FVector Pos = Fr.P + Fr.R * X;
-			const float R = Rng.FRandRange(60.f, 140.f);
-			Clouds->AddInstance(FTransform(FRotator(0.f, Rng.FRandRange(0.f, 180.f), 0.f),
-				FVector(Pos.X, Pos.Y, Rng.FRandRange(1500.f, 4500.f)), FVector(R * 1.8f, R, R * 0.12f)), true);
-		}
-	}
-
-	// Sea glints: placed on a world grid each time the camera crosses a cell.
-	for (int32 i = 0; i < 28 * 28; ++i)
-	{
-		Whitecaps->AddInstance(Hidden(), true);
+		UMaterialInterface* Ocean = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Flight/M_FlightOcean.M_FlightOcean"));
+		Sea->SetMaterial(0, Ocean ? Ocean : FlightMaterials::Surface(this, FLinearColor(0.018f, 0.08f, 0.09f), 0.f, 0.25f, 0.7f));
 	}
 }
 
@@ -513,10 +361,10 @@ void AFlightCourse::BuildSchedule()
 	Add(20000, 0, 0, 3);
 	Add(42000, 0, 2, 4, FVector2D(-1, 150));
 	Add(66000, 0, 1, 2);
-	Add(92000, 0, 0, 5);
+	Add(92000, 0, 3, 4);
 	Add(118000, 0, 2, 4, FVector2D(1, -150));
 	Add(142000, 0, 1, 3);
-	Add(172000, 0, 0, 4);
+	Add(172000, 0, 4, 4);
 	Add(196000, 0, 2, 5, FVector2D(-1, 0));
 	Add(222000, 0, 1, 3);
 	// Canyon: turrets on low ledges plus drones
@@ -526,11 +374,11 @@ void AFlightCourse::BuildSchedule()
 		const float X = (i % 2 == 0 ? 1.f : -1.f) * 1180.f;
 		Add(TS - 9000.0, 1, 0, 1, FVector2D(X, -LimitZ + 120.f));
 		const FPathFrame Fr = Path.Frame(TS);
-		Rocks->AddInstance(FTransform(Fr.Rotation(), Fr.ToWorld(0, X, -LimitZ - 180.f), FVector(6.f, 6.f, 3.f)), true);
+		BaseDecks->AddInstance(FTransform(Fr.Rotation(), Fr.ToWorld(0, X, -LimitZ - 180.f), FVector(6.f, 6.f, 3.f)), true);
 	}
 	Add(280000, 0, 0, 3);
 	Add(322000, 0, 1, 2);
-	Add(362000, 0, 2, 3, FVector2D(1, 200));
+	Add(362000, 0, 3, 4, FVector2D(1, 200));
 	Add(402000, 0, 0, 4);
 	Add(440000, 0, 1, 3);
 	// Sky base: turrets on small decks
@@ -545,8 +393,8 @@ void AFlightCourse::BuildSchedule()
 	}
 	Add(490000, 0, 1, 3);
 	Add(522000, 0, 2, 5, FVector2D(-1, 100));
-	Add(552000, 0, 0, 5);
-	Add(586000, 0, 1, 4);
+	Add(552000, 0, 4, 4);
+	Add(586000, 0, 3, 4);
 	Add(616000, 0, 2, 4, FVector2D(1, -100));
 	// Boss
 	Add(BossS, 2, 0, 1);
@@ -591,7 +439,7 @@ void AFlightCourse::BuildRings()
 			PMC->SetCastShadow(false);
 			PMC->RegisterComponent();
 			AddInstanceComponent(PMC);
-			Ring.MID = FlightMaterials::Additive(this, FLinearColor(0.25f, 0.85f, 1.f) * 2.f);
+			Ring.MID = FlightMaterials::Additive(this, FLinearColor(0.35f, 0.94f, 0.75f));
 			FlightModels::RingMesh().Upload(PMC, 0, Ring.MID);
 			const FPathFrame Fr = Path.Frame(Ring.S);
 			PMC->SetWorldLocationAndRotation(Fr.ToWorld(0, Ring.Off.X, Ring.Off.Y), Fr.Rotation());
@@ -701,6 +549,7 @@ void AFlightCourse::SpawnEnemy(const FFlightSpawn& Sp, double ShipS, int32 Index
 		Boss.FireTimer = 3.5f;
 		Boss.Pattern = 0;
 		Boss.HitFlash = 0.f;
+		Boss.bCharging = false;
 		BossMesh->SetVisibility(true);
 		bBossActive = true;
 		BossHealth01 = 1.f;
@@ -716,6 +565,7 @@ void AFlightCourse::SpawnEnemy(const FFlightSpawn& Sp, double ShipS, int32 Index
 	E->Pattern = Sp.Pattern;
 	E->Age = 0.f;
 	E->HitFlash = 0.f;
+	E->bCharging = false;
 	E->Vel = FVector2D::ZeroVector;
 	if (Sp.Kind == 1)
 	{
@@ -742,6 +592,18 @@ void AFlightCourse::SpawnEnemy(const FFlightSpawn& Sp, double ShipS, int32 Index
 			E->Anchor = FVector2D(Spread * 900.f, 150.f);
 			E->SpeedS = ShipSpeed;
 			E->FireTimer = 2.4f + Index * 0.5f;
+			break;
+		case 3: // paired pincer: lanes converge, then cross and peel away
+			E->S = ShipS + 11000 + (Index / 2) * 1200;
+			E->Anchor = FVector2D((Index % 2 ? 1 : -1) * (1250 + (Index / 2) * 250), (Index / 2) * 240 - 120);
+			E->SpeedS = ShipSpeed * 0.72;
+			E->FireTimer = 2.4f + Index * 0.4f;
+			break;
+		case 4: // diving echelon, clear exit after its attack
+			E->S = ShipS + 11000 + Index * 900;
+			E->Anchor = FVector2D(Spread * 620, 650);
+			E->SpeedS = ShipSpeed * 0.7;
+			E->FireTimer = 2.6f + Index * 0.35f;
 			break;
 		default: // cross the course from one side
 		{
@@ -815,6 +677,7 @@ void AFlightCourse::KillEnemy(FFlightEnemy& E, bool bByPlayer)
 	if (bByPlayer)
 	{
 		++Kills;
+		AwardNotice(Score.Award(E.Kind == 1 ? 400 : 250, false), E.Kind == 1 ? TEXT("砲台撃破") : TEXT("撃破"));
 		SpawnExplosion(World, E.Kind == 1 ? 1.3f : 1.f);
 		EmitDebris(World, E.Kind == 1 ? 16 : 12, 1800.f, 0.22f);
 		PlayCue(CueSmallBoom, FMath::FRandRange(0.9f, 1.1f));
@@ -830,13 +693,21 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 		return;
 	}
 	WorldTime += Dt;
+	Score.Tick(Dt);
+	NoticeTime = FMath::Max(0.f, NoticeTime - Dt);
+	IncomingTime = FMath::Max(0.f, IncomingTime - Dt);
 	const double ShipS = Ship->S;
 	const FVector2D ShipOff = Ship->Off;
 
 	// 1) Spawns
 	for (FFlightSpawn& Sp : Schedule)
 	{
-		if (!Sp.bDone && ShipS >= Sp.TriggerS)
+		if (!Score.bFinished && !Sp.bDone && !Sp.bAnnounced && Sp.Kind == 0 && Sp.TriggerS > ShipS && Sp.TriggerS - ShipS < 5500)
+		{
+			Sp.bAnnounced = true; IncomingTime = 2.f;
+			IncomingFormation = Sp.Pattern == 3 ? TEXT("左右から編隊接近") : Sp.Pattern == 4 ? TEXT("上空から降下編隊") : Sp.Pattern == 2 ? TEXT("横切る編隊に注意") : TEXT("前方に敵編隊");
+		}
+		if (!Score.bFinished && !Sp.bDone && ShipS >= Sp.TriggerS)
 		{
 			Sp.bDone = true;
 			for (int32 i = 0; i < Sp.Count; ++i)
@@ -847,6 +718,21 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 	}
 
 	// 2) Enemies
+	// Aim is locked during a readable charge-up; moving after the warning dodges it.
+	auto ChargeAttack = [&](FFlightEnemy& E, double Gap) -> bool
+	{
+		if (Gap < 2000 || Gap > 13000) { E.bCharging = false; return false; }
+		if (E.FireTimer <= 0.9f && !E.bCharging)
+		{
+			E.bCharging = true; E.FireTimer = 0.9f;
+			E.LockedTarget = ShipOff + Ship->Vel * 0.12;
+			E.LockedTarget.X = FMath::Clamp(E.LockedTarget.X, -double(LimitX), double(LimitX));
+			E.LockedTarget.Y = FMath::Clamp(E.LockedTarget.Y, -double(LimitZ), double(LimitZ));
+			PlayCue(FlightCue::Charge, E.Kind == 2 ? 0.8f : 1.f, 0.18f);
+		}
+		if (E.bCharging && E.FireTimer <= 0) { E.bCharging = false; return true; }
+		return false;
+	};
 	for (FFlightEnemy& E : Enemies)
 	{
 		if (!E.bActive)
@@ -859,10 +745,10 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 		if (E.Kind == 1)
 		{
 			E.FireTimer -= Dt;
-			if (Gap > 2000.0 && Gap < 8500.0 && E.FireTimer <= 0.f)
+			if (ChargeAttack(E, Gap))
 			{
 				E.FireTimer = 1.5f;
-				FireBullet(E, ShipOff + Ship->Vel * 0.4f, ShipS, 0.f);
+				FireBullet(E, E.LockedTarget, ShipS, 0.f);
 			}
 		}
 		else
@@ -879,6 +765,14 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 				E.Off = E.Anchor + FVector2D(FMath::Sin(E.Age * 1.3f + E.Anchor.X) * 650.f, FMath::Cos(E.Age * 0.9f) * 320.f);
 				break;
 			}
+			case 3:
+				E.Off = FVector2D(E.Anchor.X * FMath::Cos(FMath::Min(E.Age * 0.5f, PI)), E.Anchor.Y + FMath::Sin(E.Age * 1.1f) * 130);
+				if (E.Age > 6.f) { E.SpeedS = ShipSpeed * 1.65; }
+				break;
+			case 4:
+				E.Off = FVector2D(E.Anchor.X + FMath::Sin(E.Age * 0.9f) * 160, FMath::Lerp(650.f, -500.f, FMath::SmoothStep(0.f, 1.f, E.Age / 4.5f)));
+				if (E.Age > 5.f) { E.SpeedS = ShipSpeed * 1.7; }
+				break;
 			default:
 				E.Anchor += E.Vel * Dt;
 				E.Off = E.Anchor + FVector2D(0.f, FMath::Sin(E.Age * 3.f) * 90.f);
@@ -887,10 +781,10 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 			E.Off.Y = FMath::Clamp(E.Off.Y, -LimitZ, LimitZ);
 			E.S += E.SpeedS * Dt;
 			E.FireTimer -= Dt;
-			if (E.FireTimer <= 0.f && Gap > 2500.0)
+			if (ChargeAttack(E, Gap))
 			{
 				E.FireTimer = E.Pattern == 1 ? 1.9f : 99.f;
-				FireBullet(E, ShipOff + Ship->Vel * 0.5f, ShipS, 0.f);
+				FireBullet(E, E.LockedTarget, ShipS, 0.f);
 			}
 		}
 		const bool bGone = Gap < -2000.0 || Gap > 16000.0 ||
@@ -904,7 +798,7 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 		const double PrevGap = E.S - E.SpeedS * Dt - LastShipS;
 		if (PrevGap > 0.0 && Gap <= 0.0 && FVector2D::Distance(E.Off, ShipOff) < 300.f)
 		{
-			KillEnemy(E, true);
+			KillEnemy(E, false);
 			Ship->ApplyDamage(20.f, Path.Frame(E.S).ToWorld(0, E.Off.X, E.Off.Y));
 		}
 	}
@@ -922,7 +816,7 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 		Boss.Off = FVector2D(FMath::Sin(Boss.Age * (bPhase2 ? 0.62f : 0.45f)) * 900.f,
 			FMath::Sin(Boss.Age * 0.7f) * 330.f + 120.f);
 		Boss.FireTimer -= Dt;
-		if (Boss.FireTimer <= 0.f && Gap < 9000.0)
+		if (ChargeAttack(Boss, Gap))
 		{
 			Boss.FireTimer = bPhase2 ? 1.45f : 2.1f;
 			const int32 Mode = Boss.Pattern++ % 3;
@@ -930,14 +824,14 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 			{
 				for (int32 k = -3; k <= 3; ++k)
 				{
-					FireBullet(Boss, ShipOff, ShipS, 0.f, FVector2D(k * 420.f, 0.f));
+					FireBullet(Boss, Boss.LockedTarget, ShipS, 0.f, FVector2D(k * 420.f, 0.f));
 				}
 			}
 			else if (Mode == 1)
 			{
 				for (int32 k = 0; k < (bPhase2 ? 5 : 3); ++k)
 				{
-					FireBullet(Boss, ShipOff + Ship->Vel * 0.6f, ShipS, 0.f, FVector2D(k * 60.f - 120.f, k * 40.f - 80.f));
+					FireBullet(Boss, Boss.LockedTarget, ShipS, 0.f, FVector2D(k * 60.f - 120.f, k * 40.f - 80.f));
 				}
 			}
 			else
@@ -945,7 +839,7 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 				for (int32 k = 0; k < 10; ++k)
 				{
 					const float A = 2.f * PI * k / 10.f + Boss.Age;
-					FireBullet(Boss, ShipOff, ShipS, 0.f, FVector2D(FMath::Cos(A) * 950.f, FMath::Sin(A) * 520.f));
+					FireBullet(Boss, Boss.LockedTarget, ShipS, 0.f, FVector2D(FMath::Cos(A) * 950.f, FMath::Sin(A) * 520.f));
 				}
 			}
 		}
@@ -1028,6 +922,7 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 				bBossDefeated = true;
 				BossDefeatTime = WorldTime;
 				++Kills;
+				AwardNotice(Score.Award(5000, false), TEXT("大型機撃破"));
 				const FVector Center = Path.Frame(Boss.S).ToWorld(0, Boss.Off.X, Boss.Off.Y);
 				SpawnExplosion(Center, 4.f);
 				EmitDebris(Center, 48, 3200.f, 0.45f);
@@ -1050,11 +945,17 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 		B.Off += B.Vel * Dt;
 		B.Life -= Dt;
 		const double Gap = B.S - ShipS;
-		if (PrevGap > 0.0 && Gap <= 0.0 && FVector2D::Distance(B.Off, ShipOff) < 150.f)
+		const bool bCrossed = PrevGap > 0.0 && Gap <= 0.0;
+		const double Distance = FVector2D::Distance(B.Off, ShipOff);
+		if (bCrossed && Distance < 150.f)
 		{
 			B.bActive = false;
 			Ship->ApplyDamage(12.f, Path.Frame(B.S).ToWorld(0, B.Off.X, B.Off.Y));
 			continue;
+		}
+		if (bCrossed && Distance >= 180 && Distance < 340 && !Ship->IsInvulnerable())
+		{
+			AwardNotice(Score.Graze(), TEXT("かすめ回避"));
 		}
 		if (B.Life <= 0.f || Gap < -2500.0)
 		{
@@ -1076,6 +977,7 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 			Ring.Flash = 1.f;
 			++RingsPassed;
 			++RingStreak;
+			AwardNotice(Score.Award(100 + (RingStreak % 5 == 0 ? 200 : 0), true), TEXT("リング"));
 			RingPulse = 1.f;
 			const bool bBonus = RingStreak % 5 == 0;
 			PlayCue(CueRing, 1.f + FMath::Min(RingStreak, 10) * 0.06f);
@@ -1101,6 +1003,11 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 		}
 	}
 
+	if (Ship->State == EFlightState::Playing && !Ship->IsInvulnerable())
+	{
+		const int32 Points = Score.CloseFlight(ShipS, Dt, Proximity(ShipS, ShipOff) > 0.55f);
+		if (Points > 0) { AwardNotice(Points, TEXT("低空・接近飛行")); }
+	}
 	LastShipS = ShipS;
 	UpdateEnemyTransforms();
 	UpdateShotInstances(Bolts, Shots, FVector(2.4f, 0.14f, 0.14f), true);
@@ -1110,6 +1017,7 @@ void AFlightCourse::Simulate(float Dt, AFlightPawn* Ship)
 void AFlightCourse::UpdateEnemyTransforms()
 {
 	const double ShipS = LastShipS;
+	Threats.Reset();
 	auto Pose = [this, ShipS](FFlightEnemy& E, float Scale)
 	{
 		const FPathFrame Fr = Path.Frame(E.S);
@@ -1123,7 +1031,10 @@ void AFlightCourse::UpdateEnemyTransforms()
 		}
 		E.Mesh->SetWorldTransform(FTransform(Q, Fr.ToWorld(0, E.Off.X, E.Off.Y), FVector(Scale)));
 		const FLinearColor Base = E.Kind == 2 ? FLinearColor(1.f, 0.3f, 0.12f) * 8.f : FLinearColor(1.f, 0.2f, 0.35f) * 6.f;
-		E.GlowMID->SetVectorParameterValue(TEXT("Color"), FMath::Lerp(Base, FLinearColor(10.f, 10.f, 10.f), E.HitFlash));
+		const float Charge = E.bCharging ? FMath::Clamp(1.f - E.FireTimer / 0.9f, 0.f, 1.f) : 0.f;
+		const FLinearColor Charging = FMath::Lerp(Base, FLinearColor(12.f, 5.f, 0.4f), Charge);
+		E.GlowMID->SetVectorParameterValue(TEXT("Color"), FMath::Lerp(Charging, FLinearColor(10.f, 10.f, 10.f), E.HitFlash));
+		if (E.bCharging) { Threats.Add({ E.S, E.Off, E.LockedTarget, Charge }); }
 		E.Mesh->SetVisibility(E.S - ShipS < 14000.0);
 	};
 	for (FFlightEnemy& E : Enemies)
@@ -1280,21 +1191,21 @@ void AFlightCourse::TickEffects(float Dt)
 			continue;
 		}
 		Ring.Flash = FMath::Max(Ring.Flash - Dt * 2.2f, 0.f);
-		FLinearColor C = FLinearColor(0.25f, 0.85f, 1.f) * 2.f;
+		FLinearColor C = FLinearColor(0.35f, 0.94f, 0.75f) * FMath::Lerp(1.3f, 0.4f, float(FMath::SmoothStep(8000.0, 28000.0, Gap)));
 		if (Ring.bResolved && !Ring.bPassed)
 		{
-			C *= 0.18f;
+			C *= 0.08f;
 		}
 		else if (Ring.bPassed)
 		{
-			C = FMath::Lerp(C * 0.35f, FLinearColor(1.f, 0.95f, 0.75f) * 9.f, Ring.Flash);
+			C = FMath::Lerp(C * 0.06f, FLinearColor(0.8f, 1.f, 0.93f) * 2.2f, Ring.Flash);
 		}
 		else
 		{
-			C *= 0.85f + 0.15f * FMath::Sin(WorldTime * 4.f + static_cast<float>(Ring.S) * 0.001f);
+			C *= 0.98f + 0.02f * FMath::Sin(WorldTime * 2.f + static_cast<float>(Ring.S) * 0.001f);
 		}
 		Ring.MID->SetVectorParameterValue(TEXT("Color"), C);
-		Ring.Mesh->SetWorldScale3D(FVector(1.f + 0.3f * (1.f - Ring.Flash) * (Ring.bPassed ? 1.f : 0.f)));
+		Ring.Mesh->SetWorldScale3D(FVector(1.f + 0.16f * (1.f - Ring.Flash) * (Ring.bPassed ? 1.f : 0.f)));
 	}
 
 	if (AFlightPawn* Ship = Cast<AFlightPawn>(UGameplayStatics::GetPlayerPawn(this, 0)))
@@ -1331,7 +1242,7 @@ void AFlightCourse::UpdateSeaDetail(const FVector& Cam)
 			FRandomStream R(CX * 73856093 ^ CY * 19349663);
 			const FVector Pos((CX + R.FRand()) * Cell, (CY + R.FRand()) * Cell, 3.f);
 			Xf[j * Grid + i] = FTransform(FRotator(0.f, R.FRandRange(-20.f, 20.f), 0.f), Pos,
-				FVector(R.FRandRange(1.5f, 4.5f), R.FRandRange(0.2f, 0.5f), 0.02f));
+				FVector(R.FRandRange(2.5f, 7.f), R.FRandRange(0.6f, 1.4f), 1.f));
 		}
 	}
 	Whitecaps->BatchUpdateInstancesTransforms(0, Xf, true, true, true);
@@ -1339,6 +1250,10 @@ void AFlightCourse::UpdateSeaDetail(const FVector& Cam)
 
 void AFlightCourse::ResetFrom(double S)
 {
+	Score.Restore(CheckpointScore);
+	Kills = CheckpointKills;
+	RingsPassed = CheckpointRings;
+	Threats.Reset(); NoticeTime = IncomingTime = 0;
 	for (FFlightEnemy& E : Enemies)
 	{
 		E.bActive = false;
@@ -1353,15 +1268,12 @@ void AFlightCourse::ResetFrom(double S)
 	{
 		// Waves before the checkpoint stay spent; everything after replays.
 		Sp.bDone = Sp.TriggerS < S - 1.0;
+		Sp.bAnnounced = Sp.bDone;
 	}
 	for (FFlightRing& Ring : Rings)
 	{
 		if (Ring.S >= S)
 		{
-			if (Ring.bPassed)
-			{
-				--RingsPassed;
-			}
 			Ring.bPassed = Ring.bResolved = false;
 			Ring.Flash = 0.f;
 		}
@@ -1393,6 +1305,8 @@ void AFlightCourse::PlayCue(uint8 Cue, float Pitch, float Volume)
 	case CueHeal: Duration = 0.55f; break;
 	case CueDamage: Duration = 0.25f; break;
 	case CueWarning: Duration = 1.6f; break;
+	case FlightCue::Charge: Duration = 0.18f; break;
+	case FlightCue::Dodge: Duration = 0.22f; break;
 	default: Duration = 0.12f; break;
 	}
 	const int32 Count = FMath::CeilToInt(Duration * SampleRate);
@@ -1439,6 +1353,14 @@ void AFlightCourse::PlayCue(uint8 Cue, float Pitch, float Volume)
 		case CueDamage:
 			PhaseA += 2.0 * PI * (180.0 - 90.0 * P) / SampleRate;
 			Sample = (0.6f * FMath::Sin(PhaseA) + 0.4f * Noise) * FMath::Exp(-T * 12.f);
+			break;
+		case FlightCue::Charge:
+			PhaseA += 2.0 * PI * (620 + 900 * P) * Pitch / SampleRate;
+			Sample = FMath::Sin(PhaseA) * FMath::Sin(P * PI) * 0.45f;
+			break;
+		case FlightCue::Dodge:
+			PhaseA += 2.0 * PI * (180 - 100 * P) / SampleRate;
+			Sample = (Noise * 0.7f + FMath::Sin(PhaseA) * 0.12f) * FMath::Sin(P * PI);
 			break;
 		case CueWarning:
 		{

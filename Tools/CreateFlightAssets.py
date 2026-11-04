@@ -11,6 +11,8 @@ Creates
 Everything visible in those levels is spawned in C++.
 """
 import unreal
+import runpy
+from pathlib import Path
 
 assets = unreal.EditorAssetLibrary
 tools = unreal.AssetToolsHelpers.get_asset_tools()
@@ -72,6 +74,7 @@ def level(name):
 
 surface()
 additive()
+runpy.run_path(str(Path(__file__).with_name("CreateFlightScenery.py")))
 level("Title_Select")
 level("Flight_Course")
 unreal.log("CreateFlightAssets: done")

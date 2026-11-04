@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "FlightScore.h"
 #include "FlightCourse.generated.h"
 
 class AFlightPawn;
@@ -53,7 +54,7 @@ private:
 
 namespace FlightCue
 {
-	enum : uint8 { Laser, SmallBoom, BigBoom, Ring, Heal, Damage, Warning, EnemyShot };
+	enum : uint8 { Laser, SmallBoom, BigBoom, Ring, Heal, Damage, Warning, EnemyShot, Charge, Dodge };
 }
 
 UENUM()
@@ -80,6 +81,8 @@ struct FFlightEnemy
 	float Age = 0.f;
 	float FireTimer = 0.f;
 	float HitFlash = 0.f;
+	bool bCharging = false;
+	FVector2D LockedTarget = FVector2D::ZeroVector;
 	FVector2D Anchor = FVector2D::ZeroVector;
 	TObjectPtr<UProceduralMeshComponent> Mesh = nullptr;
 	TObjectPtr<UMaterialInstanceDynamic> GlowMID = nullptr;
@@ -114,6 +117,14 @@ struct FFlightSpawn
 	int32 Count = 1;
 	FVector2D Off = FVector2D::ZeroVector;
 	bool bDone = false;
+	bool bAnnounced = false;
+};
+
+struct FFlightThreat
+{
+	double S = 0;
+	FVector2D Off, Target;
+	float Charge01 = 0;
 };
 
 struct FFlightHazard
@@ -181,6 +192,19 @@ public:
 
 	/** Synthesised cue (see FlightCue). */
 	void PlayCue(uint8 Cue, float Pitch = 1.f, float Volume = 1.f);
+	float Proximity(double S, const FVector2D& Off) const;
+	FVector2D CameraClearance(double S, const FVector2D& Off) const;
+	void CommitCheckpoint();
+	void CompleteRun(bool bPreview);
+	void NotifyDamage();
+	void AwardNotice(int32 Points, const FString& Reason);
+	FFlightScore Score;
+	int32 BestScore = 0;
+	bool bNewBest = false;
+	bool bRecordSaveFailed = false;
+	FString ScoreNotice, IncomingFormation;
+	float NoticeTime = 0, IncomingTime = 0;
+	TArray<FFlightThreat> Threats;
 
 	// HUD data
 	int32 RingsPassed = 0;
@@ -205,6 +229,7 @@ public:
 private:
 	void BuildEnvironment();
 	void BuildScenery();
+	void BuildLandmarks();
 	void BuildSchedule();
 	void BuildRings();
 	void BuildPools();
@@ -219,8 +244,6 @@ private:
 	void UpdateSeaDetail(const FVector& CameraPos);
 	UPROPERTY() TObjectPtr<USceneComponent> Root;
 	UPROPERTY() TObjectPtr<UStaticMeshComponent> Sea;
-	UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> Rocks;
-	UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> RockSpires;
 	UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> Clouds;
 	UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> BaseHull;
 	UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> BaseDecks;
@@ -252,4 +275,6 @@ private:
 	FVector LastCameraPos = FVector::ZeroVector;
 	float LaserCueTimer = 0.f;
 	float WorldTime = 0.f;
+	FFlightScore CheckpointScore;
+	int32 CheckpointKills = 0, CheckpointRings = 0;
 };

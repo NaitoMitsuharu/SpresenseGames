@@ -60,6 +60,7 @@ struct FFlightMesh
 /** Runtime material helpers (assets authored by Tools/CreateFlightAssets.py). */
 namespace FlightMaterials
 {
+	UMaterialInstanceDynamic* Structure(UObject* Outer, const FLinearColor& BaseColor, float Metallic = 0.5f, float Roughness = 0.55f);
 	/** Lit opaque surface. Metallic/Roughness distinguish paint, metal and glass. */
 	UMaterialInstanceDynamic* Surface(UObject* Outer, const FLinearColor& BaseColor, float Metallic,
 		float Roughness, float Specular = 0.5f, const FLinearColor& Emissive = FLinearColor::Black);

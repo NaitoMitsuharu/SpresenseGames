@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "FlightModels.h"
+#include "FlightScore.h"
 #include "FlightPawn.generated.h"
 
 class AFlightCourse;
@@ -10,6 +11,8 @@ class UCameraComponent;
 class UInstancedStaticMeshComponent;
 class UMaterialInstanceDynamic;
 class UPointLightComponent;
+class UAudioComponent;
+class USoundWaveProcedural;
 
 UENUM()
 enum class EFlightState : uint8
@@ -40,9 +43,9 @@ public:
 
 	// ---- tuning ----
 	/** Tilt (deg) that commands full lateral speed. */
-	UPROPERTY(EditAnywhere, Category = "Flight") float MaxTiltDeg = 26.f;
-	UPROPERTY(EditAnywhere, Category = "Flight") float DeadZoneDeg = 2.5f;
-	UPROPERTY(EditAnywhere, Category = "Flight") float LateralSpeed = 2600.f;
+	UPROPERTY(EditAnywhere, Category = "Flight") float MaxTiltDeg = 24.f;
+	UPROPERTY(EditAnywhere, Category = "Flight") float DeadZoneDeg = 1.8f;
+	UPROPERTY(EditAnywhere, Category = "Flight") float LateralSpeed = 2800.f;
 	UPROPERTY(EditAnywhere, Category = "Flight") float VerticalSpeed = 1900.f;
 	/** Tilting the far edge down dives (flight-stick convention). */
 	UPROPERTY(EditAnywhere, Category = "Flight") bool bInvertPitch = false;
@@ -51,6 +54,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Flight") float FireInterval = 0.11f;
 	/** Distance of the far reticle; the twin guns converge here. */
 	UPROPERTY(EditAnywhere, Category = "Flight") float AimDistance = 6000.f;
+	UPROPERTY(EditAnywhere, Category = "Flight") float AccelerationResponse = 12.f;
+	UPROPERTY(EditAnywhere, Category = "Flight") float BrakingResponse = 17.f;
+	UPROPERTY(EditAnywhere, Category = "Flight") bool bGestureDodge = true;
 
 	// ---- state read by the course and HUD ----
 	EFlightState State = EFlightState::AwaitNeutral;
@@ -68,6 +74,16 @@ public:
 	float BannerTime = 0.f;
 	int32 CheckpointIndex = 0;
 	bool bInputLost = false;
+	float NearSurface = 0.f;
+	static constexpr float DodgeDuration = 0.26f;
+	static constexpr float DodgeRecharge = 1.6f;
+	float DodgeTime = 0.f, DodgeCooldown = 0.f;
+	int32 DodgeDirection = 1;
+	float DodgePulse() const { return DodgeTime > 0 ? FMath::Sin(PI * DodgeTime / DodgeDuration) : 0.f; }
+	float SteeringAmount() const { return CommandX; }
+	bool RequestDodge(int32 Direction);
+	bool CanDodge(int32 Direction) const;
+	void ToggleGestureDodge();
 
 	/** Ship rotation relative to the path frame (deg): applied attitude. */
 	float ShipRoll = 0.f;
@@ -107,12 +123,18 @@ private:
 	void UpdateShip(float Dt);
 	void UpdateCamera(float Dt, bool bSnap);
 	void UpdateTrail(float Dt);
+	void UpdateWind(float Dt);
+	void UpdateDodge(float Dt);
 	void Respawn();
 	void BeginCountdown(float Seconds);
 	void Vibrate(float Intensity, float Duration);
 	/** Dev-only (-FlightAutoShot): fly a scripted tour and save screenshots. */
 	void TickAutoShot(float Dt);
+	void TickUpgradeReview(float Dt);
+	void TickHudReview(float Dt);
 	bool bAutoShot = false;
+	bool bUpgradeReview = false;
+	bool bHudReview = false;
 	float AutoShotTime = 0.f;
 	int32 AutoShotStep = 0;
 	float AutoRoll = 0.f;
@@ -146,4 +168,10 @@ private:
 	FVector LastTipR = FVector::ZeroVector;
 	bool bHaveLastTips = false;
 	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> TrailMID;
+	UPROPERTY() TObjectPtr<UAudioComponent> WindAudio;
+	UPROPERTY() TObjectPtr<USoundWaveProcedural> WindWave;
+	TArray<uint8> WindBuffer;
+	FlightHandling::FFlickGesture Flick;
+	float DodgeTravel = 640.f;
+	int32 LastSteerSide = 1;
 };

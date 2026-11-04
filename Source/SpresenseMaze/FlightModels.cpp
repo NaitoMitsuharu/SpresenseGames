@@ -286,6 +286,16 @@ void FFlightMesh::Upload(UProceduralMeshComponent* PMC, int32 Index, UMaterialIn
 
 namespace FlightMaterials
 {
+	UMaterialInstanceDynamic* Structure(UObject* Outer, const FLinearColor& BaseColor, float Metallic, float Roughness)
+	{
+		UMaterialInterface* Parent = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Flight/M_FlightStructure.M_FlightStructure"));
+		if (!Parent) { return Surface(Outer, BaseColor, Metallic, Roughness); }
+		UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(Parent, Outer);
+		MID->SetVectorParameterValue(TEXT("BaseColor"), BaseColor);
+		MID->SetScalarParameterValue(TEXT("Metallic"), Metallic);
+		MID->SetScalarParameterValue(TEXT("Roughness"), Roughness);
+		return MID;
+	}
 	UMaterialInstanceDynamic* Surface(UObject* Outer, const FLinearColor& BaseColor, float Metallic,
 		float Roughness, float Specular, const FLinearColor& Emissive)
 	{
@@ -651,8 +661,33 @@ namespace FlightModels
 		static FFlightMesh M = []
 		{
 			FFlightMesh R;
-			R.AddTorus(FVector::ZeroVector, 440.f, 22.f, 56, 10);
-			R.AddTorus(FVector::ZeroVector, 395.f, 5.f, 56, 6);
+			// Four slim arcs leave breathing room around the actual pass aperture.
+			constexpr int32 Segments = 16, Sides = 6;
+			for (int32 Q = 0; Q < 4; ++Q)
+			{
+				const int32 First = R.Verts.Num();
+				for (int32 I = 0; I <= Segments; ++I)
+				{
+					const double A = FMath::DegreesToRadians(Q * 90.0 + 13.0 + I * 64.0 / Segments);
+					for (int32 J = 0; J < Sides; ++J)
+					{
+						const double B = J * 2 * PI / Sides, Radius = 440 + 8.5 * FMath::Sin(B);
+						const FVector N(FMath::Cos(B),FMath::Sin(B)*FMath::Cos(A),FMath::Sin(B)*FMath::Sin(A));
+						R.AddVert(FVector(8.5*FMath::Cos(B),Radius*FMath::Cos(A),Radius*FMath::Sin(A)),N,FVector2D(I/double(Segments),J/double(Sides)));
+					}
+				}
+				for (int32 I = 0; I < Segments; ++I)
+				{
+					for (int32 J = 0; J < Sides; ++J)
+					{
+						const int32 A=First+I*Sides+J,B=First+I*Sides+(J+1)%Sides;
+						const FVector Hint=R.Normals[A]+R.Normals[B];
+						R.AddTri(A,B,B+Sides,Hint); R.AddTri(A,B+Sides,A+Sides,Hint);
+					}
+				}
+				const double Angle = Q*PI/2;
+				R.AddBox(FTransform(FRotator(0,0,Q*90),FVector(0,472*FMath::Cos(Angle),472*FMath::Sin(Angle))),FVector(3,5,16));
+			}
 			return R;
 		}();
 		return M;

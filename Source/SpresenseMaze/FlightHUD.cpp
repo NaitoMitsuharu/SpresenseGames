@@ -1,44 +1,33 @@
-﻿#include "FlightHUD.h"
-
+#include "FlightHUD.h"
 #include "AttitudeInputSubsystem.h"
 #include "Engine/Canvas.h"
 #include "FlightCourse.h"
 #include "FlightPawn.h"
 
-namespace
-{
-	const FLinearColor White(1.f, 1.f, 1.f, 0.95f);
-	const FLinearColor Dimmed(1.f, 1.f, 1.f, 0.65f);
-	const FLinearColor Danger(1.f, 0.3f, 0.25f);
-}
-
 void AFlightHUD::DrawHUD()
 {
 	Super::DrawHUD();
 	AFlightPawn* Ship = Cast<AFlightPawn>(GetOwningPawn());
-	if (!Canvas || !Ship || !Ship->GetCourse())
-	{
-		return;
-	}
+	if (!Canvas || !Ship || !Ship->GetCourse()) { return; }
 	AFlightCourse* Course = Ship->GetCourse();
-
-	const bool bLive = Ship->State == EFlightState::Playing || Ship->State == EFlightState::Countdown;
-	if (bLive)
+	const float Dt = FMath::Min(GetWorld()->GetDeltaSeconds(), 0.05f);
+	UiTime += Dt;
+	if (!bUiInitialised) { ShownShield = Ship->Shield; ShownScore = Course->Score.Total(); bUiInitialised = true; }
+	ShownShield = FMath::FInterpTo(ShownShield, Ship->Shield, Dt, 4.f);
+	ShownScore = FMath::FInterpTo(ShownScore, float(Course->Score.Total()), Dt, 15.f);
+	FadeEdges();
+	const bool Live = Ship->State == EFlightState::Playing || Ship->State == EFlightState::Countdown;
+	if (Live)
 	{
-		DrawReticles(Ship);
+		DrawDamageEdges(Ship); DrawScore(Course); DrawRings(Course); DrawShield(Ship);
+		DrawAttitude(); DrawBoss(Course); DrawBanner(Ship); DrawReticles(Ship); DrawDodge(Ship);
+		if (Ship->State == EFlightState::Playing) { DrawThreats(Ship); }
+		const float X = W-104*S, Y = 32*S, Size = 68*S;
+		RoundRect(X,Y,Size,Size,Size*0.5f,Ink.CopyWithNewOpacity(0.55f));
+		RoundRect(X+25*S,Y+23*S,5*S,22*S,2*S,Paper);
+		RoundRect(X+38*S,Y+23*S,5*S,22*S,2*S,Paper);
+		AddHitBox(FVector2D(X,Y),FVector2D(Size,Size),TEXT("Pause"),true);
 	}
-	DrawDamageEdges(Ship);
-	DrawShield(Ship);
-	DrawRings(Course);
-	DrawInputChip();
-	DrawAttitude();
-	DrawBoss(Course);
-	DrawBanner(Ship);
-	if (bLive)
-	{
-		Button(TEXT("Pause"), TEXT("一時停止"), W - 24.f * S - 170.f * S, 24.f * S, 170.f * S, 62.f * S, false);
-	}
-
 	switch (Ship->State)
 	{
 	case EFlightState::AwaitNeutral: DrawAwaitNeutral(Ship); break;
@@ -50,270 +39,209 @@ void AFlightHUD::DrawHUD()
 	}
 }
 
-void AFlightHUD::NotifyHitBoxClick(FName BoxName)
+void AFlightHUD::NotifyHitBoxClick(FName Id)
 {
-	Super::NotifyHitBoxClick(BoxName);
+	Super::NotifyHitBoxClick(Id);
 	AFlightPawn* Ship = Cast<AFlightPawn>(GetOwningPawn());
-	if (!Ship)
-	{
-		return;
-	}
-	if (BoxName == TEXT("Reset")) { Ship->RequestNeutralReset(); }
-	else if (BoxName == TEXT("Pause") || BoxName == TEXT("Resume")) { Ship->TogglePause(); }
-	else if (BoxName == TEXT("Top")) { Ship->ReturnToTop(); }
-	else if (BoxName == TEXT("Retry")) { Ship->RestartCourse(); }
+	if (!Ship) { return; }
+	if (Id == TEXT("Reset")) { Ship->RequestNeutralReset(); }
+	else if (Id == TEXT("Pause") || Id == TEXT("Resume")) { Ship->TogglePause(); }
+	else if (Id == TEXT("Top")) { Ship->ReturnToTop(); }
+	else if (Id == TEXT("Retry")) { Ship->RestartCourse(); }
+	else if (Id == TEXT("DodgeLeft")) { Ship->RequestDodge(-1); }
+	else if (Id == TEXT("DodgeRight")) { Ship->RequestDodge(1); }
+	else if (Id == TEXT("Gesture")) { Ship->ToggleGestureDodge(); }
 }
 
 void AFlightHUD::Dim(float Alpha)
 {
-	DrawRect(FLinearColor(0.01f, 0.02f, 0.04f, Alpha), 0.f, 0.f, W, H);
+	DrawRect(FLinearColor(0.012f,0.022f,0.035f,Alpha),0,0,W,H);
 }
 
 void AFlightHUD::DrawShield(AFlightPawn* Ship)
 {
-	const float X = SafeLeft(), Y = 24.f * S, PW = 380.f * S, PH = 74.f * S;
-	Panel(X, Y, PW, PH);
-	Text(TEXT("シールド"), Dimmed, X + 16.f * S, Y + 8.f * S, 17.f);
-	const float Frac = Ship->Shield / AFlightPawn::MaxShield;
-	const FLinearColor Fill = Frac > 0.5f ? Cyan : (Frac > 0.25f ? Accent : Danger);
-	const int32 Segs = 20;
-	const float BX = X + 16.f * S, BY = Y + 38.f * S, BW = PW - 32.f * S, BH = 22.f * S;
-	const float SegW = BW / Segs;
-	for (int32 i = 0; i < Segs; ++i)
-	{
-		const bool bOn = (i + 0.5f) / Segs <= Frac;
-		FLinearColor C = bOn ? Fill : FLinearColor(1.f, 1.f, 1.f, 0.1f);
-		if (bOn && Ship->HealFlash > 0.f)
-		{
-			C = FMath::Lerp(C, FLinearColor::White, Ship->HealFlash * 0.7f);
-		}
-		DrawRect(C, BX + i * SegW + 1.f, BY, SegW - 3.f * S, BH);
-	}
+	const float X = SafeLeft(), Y = H-126*S, BW = 294*S;
+	const float Health = FMath::Clamp(Ship->Shield / AFlightPawn::MaxShield,0.f,1.f);
+	const FLinearColor Color = Health <= 0.25f ? Coral : Mint;
+	// A small shield outline; a continuous fill with delayed damage makes loss legible.
+	const FVector2D P[] = { {X,Y+2*S},{X+12*S,Y-3*S},{X+24*S,Y+2*S},{X+22*S,Y+17*S},{X+12*S,Y+26*S},{X+2*S,Y+17*S} };
+	for (int32 I=0; I<6; ++I) { DrawLine(P[I].X,P[I].Y,P[(I+1)%6].X,P[(I+1)%6].Y,Color,1.8f*S); }
+	Label(Health <= 0.25f ? TEXT("シールド低下") : TEXT("シールド"),X+38*S,Y,17,Muted);
+	const FString Value = FString::FromInt(FMath::CeilToInt(Ship->Shield));
+	Label(Value,X+BW-Measure(Value,25,true).X,Y-5*S,25,Paper,true);
+	RoundRect(X,Y+42*S,BW,7*S,3.5f*S,Paper.CopyWithNewOpacity(0.16f));
+	RoundRect(X,Y+42*S,BW*ShownShield/AFlightPawn::MaxShield,7*S,3.5f*S,Color.CopyWithNewOpacity(0.32f));
+	RoundRect(X,Y+42*S,BW*Health,7*S,3.5f*S,FMath::Lerp(Color,Paper,Ship->HealFlash*0.7f));
 }
 
 void AFlightHUD::DrawRings(AFlightCourse* Course)
 {
-	const float CX = W * 0.5f;
-	const float Y = 24.f * S;
-	const FString Count = FString::Printf(TEXT("リング  %d / %d"), Course->RingsPassed, Course->RingsTotal);
-	const FVector2D TS = TextSize(Count, 26.f);
-	const float PW = TS.X + 60.f * S;
-	Panel(CX - PW * 0.5f, Y, PW, 62.f * S);
-	const float Pop = 1.f + 0.25f * Course->RingPulse;
-	Text(Count, FMath::Lerp(White, FLinearColor(0.7f, 1.f, 1.f), Course->RingPulse), CX - TS.X * 0.5f, Y + 14.f * S, 26.f * Pop);
+	const float X = W-320*S, Y = 36*S;
+	// Airy, split-ring symbol beside an unpadded count.
+	Arc(X+18*S,Y+28*S,13*S,12,78,Mint,2*S);
+	Arc(X+18*S,Y+28*S,13*S,102,168,Mint,2*S);
+	Arc(X+18*S,Y+28*S,13*S,192,258,Mint,2*S);
+	Arc(X+18*S,Y+28*S,13*S,282,348,Mint,2*S);
+	Label(TEXT("リング"),X+48*S,Y,16,Muted);
+	const FString Count = FString::FromInt(Course->RingsPassed);
+	const float Size = 33.f + Course->RingPulse * 2.f;
+	Label(Count,X+48*S,Y+23*S,Size,Paper,true);
+	Label(FString::Printf(TEXT("/ %d"),Course->RingsTotal),X+48*S+Measure(Count,Size,true).X+9*S,Y+35*S,18,Muted);
 	if (Course->RingStreak >= 2)
 	{
-		const FString Streak = FString::Printf(TEXT("連続 %d"), Course->RingStreak);
-		TextCentered(Streak, Cyan, CX, Y + 70.f * S, 20.f);
+		Label(FString::Printf(TEXT("%d 連続"),Course->RingStreak),X+48*S,Y+69*S,16,Mint);
+	}
+	const AFlightPawn* Ship = Cast<AFlightPawn>(GetOwningPawn());
+	const int32 Section = int32(Course->SectionAt(Ship ? Ship->S : 0));
+	CenterLabel(AFlightCourse::SectionName(EFlightSection(Section)),W*0.5f,39*S,19,Paper,true);
+	for (int32 I=0; I<4; ++I)
+	{
+		RoundRect(W*0.5f-93*S+I*49*S,72*S,39*S,3*S,1.5f*S,I<=Section?Mint:Paper.CopyWithNewOpacity(0.2f));
 	}
 }
 
 void AFlightHUD::DrawInputChip()
 {
-	UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>();
-	if (!Attitude)
-	{
-		return;
-	}
-	const FAttitudeState& Att = Attitude->GetState();
-	const FString Label = UAttitudeInputSubsystem::SourceLabel(Att.Source);
-	const FVector2D TS = TextSize(Label, 18.f);
-	const float PW = TS.X + 56.f * S;
-	const float X = W - 24.f * S - 170.f * S - 14.f * S - PW;
-	const float Y = 24.f * S;
-	Panel(X, Y, PW, 62.f * S);
-	const bool bFresh = Att.bAvailable && Attitude->GetSampleAge() < UAttitudeInputSubsystem::SprBoxStaleSeconds;
-	const FLinearColor DotColor = Att.Source == EAttitudeSource::SprBox ? FLinearColor(0.25f, 0.95f, 0.45f)
-		: (bFresh ? Cyan : Danger);
-	Dot(X + 22.f * S, Y + 31.f * S, 6.f * S, DotColor);
-	Text(Label, White, X + 38.f * S, Y + 19.f * S, 18.f);
+	UAttitudeInputSubsystem* Input = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>();
+	if (!Input) { return; }
+	const EAttitudeSource Source = Input->GetState().Source;
+	const FString LabelText = Source == EAttitudeSource::SprBox ? TEXT("Spresenseで操作") : Source == EAttitudeSource::DeviceMotion ? TEXT("端末の傾きで操作") : Source == EAttitudeSource::Keyboard ? TEXT("キーボードで操作") : TEXT("入力の接続待ち");
+	const AFlightPawn* Ship = Cast<AFlightPawn>(GetOwningPawn());
+	const float Y = Ship && Ship->State == EFlightState::Paused ? H*0.5f+252*S : H*0.5f+218*S;
+	CenterLabel(LabelText,W*0.5f,Y,16,Muted);
 }
 
 void AFlightHUD::DrawAttitude()
 {
-	UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>();
-	if (!Attitude)
-	{
-		return;
-	}
-	const FAttitudeState& Att = Attitude->GetState();
-	const float PW = 250.f * S, PH = 150.f * S;
-	const float X = SafeLeft(), Y = H - PH - 24.f * S;
-	Panel(X, Y, PW, PH);
-
-	// Roll: an arc gauge with a needle. Pitch: a vertical bar. Both draw the
-	// exact angles the flight model applies.
-	const float CX = X + 80.f * S, CY = Y + 76.f * S, R = 46.f * S;
-	Arc(CX, CY, R, -90.f, 90.f, FLinearColor(1.f, 1.f, 1.f, 0.25f), 2.f);
-	for (const float Tick : { -60.f, -30.f, 0.f, 30.f, 60.f })
-	{
-		const float A = FMath::DegreesToRadians(Tick);
-		DrawLine(CX + FMath::Sin(A) * R * 0.85f, CY - FMath::Cos(A) * R * 0.85f,
-			CX + FMath::Sin(A) * R, CY - FMath::Cos(A) * R, FLinearColor(1.f, 1.f, 1.f, 0.4f), 2.f);
-	}
-	const float RollA = FMath::DegreesToRadians(FMath::Clamp(Att.RollDeg, -90.f, 90.f));
-	DrawLine(CX, CY, CX + FMath::Sin(RollA) * R, CY - FMath::Cos(RollA) * R, Accent, 3.f);
-	// A small level-wing symbol rotating with the roll.
-	const FVector2D Wing(FMath::Cos(RollA) * 26.f * S, FMath::Sin(RollA) * 26.f * S);
-	DrawLine(CX - Wing.X, CY + 22.f * S - Wing.Y, CX + Wing.X, CY + 22.f * S + Wing.Y, White, 3.f);
-
-	const float BX = X + 160.f * S, BY = Y + 24.f * S, BH = 100.f * S;
-	DrawRect(FLinearColor(1.f, 1.f, 1.f, 0.15f), BX, BY, 6.f * S, BH);
-	DrawRect(FLinearColor(1.f, 1.f, 1.f, 0.35f), BX - 4.f * S, BY + BH * 0.5f, 14.f * S, 1.f);
-	const float PitchT = FMath::Clamp(Att.PitchDeg / 40.f, -1.f, 1.f);
-	DrawRect(Accent, BX - 5.f * S, BY + BH * 0.5f + PitchT * BH * 0.5f - 3.f * S, 16.f * S, 6.f * S);
-
-	const FString Values = FString::Printf(TEXT("R%+4.0f  P%+4.0f  Y%+4.0f"), Att.RollDeg, Att.PitchDeg, Att.YawDeg);
-	Text(Values, Dimmed, X + 14.f * S, Y + PH - 26.f * S, 14.f);
+	const AFlightPawn* Ship = Cast<AFlightPawn>(GetOwningPawn());
+	if (!Ship) { return; }
+	const float CX = W*0.5f, Y = H-47*S;
+	RoundRect(CX-68*S,Y,136*S,3*S,1.5f*S,Paper.CopyWithNewOpacity(0.18f));
+	DrawLine(CX,Y-5*S,CX,Y+8*S,Paper.CopyWithNewOpacity(0.5f),S);
+	const float Input = FMath::Clamp(Ship->SteeringAmount(),-1.f,1.f);
+	RoundRect(CX+Input*62*S-4*S,Y-2.5f*S,8*S,8*S,4*S,Mint);
 }
 
 void AFlightHUD::DrawReticles(AFlightPawn* Ship)
 {
-	// Both reticles are points on the real line of fire (twin guns converge on
-	// the far one), projected from path space into the camera.
-	auto Screen = [&](float Dist, FVector2D& Out) -> bool
-	{
-		const FVector P = Ship->AimPoint(Dist);
-		const FVector World = Ship->GetCourse()->Path.Frame(Ship->S + P.X).ToWorld(0, P.Y, P.Z);
-		const FVector Proj = Project(World, false);
-		Out = FVector2D(Proj.X, Proj.Y);
-		return Proj.Z > 0.f;
-	};
-	FVector2D Near, Far;
-	const FLinearColor C = Cyan.CopyWithNewOpacity(0.9f);
-	if (Screen(Ship->AimDistance * 0.45f, Near))
-	{
-		const float Q = 30.f * S, L = 12.f * S;
-		for (const FVector2D Sgn : { FVector2D(-1, -1), FVector2D(1, -1), FVector2D(1, 1), FVector2D(-1, 1) })
-		{
-			const FVector2D Corner = Near + Sgn * Q;
-			DrawLine(Corner.X, Corner.Y, Corner.X - Sgn.X * L, Corner.Y, C, 2.5f);
-			DrawLine(Corner.X, Corner.Y, Corner.X, Corner.Y - Sgn.Y * L, C, 2.5f);
-		}
-	}
-	if (Screen(Ship->AimDistance, Far))
-	{
-		Ring(Far.X, Far.Y, 15.f * S, C, 2.5f);
-		DrawRect(C, Far.X - 2.f, Far.Y - 2.f, 4.f, 4.f);
-		DrawLine(Far.X - 26.f * S, Far.Y, Far.X - 18.f * S, Far.Y, C, 2.f);
-		DrawLine(Far.X + 18.f * S, Far.Y, Far.X + 26.f * S, Far.Y, C, 2.f);
-	}
+	const FVector Aim = Ship->AimPoint(Ship->AimDistance);
+	const FVector P = Project(Ship->GetCourse()->Path.Frame(Ship->S+Aim.X).ToWorld(0,Aim.Y,Aim.Z),false);
+	if (P.Z <= 0) { return; }
+	const FLinearColor Color = FMath::Lerp(Paper,Mint,Ship->DodgePulse());
+	const float Gap = 9*S, Reach = 17*S;
+	DrawLine(P.X-Reach,P.Y,P.X-Gap,P.Y,Color,1.5f*S);
+	DrawLine(P.X+Gap,P.Y,P.X+Reach,P.Y,Color,1.5f*S);
+	DrawLine(P.X,P.Y-Reach,P.X,P.Y-Gap,Color,1.5f*S);
+	DrawLine(P.X,P.Y+Gap,P.X,P.Y+Reach,Color,1.5f*S);
+	RoundRect(P.X-2*S,P.Y-2*S,4*S,4*S,2*S,Mint);
 }
 
 void AFlightHUD::DrawBoss(AFlightCourse* Course)
 {
-	if (!Course->bBossActive)
-	{
-		return;
-	}
-	const float BW = W * 0.36f, BH = 14.f * S;
-	const float X = (W - BW) * 0.5f, Y = 118.f * S;
-	TextCentered(TEXT("大型機"), Danger, W * 0.5f, Y - 30.f * S, 18.f);
-	DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.5f), X - 2.f, Y - 2.f, BW + 4.f, BH + 4.f);
-	DrawRect(Danger, X, Y, BW * Course->BossHealth01, BH);
+	if (!Course->bBossActive) { return; }
+	const float BW = 390*S, X=(W-BW)*0.5f,Y=115*S;
+	CenterLabel(TEXT("大型機"),W*0.5f,Y,15,Coral);
+	RoundRect(X,Y+29*S,BW,5*S,2.5f*S,Paper.CopyWithNewOpacity(0.15f));
+	RoundRect(X,Y+29*S,BW*Course->BossHealth01,5*S,2.5f*S,Coral);
 }
 
 void AFlightHUD::DrawBanner(AFlightPawn* Ship)
 {
-	if (Ship->BannerTime <= 0.f || Ship->Banner.IsEmpty())
-	{
-		return;
-	}
-	const float A = FMath::Clamp(Ship->BannerTime / 0.4f, 0.f, 1.f);
-	const FVector2D TS = TextSize(Ship->Banner, 46.f);
-	const float Y = H * 0.28f;
-	DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.35f * A), 0.f, Y - 18.f * S, W, TS.Y + 36.f * S);
-	DrawRect(Accent.CopyWithNewOpacity(0.8f * A), W * 0.5f - TS.X * 0.5f, Y + TS.Y + 12.f * S, TS.X, 3.f * S);
-	Text(Ship->Banner, FLinearColor(1.f, 1.f, 1.f, A), W * 0.5f - TS.X * 0.5f, Y, 46.f);
+	if (Ship->BannerTime <= 0 || Ship->Banner.IsEmpty()) { return; }
+	const float A = FMath::Min(Ship->BannerTime/0.4f,1.f);
+	const FVector2D T = Measure(Ship->Banner,22,true);
+	const float Y=Ship->GetCourse()->bBossActive?172*S:118*S;
+	RoundRect(W*0.5f-T.X*0.5f-22*S,Y,T.X+44*S,45*S,22*S,Ink.CopyWithNewOpacity(A*0.72f));
+	CenterLabel(Ship->Banner,W*0.5f,Y+9*S,22,(Ship->Banner.Contains(TEXT("警告"))?Coral:Paper).CopyWithNewOpacity(A),true);
 }
 
 void AFlightHUD::DrawDamageEdges(AFlightPawn* Ship)
 {
-	if (Ship->HitFlash <= 0.f)
+	if (Ship->HitFlash <= 0) { return; }
+	for (int32 I=0; I<12; ++I)
 	{
-		return;
-	}
-	const float A = Ship->HitFlash * 0.45f;
-	const float E = 60.f * S;
-	for (int32 i = 0; i < 4; ++i)
-	{
-		const float K = A * (1.f - i / 4.f);
-		const float O = i * E / 4.f;
-		const FLinearColor C(1.f, 0.1f, 0.08f, K * 0.5f);
-		DrawRect(C, O, O, W - O * 2.f, E / 4.f);
-		DrawRect(C, O, H - O - E / 4.f, W - O * 2.f, E / 4.f);
-		DrawRect(C, O, O, E / 4.f, H - O * 2.f);
-		DrawRect(C, W - O - E / 4.f, O, E / 4.f, H - O * 2.f);
+		const float A=(1-I/12.f)*Ship->HitFlash*0.24f;
+		DrawRect(Coral.CopyWithNewOpacity(A),I*3*S,0,3*S,H);
+		DrawRect(Coral.CopyWithNewOpacity(A),W-(I+1)*3*S,0,3*S,H);
 	}
 }
 
 void AFlightHUD::DrawAwaitNeutral(AFlightPawn* Ship)
 {
-	Dim(0.45f);
-	UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>();
-	const FAttitudeState& Att = Attitude->GetState();
-	const float CX = W * 0.5f;
-	float Y = H * 0.3f;
-	if (Ship->bInputLost)
-	{
-		TextCentered(TEXT("入力元が切り替わりました"), Accent, CX, Y - 56.f * S, 26.f);
-	}
-	if (!Att.bAvailable)
-	{
-		TextCentered(TEXT("姿勢入力が見つかりません"), Danger, CX, Y, 40.f);
-		TextCentered(TEXT("Spresenseを接続してください"), Dimmed, CX, Y + 64.f * S, 22.f);
-	}
-	else
-	{
-		TextCentered(TEXT("持ち方を整えて姿勢リセット"), White, CX, Y, 40.f);
-		TextCentered(FString::Printf(TEXT("入力  %s"), *UAttitudeInputSubsystem::SourceLabel(Att.Source)), Dimmed, CX, Y + 64.f * S, 22.f);
-		const float BW = 380.f * S, BH = 76.f * S;
-		Button(TEXT("Reset"), TEXT("姿勢リセット"), CX - BW * 0.5f, H * 0.52f, BW, BH, true);
-	}
-	const float SW = 220.f * S, SH = 60.f * S;
-	Button(TEXT("Top"), TEXT("トップへ"), CX - SW * 0.5f, H * 0.52f + 100.f * S, SW, SH, false);
-	TextCentered(TEXT("傾けて上下左右へ移動  レーザーは自動"), Dimmed, CX, H * 0.52f + 180.f * S, 18.f);
+	Dim(0.24f);
+	const FAttitudeState& Input = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>()->GetState();
+	const float PW=660*S,X=(W-PW)*0.5f,Y=H*0.5f-260*S;
+	Modal(X,Y,PW,520*S);
+	Label(TEXT("FLIGHT / READY"),X+42*S,Y+35*S,15,Mint,true);
+	Label(Ship->bInputLost?TEXT("持ち方をもう一度合わせよう"):TEXT("空へ、飛び出そう。"),X+42*S,Y+74*S,36,Paper,true);
+	Label(Input.bAvailable?TEXT("いまの持ち方を基準にしてスタート。"):TEXT("Spresenseか端末の姿勢入力を接続してください。"),X+42*S,Y+143*S,21,Muted);
+	const bool Keys=Input.Source==EAttitudeSource::Keyboard;
+	const FString Guide=Keys?TEXT("WASDで移動。Spaceでクイック回避。"):Ship->bGestureDodge?TEXT("傾けて移動。短く傾けて戻すと回避。"):TEXT("傾けて移動。右下のボタンで回避。");
+	Label(Guide,X+42*S,Y+193*S,22,Paper);
+	Label(TEXT("レーザーは自動。リングと撃破をつなごう。"),X+42*S,Y+235*S,20,Muted);
+	if (Input.bAvailable) { PillButton(TEXT("Reset"),TEXT("姿勢を合わせて開始"),X+42*S,Y+307*S,PW-84*S,74*S,true); }
+	else { CenterLabel(TEXT("接続を待っています"),W*0.5f,Y+329*S,24,Muted); }
+	PillButton(TEXT("Top"),TEXT("トップへ"),X+42*S,Y+397*S,PW-84*S,62*S);
+	DrawInputChip();
 }
 
 void AFlightHUD::DrawCountdown(AFlightPawn* Ship)
 {
-	const int32 N = FMath::CeilToInt(Ship->CountdownLeft);
-	const float Frac = Ship->CountdownLeft - FMath::FloorToFloat(Ship->CountdownLeft);
-	const FString Num = FString::FromInt(FMath::Max(N, 1));
-	TextCentered(Num, FLinearColor(1.f, 1.f, 1.f, 0.4f + 0.6f * Frac), W * 0.5f, H * 0.36f, 96.f * (0.8f + 0.3f * Frac));
+	const int32 N=FMath::Max(1,FMath::CeilToInt(Ship->CountdownLeft));
+	const float Frac=Ship->CountdownLeft-FMath::FloorToFloat(Ship->CountdownLeft);
+	const float R=(52+Frac*4)*S;
+	RoundRect(W*0.5f-R,H*0.39f-R,R*2,R*2,R,Ink.CopyWithNewOpacity(0.65f));
+	CenterLabel(FString::FromInt(N),W*0.5f,H*0.39f-39*S,68,Paper,true);
+	CenterLabel(TEXT("まもなくスタート"),W*0.5f,H*0.39f+78*S,20,Paper);
 }
 
 void AFlightHUD::DrawPaused()
 {
-	Dim(0.55f);
-	const float CX = W * 0.5f;
-	TextCentered(TEXT("一時停止"), White, CX, H * 0.24f, 52.f);
-	const float BW = 340.f * S, BH = 70.f * S, Gap = 16.f * S;
-	float Y = H * 0.42f;
-	Button(TEXT("Resume"), TEXT("再開"), CX - BW * 0.5f, Y, BW, BH, true);
-	Y += BH + Gap;
-	Button(TEXT("Reset"), TEXT("姿勢リセット"), CX - BW * 0.5f, Y, BW, BH, false);
-	Y += BH + Gap;
-	Button(TEXT("Top"), TEXT("トップへ"), CX - BW * 0.5f, Y, BW, BH, false);
+	Dim(0.35f);
+	const AFlightPawn* Ship=Cast<AFlightPawn>(GetOwningPawn());
+	const float PW=660*S,X=(W-PW)*0.5f,Y=H*0.5f-305*S;
+	Modal(X,Y,PW,610*S);
+	Label(TEXT("TAKE A BREATH"),X+42*S,Y+34*S,15,Mint,true);
+	Label(TEXT("ひと休み。"),X+42*S,Y+70*S,42,Paper,true);
+	PillButton(TEXT("Resume"),TEXT("フライトを続ける"),X+42*S,Y+149*S,PW-84*S,74*S,true);
+	PillButton(TEXT("Reset"),TEXT("姿勢を合わせ直す"),X+42*S,Y+239*S,PW-84*S,64*S);
+	PillButton(TEXT("Gesture"),Ship&&Ship->bGestureDodge?TEXT("傾けて戻す回避：オン"):TEXT("傾けて戻す回避：オフ"),X+42*S,Y+325*S,PW-84*S,64*S);
+	PillButton(TEXT("Top"),TEXT("トップへ"),X+42*S,Y+418*S,PW-84*S,64*S);
+	DrawInputChip();
 }
 
 void AFlightHUD::DrawDestroyed()
 {
-	Dim(0.3f);
-	TextCentered(TEXT("撃墜"), Danger, W * 0.5f, H * 0.34f, 64.f);
-	TextCentered(TEXT("チェックポイントから再開します"), Dimmed, W * 0.5f, H * 0.34f + 90.f * S, 22.f);
+	Dim(0.25f);
+	const float PW=580*S,X=(W-PW)*0.5f,Y=H*0.5f-145*S;
+	Modal(X,Y,PW,290*S);
+	Label(TEXT("もう一度、飛ぼう。"),X+42*S,Y+56*S,38,Paper,true);
+	Label(TEXT("チェックポイントからまもなく再開します。"),X+42*S,Y+129*S,21,Muted);
+	RoundRect(X+42*S,Y+209*S,PW-84*S,4*S,2*S,Mint.CopyWithNewOpacity(0.7f));
 }
 
 void AFlightHUD::DrawCleared(AFlightCourse* Course)
 {
-	Dim(0.5f);
-	const float CX = W * 0.5f;
-	TextCentered(TEXT("コースクリア"), Accent, CX, H * 0.2f, 60.f);
-	const float PW = 520.f * S, PH = 150.f * S;
-	Panel(CX - PW * 0.5f, H * 0.36f, PW, PH);
-	TextCentered(FString::Printf(TEXT("リング  %d / %d"), Course->RingsPassed, Course->RingsTotal), White, CX, H * 0.36f + 26.f * S, 30.f);
-	TextCentered(FString::Printf(TEXT("撃破  %d"), Course->Kills), White, CX, H * 0.36f + 82.f * S, 30.f);
-	const float BW = 260.f * S, BH = 70.f * S;
-	Button(TEXT("Retry"), TEXT("もう一度"), CX - BW - 10.f * S, H * 0.66f, BW, BH, true);
-	Button(TEXT("Top"), TEXT("トップへ"), CX + 10.f * S, H * 0.66f, BW, BH, false);
+	Dim(0.32f);
+	const float PW=760*S,X=(W-PW)*0.5f,Y=H*0.5f-320*S;
+	Modal(X,Y,PW,640*S);
+	Label(TEXT("FLIGHT COMPLETE"),X+42*S,Y+31*S,15,Mint,true);
+	Label(TEXT("コースクリア"),X+42*S,Y+66*S,37,Paper,true);
+	Label(Course->Score.Grade(),X+40*S,Y+130*S,112,Mint,true);
+	Label(FText::AsNumber(Course->Score.Total()).ToString(),X+220*S,Y+154*S,51,Paper,true);
+	const FString Record=Course->bRecordSaveFailed?TEXT("記録を保存できませんでした"):Course->bNewBest?TEXT("自己ベスト更新"):TEXT("ベスト ")+FText::AsNumber(Course->BestScore).ToString();
+	Label(Record,X+224*S,Y+225*S,19,Course->bRecordSaveFailed?Coral:Mint);
+	DrawRect(Paper.CopyWithNewOpacity(0.1f),X+42*S,Y+284*S,PW-84*S,S);
+	const FString Values[]={FString::Printf(TEXT("%d / %d"),Course->RingsPassed,Course->RingsTotal),FString::FromInt(Course->Kills),FString::FromInt(Course->Score.MaxCombo),FString::FromInt(Course->Score.Grazes),FString::FromInt(Course->Score.DamageCount),FString::FromInt(Course->Score.Retries)};
+	const TCHAR* Names[]={TEXT("リング"),TEXT("撃破"),TEXT("最大コンボ"),TEXT("かすめ回避"),TEXT("被弾"),TEXT("再挑戦")};
+	for (int32 I=0; I<6; ++I)
+	{
+		const float CX=X+(150+(I%3)*230)*S, RowY=Y+(307+(I/3)*89)*S;
+		CenterLabel(Values[I],CX,RowY,29,Paper,true);
+		CenterLabel(Names[I],CX,RowY+42*S,16,Muted);
+	}
+	const FString Breakdown=FString::Printf(TEXT("リング %d   戦闘 %d   飛行 %d   ボーナス %d"),Course->Score.RingPoints,Course->Score.CombatPoints,Course->Score.FlyingPoints,Course->Score.BonusPoints);
+	CenterLabel(Breakdown,W*0.5f,Y+492*S,16,Muted);
+	PillButton(TEXT("Retry"),TEXT("もう一度飛ぶ"),X+42*S,Y+548*S,332*S,66*S,true);
+	PillButton(TEXT("Top"),TEXT("トップへ"),X+390*S,Y+548*S,328*S,66*S);
 }
