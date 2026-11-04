@@ -132,9 +132,11 @@ private:
 	void TickAutoShot(float Dt);
 	void TickUpgradeReview(float Dt);
 	void TickHudReview(float Dt);
+	void TickModelReview(float Dt);
 	bool bAutoShot = false;
 	bool bUpgradeReview = false;
 	bool bHudReview = false;
+	bool bModelReview = false;
 	float AutoShotTime = 0.f;
 	int32 AutoShotStep = 0;
 	float AutoRoll = 0.f;

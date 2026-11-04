@@ -95,13 +95,24 @@ namespace FlightModels
 	/** Builds the player ship under Parent (nose +X, ~7m long). */
 	void BuildShip(AActor* Owner, USceneComponent* Parent, FFlightShipParts& Out);
 
-	/** Shared enemy geometry, section 0 = hull, section 1 = glow. */
+	/** Shared enemy geometry: hull, signal lights and separate armour panels. */
 	const FFlightMesh& DroneHull();
+	const FFlightMesh& DroneArmor();
 	const FFlightMesh& DroneGlow();
 	const FFlightMesh& TurretHull();
+	const FFlightMesh& TurretArmor();
 	const FFlightMesh& TurretGlow();
 	const FFlightMesh& BossHull();
 	const FFlightMesh& BossArmor();
 	const FFlightMesh& BossGlow();
 	const FFlightMesh& RingMesh();
+}
+
+/** Airframe colours share the HUD's mint / coral identification language. */
+namespace FlightPalette
+{
+	inline const FLinearColor Mint(0.35f, 0.94f, 0.75f);
+	inline const FLinearColor Coral(1.f, 0.25f, 0.32f);
+	inline const FLinearColor Graphite(0.045f, 0.065f, 0.085f);
+	inline const FLinearColor HostileArmor(0.48f, 0.55f, 0.60f);
 }

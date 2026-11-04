@@ -3,6 +3,78 @@
 #include "HAL/FileManager.h"
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
+#include "Camera/CameraComponent.h"
+#include "Components/PointLightComponent.h"
+#include "GameFramework/HUD.h"
+#include "GameFramework/PlayerController.h"
+#include "ProceduralMeshComponent.h"
+
+void AFlightPawn::TickModelReview(float Dt)
+{
+#if !UE_BUILD_SHIPPING
+	AutoShotTime += Dt;
+	if (!FindObjectFast<UProceduralMeshComponent>(this,TEXT("ReviewDrone")))
+	{
+		S=20000; Off=Vel=FVector2D::ZeroVector; Course->ResetFrom(S);
+		State=EFlightState::Paused; UpdateShip(0);
+		if (auto* PC=Cast<APlayerController>(GetController())) { if (PC->GetHUD()) { PC->GetHUD()->bShowHUD=false; } }
+		const TCHAR* Names[]={TEXT("ReviewDrone"),TEXT("ReviewTurret"),TEXT("ReviewBoss")};
+		for (int32 Kind=0; Kind<3; ++Kind)
+		{
+			auto* M=NewObject<UProceduralMeshComponent>(this,Names[Kind]);
+			M->SetupAttachment(Root); M->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			M->SetRelativeRotation(Course->Path.Frame(S).Rotation());
+			M->RegisterComponent(); AddInstanceComponent(M);
+			auto* Hull=FlightMaterials::Surface(this,FlightPalette::Graphite,0.48f,0.38f);
+			auto* Armor=FlightMaterials::Surface(this,FlightPalette::HostileArmor,0.32f,0.32f);
+			auto* Glow=FlightMaterials::Glow(this,FlightPalette::Coral*(Kind==2?3.2f:2.8f));
+			const FFlightMesh& H=Kind==0?FlightModels::DroneHull():Kind==1?FlightModels::TurretHull():FlightModels::BossHull();
+			const FFlightMesh& A=Kind==0?FlightModels::DroneArmor():Kind==1?FlightModels::TurretArmor():FlightModels::BossArmor();
+			const FFlightMesh& G=Kind==0?FlightModels::DroneGlow():Kind==1?FlightModels::TurretGlow():FlightModels::BossGlow();
+			H.Upload(M,0,Hull); A.Upload(M,1,Armor); G.Upload(M,2,Glow);
+			M->SetVisibility(false);
+			UE_LOG(LogTemp,Display,TEXT("FlightModelReview: %s %d triangles"),Names[Kind],(H.Tris.Num()+A.Tris.Num()+G.Tris.Num())/3);
+		}
+		int32 ShipTriangles=0;
+		for (int32 I=0; I<Parts.Body->GetNumSections(); ++I) { ShipTriangles+=Parts.Body->GetProcMeshSection(I)->ProcIndexBuffer.Num()/3; }
+		UE_LOG(LogTemp,Display,TEXT("FlightModelReview: player body %d triangles"),ShipTriangles);
+	}
+	struct FView { float At; int32 Kind; FVector Camera, Look; const TCHAR* Name; };
+	static const FView Views[]={
+		{2.5f,-1,{-1250,-1050,650},{-20,0,10},TEXT("01_player_rear")},
+		{4.f,-1,{1350,-950,600},{-20,0,10},TEXT("02_player_front")},
+		{5.5f,0,{680,-620,390},{0,0,5},TEXT("03_drone_front")},
+		{7.f,0,{-650,-540,380},{0,0,5},TEXT("04_drone_rear")},
+		{8.5f,1,{640,-490,330},{40,0,0},TEXT("05_turret")},
+		{10.f,2,{3600,-2600,1700},{-40,0,30},TEXT("06_boss_front")},
+		{11.5f,2,{-3500,-2600,1700},{-40,0,30},TEXT("07_boss_rear")}
+	};
+	if (AutoShotStep>=UE_ARRAY_COUNT(Views))
+	{
+		if (AutoShotTime>12.2f) { FPlatformMisc::RequestExit(false); }
+		return;
+	}
+	const FView& View=Views[AutoShotStep];
+	ShipPivot->SetVisibility(View.Kind<0,true);
+	FindObjectFast<UProceduralMeshComponent>(this,TEXT("ReviewDrone"))->SetVisibility(View.Kind==0);
+	FindObjectFast<UProceduralMeshComponent>(this,TEXT("ReviewTurret"))->SetVisibility(View.Kind==1);
+	FindObjectFast<UProceduralMeshComponent>(this,TEXT("ReviewBoss"))->SetVisibility(View.Kind==2);
+	ShipRoll=-5; ShipPitch=2; UpdateShip(Dt);
+	if (View.Kind>=0) { EngineLight->SetIntensity(0); }
+	const FPathFrame Fr=Course->Path.Frame(S);
+	const FVector Pos=Fr.ToWorld(View.Camera.X,View.Camera.Y,View.Camera.Z);
+	const FVector Target=Fr.ToWorld(View.Look.X,View.Look.Y,View.Look.Z);
+	Camera->SetWorldLocationAndRotation(Pos,FRotationMatrix::MakeFromXZ(Target-Pos,FVector::UpVector).Rotator());
+	Camera->SetFieldOfView(42);
+	if (AutoShotTime>=View.At)
+	{
+		const FString Dir=FPaths::ProjectSavedDir()/TEXT("ModernAirframes");
+		IFileManager::Get().MakeDirectory(*Dir,true);
+		FScreenshotRequest::RequestScreenshot(Dir/FString(View.Name)+TEXT(".png"),false,false);
+		++AutoShotStep;
+	}
+#endif
+}
 
 void AFlightPawn::TickUpgradeReview(float Dt)
 {

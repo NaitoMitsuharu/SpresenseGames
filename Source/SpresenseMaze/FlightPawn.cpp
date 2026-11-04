@@ -48,7 +48,7 @@ AFlightPawn::AFlightPawn()
 	EngineLight->SetRelativeLocation(FVector(-470.f, 0.f, -20.f));
 	EngineLight->SetIntensity(9000.f);
 	EngineLight->SetAttenuationRadius(700.f);
-	EngineLight->SetLightColor(FLinearColor(0.35f, 0.75f, 1.f));
+	EngineLight->SetLightColor(FlightPalette::Mint);
 	EngineLight->SetCastShadows(false);
 
 	Trail = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("Trail"));
@@ -91,7 +91,7 @@ void AFlightPawn::BeginPlay()
 	{
 		Trail->SetStaticMesh(Cube);
 	}
-	TrailMID = FlightMaterials::Additive(this, FLinearColor(0.3f, 0.9f, 1.f) * 3.f);
+	TrailMID = FlightMaterials::Additive(this, FlightPalette::Mint * 0.9f);
 	Trail->SetMaterial(0, TrailMID);
 	TrailSegs.SetNum(120);
 	for (int32 i = 0; i < TrailSegs.Num(); ++i)
@@ -109,7 +109,8 @@ void AFlightPawn::BeginPlay()
 	bAutoShot = FParse::Param(FCommandLine::Get(), TEXT("FlightAutoShot"));
 	bUpgradeReview = FParse::Param(FCommandLine::Get(), TEXT("FlightUpgradeReview"));
 	bHudReview = FParse::Param(FCommandLine::Get(), TEXT("FlightHudReview"));
-	bAutoShot |= bUpgradeReview || bHudReview;
+	bModelReview = FParse::Param(FCommandLine::Get(), TEXT("FlightModelReview"));
+	bAutoShot |= bUpgradeReview || bHudReview || bModelReview;
 #endif
 
 	// Start paused: the player settles the grip and confirms 姿勢リセット.
@@ -179,6 +180,9 @@ void AFlightPawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	const float Dt = FMath::Min(DeltaSeconds, 0.05f);
+#if !UE_BUILD_SHIPPING
+	if (bModelReview) { TickModelReview(Dt); return; }
+#endif
 	const float Now = GetWorld()->GetTimeSeconds();
 	UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>();
 	if (!Course || !Attitude)
@@ -388,15 +392,19 @@ void AFlightPawn::UpdateShip(float Dt)
 	if (Parts.PlumeGlow)
 	{
 		const float Boost = State == EFlightState::Playing || State == EFlightState::Cleared ? 1.f : 0.45f;
-		Parts.PlumeGlow->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.3f, 0.7f, 1.f) * 1.6f * Flicker * Boost);
+		Parts.PlumeGlow->SetVectorParameterValue(TEXT("Color"), FlightPalette::Mint * (0.55f + DodgePulse()*0.35f) * Flicker * Boost);
+	}
+	if (Parts.EngineGlow)
+	{
+		Parts.EngineGlow->SetVectorParameterValue(TEXT("Color"), FlightPalette::Mint * (3.2f + DodgePulse()*1.4f) * Flicker);
 	}
 	if (Parts.TrimGlow)
 	{
-		const FLinearColor Base(0.25f, 0.85f, 1.f);
+		const FLinearColor Base = FlightPalette::Mint;
 		const FLinearColor Hit(1.f, 0.25f, 0.2f);
 		const float Blink = IsInvulnerable() && FMath::Fmod(T, 0.16f) < 0.08f ? 0.2f : 1.f;
 		Parts.TrimGlow->SetVectorParameterValue(TEXT("Color"),
-			FMath::Lerp(Base, Hit, HitFlash) * (6.f + 10.f * HealFlash) * Blink);
+			FMath::Lerp(Base, Hit, HitFlash) * (2.1f + 4.f * HealFlash) * Blink);
 	}
 	EngineLight->SetIntensity(9000.f * Flicker);
 }
@@ -449,7 +457,10 @@ void AFlightPawn::UpdateTrail(float Dt)
 	const FVector TipL = ShipXf.TransformPosition(Parts.WingTipL);
 	const FVector TipR = ShipXf.TransformPosition(Parts.WingTipR);
 	TrailTime = FMath::Max(TrailTime - Dt, 0.f);
-	if (TrailTime > 0.f && bHaveLastTips)
+	// Never connect a respawn or a review teleport with a world-spanning streak.
+	const bool bContinuous = bHaveLastTips && FVector::DistSquared(TipL,LastTipL)<FMath::Square(1200.0)
+		&& FVector::DistSquared(TipR,LastTipR)<FMath::Square(1200.0);
+	if (TrailTime > 0.f && bContinuous)
 	{
 		for (const TPair<FVector, FVector>& Seg : { TPair<FVector, FVector>(LastTipL, TipL), TPair<FVector, FVector>(LastTipR, TipR) })
 		{
@@ -458,7 +469,9 @@ void AFlightPawn::UpdateTrail(float Dt)
 			T.A = Seg.Key;
 			T.B = Seg.Value;
 			T.Age = 0.f;
-			T.Life = 0.35f + 0.35f * TrailStrength;
+			// Keep the wake ahead of the chase camera, rather than crossing its
+			// near plane and expanding into bright polygons over the HUD.
+			T.Life = 0.10f + 0.05f * TrailStrength;
 			T.bActive = true;
 		}
 	}
@@ -487,12 +500,12 @@ void AFlightPawn::UpdateTrail(float Dt)
 		const float Len = FMath::Max(D.Size(), 1.f);
 		const float K = (1.f - T.Age / T.Life) * (0.5f + TrailStrength);
 		Xf[i] = FTransform(FRotationMatrix::MakeFromX(D).ToQuat(), (T.A + T.B) * 0.5f,
-			FVector(Len / 100.f, 0.07f * K, 0.07f * K));
+			FVector(Len / 100.f, 0.03f * K, 0.03f * K));
 	}
 	Trail->BatchUpdateInstancesTransforms(0, Xf, true, true, true);
 	if (TrailMID)
 	{
-		TrailMID->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.3f, 0.9f, 1.f) * (1.5f + 3.f * TrailStrength));
+		TrailMID->SetVectorParameterValue(TEXT("Color"), FlightPalette::Mint * (0.9f + 1.6f * TrailStrength));
 	}
 }
 

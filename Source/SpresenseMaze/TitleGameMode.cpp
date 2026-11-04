@@ -73,7 +73,7 @@ void ATitlePawn::Tick(float DeltaSeconds)
 	if (Parts.PlumeGlow)
 	{
 		Parts.PlumeGlow->SetVectorParameterValue(TEXT("Color"),
-			FLinearColor(0.3f, 0.7f, 1.f) * (1.2f + 0.2f * FMath::Sin(T * 40.f)));
+			FlightPalette::Mint * (0.5f + 0.08f * FMath::Sin(T * 40.f)));
 	}
 
 #if !UE_BUILD_SHIPPING

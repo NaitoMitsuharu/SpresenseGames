@@ -1,9 +1,40 @@
 #include "Misc/AutomationTest.h"
 #include "../FlightScore.h"
 #include "../FlightSaveGame.h"
+#include "../FlightModels.h"
 #include "Kismet/GameplayStatics.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FFlightAirframeTest, "SpresenseMaze.Flight.AirframeGeometry", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FFlightAirframeTest::RunTest(const FString&)
+{
+	const FFlightMesh* Meshes[]={&FlightModels::DroneHull(),&FlightModels::DroneArmor(),&FlightModels::DroneGlow(),
+		&FlightModels::TurretHull(),&FlightModels::TurretArmor(),&FlightModels::TurretGlow(),
+		&FlightModels::BossHull(),&FlightModels::BossArmor(),&FlightModels::BossGlow()};
+	for (const FFlightMesh* M:Meshes)
+	{
+		bool bValid=M->Verts.Num()>0 && M->Tris.Num()>0 && M->Tris.Num()%3==0
+			&& M->Verts.Num()==M->Normals.Num() && M->Verts.Num()==M->Colors.Num() && M->Verts.Num()==M->UVs.Num();
+		for (int32 I=0; I<M->Verts.Num() && bValid; ++I)
+		{
+			bValid=!M->Verts[I].ContainsNaN() && !M->Normals[I].ContainsNaN()
+				&& M->Normals[I].SizeSquared()>0.9 && M->Verts[I].GetAbsMax()<2000;
+		}
+		for (int32 I=0; I<M->Tris.Num() && bValid; I+=3)
+		{
+			const int32 A=M->Tris[I], B=M->Tris[I+1], C=M->Tris[I+2];
+			bValid=M->Verts.IsValidIndex(A) && M->Verts.IsValidIndex(B) && M->Verts.IsValidIndex(C);
+			if (bValid)
+			{
+				const FVector Face=-((M->Verts[B]-M->Verts[A])^(M->Verts[C]-M->Verts[A]));
+				bValid=Face.SizeSquared()>0.0001 && (Face|(M->Normals[A]+M->Normals[B]+M->Normals[C]))>0;
+			}
+		}
+		TestTrue(TEXT("Airframe mesh has finite attributes, valid non-degenerate triangles and outward normals"),bValid);
+	}
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FFlightFlickTest, "SpresenseMaze.Flight.FlickGesture", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FFlightFlickTest::RunTest(const FString&)
 {

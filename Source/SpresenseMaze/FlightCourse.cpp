@@ -474,10 +474,11 @@ void AFlightCourse::BuildPools()
 	for (int32 i = 0; i < MaxDebris; ++i) { Debris->AddInstance(Hidden(), true); }
 	for (int32 i = 0; i < BlastPool.Num(); ++i) { Blasts->AddInstance(Hidden(), true); }
 
-	UMaterialInstanceDynamic* HullMID = FlightMaterials::Surface(this, FLinearColor(0.12f, 0.06f, 0.16f), 0.85f, 0.3f);
-	UMaterialInstanceDynamic* TurretMID = FlightMaterials::Surface(this, FLinearColor(0.2f, 0.18f, 0.16f), 0.8f, 0.38f);
+	UMaterialInstanceDynamic* HullMID = FlightMaterials::Surface(this, FlightPalette::Graphite, 0.48f, 0.38f);
+	UMaterialInstanceDynamic* TurretMID = HullMID;
+	UMaterialInstanceDynamic* ArmorMID = FlightMaterials::Surface(this, FlightPalette::HostileArmor, 0.32f, 0.32f);
 	KeepAlive.Add(HullMID);
-	KeepAlive.Add(TurretMID);
+	KeepAlive.Add(ArmorMID);
 
 	// Enemy slots: drones first, a fixed number of turrets after them.
 	constexpr int32 TurretSlots = 5;
@@ -491,16 +492,18 @@ void AFlightCourse::BuildPools()
 		PMC->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		PMC->RegisterComponent();
 		AddInstanceComponent(PMC);
-		E.GlowMID = FlightMaterials::Glow(this, FLinearColor(1.f, 0.2f, 0.35f) * 6.f);
+		E.GlowMID = FlightMaterials::Glow(this, FlightPalette::Coral * 2.8f);
 		if (E.Kind == 0)
 		{
 			FlightModels::DroneHull().Upload(PMC, 0, HullMID);
 			FlightModels::DroneGlow().Upload(PMC, 1, E.GlowMID);
+			FlightModels::DroneArmor().Upload(PMC, 2, ArmorMID);
 		}
 		else
 		{
 			FlightModels::TurretHull().Upload(PMC, 0, TurretMID);
 			FlightModels::TurretGlow().Upload(PMC, 1, E.GlowMID);
+			FlightModels::TurretArmor().Upload(PMC, 2, ArmorMID);
 		}
 		PMC->SetVisibility(false);
 		E.Mesh = PMC;
@@ -511,9 +514,9 @@ void AFlightCourse::BuildPools()
 	BossMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	BossMesh->RegisterComponent();
 	AddInstanceComponent(BossMesh);
-	FlightModels::BossHull().Upload(BossMesh, 0, FlightMaterials::Surface(this, FLinearColor(0.07f, 0.06f, 0.09f), 0.9f, 0.25f));
-	FlightModels::BossArmor().Upload(BossMesh, 1, FlightMaterials::Surface(this, FLinearColor(0.5f, 0.18f, 0.08f), 0.6f, 0.35f));
-	BossGlowMID = FlightMaterials::Glow(this, FLinearColor(1.f, 0.3f, 0.12f) * 8.f);
+	FlightModels::BossHull().Upload(BossMesh, 0, HullMID);
+	FlightModels::BossArmor().Upload(BossMesh, 1, ArmorMID);
+	BossGlowMID = FlightMaterials::Glow(this, FlightPalette::Coral * 3.2f);
 	FlightModels::BossGlow().Upload(BossMesh, 2, BossGlowMID);
 	BossMesh->SetVisibility(false);
 	Boss.Kind = 2;
@@ -1030,10 +1033,10 @@ void AFlightCourse::UpdateEnemyTransforms()
 			Q = Fr.Rotation() * FRotator(0.f, 180.f, 0.f).Quaternion();
 		}
 		E.Mesh->SetWorldTransform(FTransform(Q, Fr.ToWorld(0, E.Off.X, E.Off.Y), FVector(Scale)));
-		const FLinearColor Base = E.Kind == 2 ? FLinearColor(1.f, 0.3f, 0.12f) * 8.f : FLinearColor(1.f, 0.2f, 0.35f) * 6.f;
+		const FLinearColor Base = FlightPalette::Coral * (E.Kind == 2 ? 3.2f : 2.8f);
 		const float Charge = E.bCharging ? FMath::Clamp(1.f - E.FireTimer / 0.9f, 0.f, 1.f) : 0.f;
-		const FLinearColor Charging = FMath::Lerp(Base, FLinearColor(12.f, 5.f, 0.4f), Charge);
-		E.GlowMID->SetVectorParameterValue(TEXT("Color"), FMath::Lerp(Charging, FLinearColor(10.f, 10.f, 10.f), E.HitFlash));
+		const FLinearColor Charging = FMath::Lerp(Base, FLinearColor(6.f, 2.4f, 0.7f), Charge);
+		E.GlowMID->SetVectorParameterValue(TEXT("Color"), FMath::Lerp(Charging, FLinearColor(6.f, 6.f, 6.f), E.HitFlash));
 		if (E.bCharging) { Threats.Add({ E.S, E.Off, E.LockedTarget, Charge }); }
 		E.Mesh->SetVisibility(E.S - ShipS < 14000.0);
 	};
