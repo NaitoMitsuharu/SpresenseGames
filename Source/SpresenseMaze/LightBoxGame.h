@@ -19,6 +19,7 @@ class USkyLightComponent;
 class SWidget;
 class FLightBoxBatchReview;
 class SLightBoxControls;
+class ULightBoxPointCloud;
 
 UCLASS()
 class SPRESENSEMAZE_API ALightBoxGameMode : public AGameModeBase
@@ -61,6 +62,8 @@ public:
 	UPROPERTY() TObjectPtr<UDirectionalLightComponent> FillLight;
 	UPROPERTY() TObjectPtr<USkyLightComponent> StudioSky;
 	UPROPERTY() TArray<TObjectPtr<UPointLightComponent>> AccentLights;
+	UPROPERTY() TObjectPtr<ULightBoxPointCloud> PointCloud;
+	UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> StageFloor;
 private:
 	friend class FLightBoxBatchReview;
 	TSharedPtr<FLightBoxBatchReview> BatchReview;
@@ -80,6 +83,8 @@ private:
 	double UIShotAt=0;
 	FString UIShotName;
 	float GeometryClock=0, LastAspect=0;
+	FTransform CameraStart,CameraTarget;
+	float CameraBlendAge=100;
 };
 
 UCLASS()

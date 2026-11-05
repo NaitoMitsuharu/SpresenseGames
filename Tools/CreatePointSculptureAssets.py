@@ -1,0 +1,62 @@
+"""Build the precompiled GPU vertex-texture point renderer; no Niagara/editor required at runtime."""
+import struct
+from pathlib import Path
+import unreal
+
+root=Path(unreal.Paths.project_dir())
+assets=unreal.EditorAssetLibrary;tools=unreal.AssetToolsHelpers.get_asset_tools();mel=unreal.MaterialEditingLibrary
+placeholder='/Game/LightBox/T_PointData'
+if not assets.does_asset_exist(placeholder):
+    file=root/'Saved/point-data.tga';file.write_bytes(struct.pack('<BBBHHBHHHHBB',0,0,2,0,0,0,0,0,2,2,32,0x28)+bytes([0,0,0,255])*4)
+    task=unreal.AssetImportTask();task.filename=str(file);task.destination_path='/Game/LightBox';task.destination_name='T_PointData';task.automated=True;task.save=True;tools.import_asset_tasks([task])
+texture=assets.load_asset(placeholder);texture.set_editor_property('srgb',False);texture.set_editor_property('compression_settings',unreal.TextureCompressionSettings.TC_VECTOR_DISPLACEMENTMAP);assets.save_loaded_asset(texture)
+path='/Game/LightBox/M_PointSculpture'
+m=assets.load_asset(path) if assets.does_asset_exist(path) else tools.create_asset('M_PointSculpture','/Game/LightBox',unreal.Material,unreal.MaterialFactoryNew())
+mel.delete_all_material_expressions(m);m.set_editor_property('shading_model',unreal.MaterialShadingModel.MSM_UNLIT);m.set_editor_property('blend_mode',unreal.BlendMode.BLEND_MASKED);m.set_editor_property('two_sided',True);m.set_editor_property('used_with_instanced_static_meshes',True);m.set_editor_property('max_world_position_offset_displacement',1000.0);m.set_editor_property('float_precision_mode',unreal.MaterialFloatPrecisionMode.MFPM_FULL)
+def node(cls,**props):
+    n=mel.create_material_expression(m,getattr(unreal,'MaterialExpression'+cls))
+    for k,v in props.items():n.set_editor_property(k,v)
+    return n
+def data(cls,**props):
+    value=getattr(unreal,cls)()
+    for k,v in props.items():value.set_editor_property(k,v)
+    return value
+def wire(a,b,name,output=''):
+    ok=mel.connect_material_expressions(a,output,b,name)
+    if not ok and name=='Input':ok=mel.connect_material_expressions(a,output,b,'')
+    assert ok,(name,output)
+inputs={
+ 'Index':node('PerInstanceCustomData',data_index=0),
+ 'QuadUV':node('TextureCoordinate'),
+ 'World':node('WorldPosition',world_position_shader_offset=unreal.WorldPositionIncludedOffsets.WPT_EXCLUDE_ALL_SHADER_OFFSETS),
+ 'Right':node('VectorParameter',parameter_name='Right',default_value=unreal.LinearColor(1,0,0,0)),
+ 'Up':node('VectorParameter',parameter_name='Up',default_value=unreal.LinearColor(0,0,1,0)),
+ 'AxisX':node('VectorParameter',parameter_name='AxisX',default_value=unreal.LinearColor(1,0,0,0)),
+ 'AxisY':node('VectorParameter',parameter_name='AxisY',default_value=unreal.LinearColor(0,1,0,0)),
+ 'AxisZ':node('VectorParameter',parameter_name='AxisZ',default_value=unreal.LinearColor(0,0,1,0)),
+ 'DataWidth':node('ScalarParameter',parameter_name='DataWidth',default_value=256),
+ 'Phase':node('ScalarParameter',parameter_name='Phase',default_value=1),
+ 'Path':node('VectorParameter',parameter_name='Path',default_value=unreal.LinearColor(65,1.25,.35,0)),
+ 'Center':node('VectorParameter',parameter_name='Center',default_value=unreal.LinearColor(0,0,160,0)),
+}
+for name in ['FromTex','ToTex']:
+    inputs[name]=node('TextureObjectParameter',parameter_name=name,texture=texture,sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
+custom=node('Custom',code=(root/'Tools/PointCloud/PointSculpture.hlsl').read_text(),output_type=unreal.CustomMaterialOutputType.CMOT_FLOAT3)
+custom.set_editor_property('inputs',[data('CustomInput',input_name=name) for name in inputs])
+
+for name,n in inputs.items():wire(n,custom,name,'RGBA' if name=='Path' else '')
+mel.connect_material_property(custom,'',unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
+color_inputs={name:inputs[name] for name in ['Index','DataWidth','Phase','Path']}
+for name in ['FromColor','ToColor']:color_inputs[name]=node('TextureObjectParameter',parameter_name=name,texture=texture,sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
+color_code='struct Rng {float H(uint i){uint x=i+747796405u+2891336453u;x^=x>>16;x*=2246822519u;x^=x>>13;x*=3266489917u;x^=x>>16;return float(x&0x00ffffffu)/16777216.;}};\nuint id=(uint)(Index+.5);float2 uv=(float2(id%(uint)DataWidth,id/(uint)DataWidth)+.5)/DataWidth;\nfloat3 b=Texture2DSampleLevel(ToColor,ToColorSampler,uv,0).rgb;\n[branch] if(Phase>=1)return b;\nRng r;float d=r.H(id)*Path.z;float u=saturate((Phase-d)/(1-d));float s=u*u*(3-2*u);\nreturn lerp(Texture2DSampleLevel(FromColor,FromColorSampler,uv,0).rgb,b,s);'
+color_vertex=node('Custom',code=color_code,output_type=unreal.CustomMaterialOutputType.CMOT_FLOAT3)
+color_vertex.set_editor_property('inputs',[data('CustomInput',input_name=name) for name in color_inputs])
+for name,n in color_inputs.items():wire(n,color_vertex,name,'RGBA' if name=='Path' else '')
+tint=node('VertexInterpolator');wire(color_vertex,tint,'Input')
+colour=node('Custom',code='float2 q=UV*2-1;return Tint.rgb*(.9+1.1*sqrt(saturate(1-dot(q,q))));',output_type=unreal.CustomMaterialOutputType.CMOT_FLOAT3)
+colour.set_editor_property('inputs',[data('CustomInput',input_name='Tint'),data('CustomInput',input_name='UV')]);wire(tint,colour,'Tint');wire(inputs['QuadUV'],colour,'UV')
+mel.connect_material_property(colour,'',unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+mask=node('Custom',code='float2 q=UV*2-1;return 1-dot(q,q);',output_type=unreal.CustomMaterialOutputType.CMOT_FLOAT1);mask.set_editor_property('inputs',[data('CustomInput',input_name='UV')]);wire(inputs['QuadUV'],mask,'UV');mel.connect_material_property(mask,'',unreal.MaterialProperty.MP_OPACITY_MASK)
+mel.recompile_material(m);assets.save_loaded_asset(m)
+mesh=assets.load_asset('/Engine/BasicShapes/Plane');unreal.log('PointSculpture plane triangles: '+str(mesh.get_num_triangles(0)))
+unreal.log('CreatePointSculptureAssets done')

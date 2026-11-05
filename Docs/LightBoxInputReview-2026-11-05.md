@@ -1,5 +1,7 @@
 # 音声・文字入力と景色の実機レビュー
 
+> 以下は当時の版の記録です。対象のXQ-FS54はXperia 1 VIIです。最新の粒子彫刻・送信操作・今回の音声試験の制約は[粒子彫刻の記録](PointSculpture.md)を参照してください。
+
 ## 確認した環境と方法
 
 2026-11-05、Xperia XQ-FS54／Android 16、2340×1080の横画面で確認しました。端末内TermuxのOpenClaw 2026.10.10からGitHub Copilotのgpt-6-lunaを使用しています。PDT-FP1そのものでは未確認です。

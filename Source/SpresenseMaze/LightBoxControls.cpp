@@ -149,7 +149,9 @@ void SLightBoxControls::Construct(const FArguments& Args)
         +SVerticalBox::Slot().AutoHeight().Padding(10,0,10,14)[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",19)).ColorAndOpacity(Paper.CopyWithNewOpacity(.8f)).Text_Lambda([D](){return FText::FromString(D()?D()->GetStyle().Title:FString());})]
         +SVerticalBox::Slot().AutoHeight()[Presets]
         +SVerticalBox::Slot().AutoHeight().Padding(0,8,0,0)[Grid]
-        +SVerticalBox::Slot().AutoHeight().Padding(10,15,10,2)[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(Paper.CopyWithNewOpacity(.55f)).Text_Lambda([D](){return FText::FromString(D()?D()->GetJournal().Summary():FString());})]
+        +SVerticalBox::Slot().AutoHeight().Padding(10,15,10,2)[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(Paper.CopyWithNewOpacity(.55f)).Text_Lambda([D](){
+            if(!D())return FText::GetEmpty();FString Label=D()->GetJournal().Summary();if(D()->GetStyle().bPointCloud)Label+=TEXT("\n")+FText::AsNumber(D()->GetStyle().PointCount).ToString()+TEXT("粒");return FText::FromString(Label);
+        })]
     ];
     Input=SNew(SEditableTextBox).Style(LightBoxUI::FieldStyle()).Font(FCoreStyle::GetDefaultFontStyle("Regular",23))
         .HintText(FText::FromString(TEXT("景色をつくる…"))).SelectAllTextWhenFocused(false)

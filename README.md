@@ -6,9 +6,12 @@ Spresense(SPR-BOX)のIMUで操作する UE 5.8 製 Android ゲームです。ト
 
 ### ひかりの箱
 
-箱を傾けたり振ったりして光の粒を動かし、PDT-FP1のマイクから「水中のようにして」
+箱を傾けたり振ったりして光の粒を動かし、Xperia 1 VIIのマイクから「水中のようにして」
 「森を作って」「目玉焼きを作って」と話すと、光の数・群れ・形・物体・背景・動きを組み合わせて景色を作る体験です。
-最大1,024個の光、物体の配置とアニメーション、保存・呼び出し、戻す・やり直すに対応します。
+新しいAI生成では **粒子彫刻** を使います。「なす」のような名詞を話すと、AIが立体の形と色を組み立て、粒子が現在の位置から移動してその表面を構成します。形の変化は通常5秒ほどのアニメーションです。
+通常は65,536粒、必要に応じて **最大1,000,000粒** を指定できます。100万粒を常時使う方式ではありません。床は標準では非表示です。[粒子の仕組み・変化の動画・Xperia 1 VII実測](Docs/PointSculpture.md)も参照してください。
+AIは100万個の座標を返すのではなく、立体の輪郭・部品と移動ルールを返します。GPUが各粒の移動を描きます。
+従来の光の群れ、物体の配置とアニメーション、保存・呼び出し、戻す・やり直すも維持しています。
 右上の **☰ → 記録** には指示・設定差分・元トークン・推定クレジットを表示し、AI変更の前後画像も保存します。
 マイクは入力欄の上中央にあります。話した内容は画面に表示され、そのまま景色の作成を開始します。
 文字入力は半透明の入力欄から行い、**矢印を押して送信**します。
@@ -85,7 +88,7 @@ SpresenseMaze/
 ├─ SpresenseMaze.uproject
 ├─ Config/
 │   ├─ DefaultEngine.ini                     … GameMode / Android 設定
-│   ├─ DefaultDeviceProfiles.ini             … Xperia 1 VI 向け描画ターゲット
+│   ├─ DefaultDeviceProfiles.ini             … Xperia 1 VII 向け描画ターゲット
 │   └─ DefaultEditorPerProjectUserSettings.ini … UE の MCP サーバ自動起動
 ├─ Content/
 │   ├─ Maps/Title_Select                     … トップ画面(空のレベル、TitleGameMode)
@@ -225,9 +228,9 @@ Details パネルの `MazeLayout` / `Stages` を編集すると即座に形が�
 
 色は `MazeGenerator` の **Theme** カテゴリで全部まとめて変えられます。
 
-### Xperia 1 VI 描画ターゲット
+### Xperia 1 VII 描画ターゲット
 
-`DefaultDeviceProfiles.ini` の `Android_Adreno_Vulkan` をXperia 1 VI向けの基準として
+`DefaultDeviceProfiles.ini` の `Android_Adreno_Vulkan` をXperia 1 VII向けの基準として
 調整しています。
 
 - Vulkan + Mobile Deferred + Mobile HDR
@@ -260,7 +263,7 @@ HUD は Canvas 直描きで、ボタンはタッチ対応です。プレイ中�
 
 ## Android試用版のインストール
 
-[ひかりの箱を含む試用版](https://github.com/NaitoMitsuharu/spresesneMaze/releases/tag/v0.3.0-preview.1) から
+[粒子が立体を作る「ひかりの箱」を含む試用版](https://github.com/NaitoMitsuharu/spresesneMaze/releases/tag/v0.4.0-preview.1) から
 `SpresenseMaze-arm64.apk` を取得してください。Android 14以上のarm64端末向けで、
 ゲームデータはAPK内に含まれるため、別のOBBファイルは不要です。
 APKを端末へコピーして開き、ファイルを開いたアプリからのインストールを許可すると導入できます。
@@ -291,7 +294,7 @@ PCはインストールに使えますが、準備後の展示では不要です
 
 ### 1. 端末とセンサーを準備する
 
-- Android 14以上・arm64端末を用意し、上記のAPKをインストールします。PDT-FP1がAndroid 13の場合は、[ソニーの更新手順](https://support.sony.jp/electronics/support/software/00380408)で14以上へ更新してから使用します。PDT-FP1は利用予定の対象で、現在の実機確認はXperia XQ-FS54／Android 16です。
+- 対象端末は **Xperia 1 VII** です。接続実機はXQ-FS54／Android 16、2340×1080で、Spresenseの箱とUSB接続して使用します。APKの最低要件はAndroid 14以上・arm64です。
 - Spresenseの箱を使う場合は、SDK対応ファームウェアを書き込んだ箱と、SDK配布物の **SPR-BOX Service APK**（`jp.co.sony.sprbox.service`）が必要です。Serviceをインストールし、USBデータケーブルで箱と端末を接続してUSB許可を与えます。
 - SPR-BOX未接続でも端末内蔵IMUで試せます。「ひかりの箱」の **☰ → 姿勢** で持ち方を合わせます。
 - 日本語のAndroid音声認識サービスを有効にします。初回のマイク許可後は、もう一度マイクを押してください。サービスを用意できない端末では文字入力を使えます。

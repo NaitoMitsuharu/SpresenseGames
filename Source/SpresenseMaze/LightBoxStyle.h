@@ -41,6 +41,7 @@ struct FLightBoxObject
 	FString Reaction = TEXT("none");
 	TArray<FVector> Path;
 	TArray<FVector2D> Outline; // Custom, simple convex/concave polygon; no holes.
+	TArray<FVector2D> Profile; // Lathe: [height -0.5..0.5, radius 0..0.5], increasing height.
 	FString Parent;
 	FString Anchor=TEXT("center"), ParentAnchor=TEXT("center");
 	FString StartObject, EndObject;
@@ -108,6 +109,10 @@ struct FLightBoxStyle
 	float FormationPeriod = 10, FormationTravel = 0;
 	FVector FormationRotation = FVector::ZeroVector;
 	TArray<FLightBoxObject> Objects;
+	bool bPointCloud = false;
+	bool bPointFloor = false;
+	int32 PointCount = 65536;
+	float AssembleSeconds = 5, AssembleArc = 65, AssembleTwist = 1.25f, AssembleStagger = .35f;
 
 	static FLightBoxStyle Preset(int32 Index);
 	static FLightBoxStyle Example(int32 Index);

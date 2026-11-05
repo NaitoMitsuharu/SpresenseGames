@@ -1,4 +1,4 @@
-﻿#include "LightBoxStyle.h"
+#include "LightBoxStyle.h"
 
 #include "Dom/JsonObject.h"
 #include "LightBoxGeometry.h"
@@ -87,6 +87,7 @@ namespace
 		O->SetStringField(TEXT("animation"), N.Animation); O->SetNumberField(TEXT("speed"), N.Speed); O->SetNumberField(TEXT("amplitude"), N.Amplitude);
 		O->SetStringField(TEXT("reaction"), N.Reaction);
 		O->SetStringField(TEXT("anchor"),N.Anchor);O->SetStringField(TEXT("parentAnchor"),N.ParentAnchor);
+		if(N.Profile.Num()) { TArray<TSharedPtr<FJsonValue>> A;for(auto P:N.Profile)A.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueNumber>(P.X),MakeShared<FJsonValueNumber>(P.Y)}));O->SetArrayField(TEXT("profile"),A); }
 		if(!N.StartObject.IsEmpty()) {O->SetStringField(TEXT("startObject"),N.StartObject);O->SetStringField(TEXT("startAnchor"),N.StartAnchor);O->SetArrayField(TEXT("startOffset"),Vec(N.StartOffset));}
 		if(!N.EndObject.IsEmpty()) {O->SetStringField(TEXT("endObject"),N.EndObject);O->SetStringField(TEXT("endAnchor"),N.EndAnchor);O->SetArrayField(TEXT("endOffset"),Vec(N.EndOffset));}
 		O->SetBoolField(TEXT("closed"),N.bCurveClosed); O->SetStringField(TEXT("parent"),N.Parent); O->SetArrayField(TEXT("pivot"),Vec(N.Pivot));
@@ -138,6 +139,8 @@ FString FLightBoxStyle::ToJson() const
 	O->SetNumberField(TEXT("trail"), Trail); O->SetNumberField(TEXT("shakeThreshold"), ShakeThreshold);
 	O->SetStringField(TEXT("shake"), Shake);
 	O->SetNumberField(TEXT("schema"), 3); O->SetStringField(TEXT("note"), Note);
+	auto Cloud=MakeShared<FJsonObject>();Cloud->SetBoolField(TEXT("enabled"),bPointCloud);Cloud->SetBoolField(TEXT("floor"),bPointFloor);Cloud->SetNumberField(TEXT("count"),PointCount);
+	Cloud->SetNumberField(TEXT("duration"),AssembleSeconds);Cloud->SetNumberField(TEXT("arc"),AssembleArc);Cloud->SetNumberField(TEXT("twist"),AssembleTwist);Cloud->SetNumberField(TEXT("stagger"),AssembleStagger);O->SetObjectField(TEXT("pointCloud"),Cloud);
 	auto P = MakeShared<FJsonObject>();
 	P->SetNumberField(TEXT("count"), Count); P->SetNumberField(TEXT("size"), ParticleSize);
 	P->SetStringField(TEXT("behavior"), Behavior); P->SetStringField(TEXT("formation"), Formation);
@@ -194,7 +197,7 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 		Error = TEXT("景色を読み取れませんでした。もう一度お試しください"); return false;
 	}
 	FLightBoxStyle Candidate;
-	if (!KnownFields(O, { TEXT("title"), TEXT("color"), TEXT("accent"), TEXT("motion"), TEXT("viscosity"), TEXT("swirl"), TEXT("attraction"), TEXT("tilt"), TEXT("glow"), TEXT("trail"), TEXT("shakeThreshold"), TEXT("shake"), TEXT("schema"), TEXT("note"), TEXT("particles"), TEXT("world"), TEXT("camera"), TEXT("objects") }))
+	if (!KnownFields(O, { TEXT("title"), TEXT("color"), TEXT("accent"), TEXT("motion"), TEXT("viscosity"), TEXT("swirl"), TEXT("attraction"), TEXT("tilt"), TEXT("glow"), TEXT("trail"), TEXT("shakeThreshold"), TEXT("shake"), TEXT("schema"), TEXT("note"), TEXT("particles"), TEXT("world"), TEXT("camera"), TEXT("objects"), TEXT("pointCloud") }))
 	{ Error = TEXT("まだ対応していない景色の操作が含まれています"); return false; }
 	if (!O->TryGetStringField(TEXT("title"), Candidate.Title) || Candidate.Title.IsEmpty() || Candidate.Title.Len() > 24
 		|| Candidate.Title.Contains(TEXT("\n")) || Candidate.Title.Contains(TEXT("\r")) || Candidate.Title.Contains(TEXT("\t"))
@@ -231,6 +234,14 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 	auto Extended = [&]() -> bool
 	{
 		const FObject* P;
+		if(O->HasField(TEXT("pointCloud"))) {
+			Context=TEXT("pointCloud: enabled/floor booleans,count integer256..1000000,duration1..15,arc0..200,twist-4..4,stagger0...75");
+			if(!O->TryGetObjectField(TEXT("pointCloud"),P)||!KnownFields(*P,{TEXT("enabled"),TEXT("floor"),TEXT("count"),TEXT("duration"),TEXT("arc"),TEXT("twist"),TEXT("stagger")})
+				||!(*P)->TryGetBoolField(TEXT("enabled"),Candidate.bPointCloud)
+				||((*P)->HasField(TEXT("floor"))&&!(*P)->TryGetBoolField(TEXT("floor"),Candidate.bPointFloor))
+				||!Integer(*P,TEXT("count"),Candidate.PointCount,256,1000000)||!Number(*P,TEXT("duration"),Candidate.AssembleSeconds,1,15)
+				||!Number(*P,TEXT("arc"),Candidate.AssembleArc,0,200)||!Number(*P,TEXT("twist"),Candidate.AssembleTwist,-4,4)||!Number(*P,TEXT("stagger"),Candidate.AssembleStagger,0,.75))return false;
+		}
 		if (O->HasField(TEXT("particles")))
 		{
 			Context = TEXT("particles: invalid field/enum/range. count INTEGER 0..1024,size .25..5,center x/y -260..260,z45..320 (even count0),wind +-2,spread20..250,formationStrength0..4,groups INTEGER1..6,travel0..80,formationPeriod2..60,rotation+-180");
@@ -290,9 +301,9 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 				const FObject N = V->AsObject(); FLightBoxObject Obj;
 				FString Id; N->TryGetStringField(TEXT("id"), Id);
 				Context = TEXT("object ") + Id + TEXT(": check allowed shape/animation/layout/reaction, color, required position/size, ranges and unique id. For custom shapes use polygon outline.");
-				if (!KnownFields(N, { TEXT("id"), TEXT("shape"), TEXT("color"), TEXT("position"), TEXT("size"), TEXT("rotation"), TEXT("emission"), TEXT("wobble"), TEXT("copies"), TEXT("layout"), TEXT("spacing"), TEXT("animation"), TEXT("speed"), TEXT("amplitude"), TEXT("reaction"), TEXT("path"), TEXT("outline"),TEXT("parent"),TEXT("pivot"),TEXT("roughness"),TEXT("metallic"),TEXT("radius"),TEXT("curve"),TEXT("motions"),TEXT("focus"),TEXT("closed"),TEXT("anchor"),TEXT("parentAnchor"),TEXT("startObject"),TEXT("endObject"),TEXT("startAnchor"),TEXT("endAnchor"),TEXT("startOffset"),TEXT("endOffset") })
+				if (!KnownFields(N, { TEXT("id"), TEXT("shape"), TEXT("color"), TEXT("position"), TEXT("size"), TEXT("rotation"), TEXT("emission"), TEXT("wobble"), TEXT("copies"), TEXT("layout"), TEXT("spacing"), TEXT("animation"), TEXT("speed"), TEXT("amplitude"), TEXT("reaction"), TEXT("path"), TEXT("outline"),TEXT("parent"),TEXT("pivot"),TEXT("roughness"),TEXT("metallic"),TEXT("radius"),TEXT("curve"),TEXT("motions"),TEXT("focus"),TEXT("closed"),TEXT("anchor"),TEXT("parentAnchor"),TEXT("startObject"),TEXT("endObject"),TEXT("startAnchor"),TEXT("endAnchor"),TEXT("startOffset"),TEXT("endOffset"),TEXT("profile") })
 					|| !N->TryGetStringField(TEXT("id"), Obj.Id) || Obj.Id.IsEmpty() || Obj.Id.Len() > 32 || Ids.Contains(Obj.Id)
-					|| !N->HasField(TEXT("shape")) || !Choice(N, TEXT("shape"), Obj.Shape, { TEXT("sphere"), TEXT("box"), TEXT("cylinder"), TEXT("cone"), TEXT("torus"), TEXT("disk"), TEXT("star"), TEXT("heart"), TEXT("leaf"), TEXT("fish"), TEXT("flower"), TEXT("polygon"),TEXT("group"),TEXT("bird"),TEXT("bowl"),TEXT("tube"),TEXT("ribbon"),TEXT("water"),TEXT("rock"),TEXT("tree"),TEXT("elephant"),TEXT("giraffe"),TEXT("lion"),TEXT("butterfly"),TEXT("whale"),TEXT("petal"),TEXT("roof"),TEXT("gear"),TEXT("blossom") })
+					|| !N->HasField(TEXT("shape")) || !Choice(N, TEXT("shape"), Obj.Shape, { TEXT("sphere"), TEXT("box"), TEXT("cylinder"), TEXT("cone"), TEXT("torus"), TEXT("disk"), TEXT("star"), TEXT("heart"), TEXT("leaf"), TEXT("fish"), TEXT("flower"), TEXT("polygon"),TEXT("group"),TEXT("bird"),TEXT("bowl"),TEXT("tube"),TEXT("ribbon"),TEXT("water"),TEXT("rock"),TEXT("tree"),TEXT("elephant"),TEXT("giraffe"),TEXT("lion"),TEXT("butterfly"),TEXT("whale"),TEXT("petal"),TEXT("roof"),TEXT("gear"),TEXT("blossom"),TEXT("lathe") })
 					|| !ReadColor(N, TEXT("color"), Obj.Color) || !Vector(N, TEXT("position"), Obj.Position, -400, 450, true)
 					|| !Vector(N, TEXT("size"), Obj.Size, 1, 600, true) || !Vector(N, TEXT("rotation"), Obj.Rotation, -360, 360)
 					|| !Number(N, TEXT("emission"), Obj.Emission, 0, 8) || !Number(N, TEXT("wobble"), Obj.Wobble, 0, 0.35)
@@ -306,6 +317,15 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 					|| (N->HasField(TEXT("closed"))&&!N->TryGetBoolField(TEXT("closed"),Obj.bCurveClosed))
 					|| (N->HasField(TEXT("focus"))&&!N->TryGetBoolField(TEXT("focus"),Obj.bFocus))||!Points(N,TEXT("curve"),Obj.Curve,2,24)) return false;
 				if((Obj.Shape==TEXT("tube")||Obj.Shape==TEXT("ribbon"))&&Obj.Curve.Num()<2) return false;
+				if(N->HasField(TEXT("profile"))) {
+                    const TArray<TSharedPtr<FJsonValue>>* A;if(!N->TryGetArrayField(TEXT("profile"),A)||A->Num()<3||A->Num()>32)return false;
+                    double Last=-1;
+                    for(const auto& Value:*A){const TArray<TSharedPtr<FJsonValue>>* Pair;double Z,R;
+                        if(!Value->TryGetArray(Pair)||Pair->Num()!=2||!(*Pair)[0]->TryGetNumber(Z)||!(*Pair)[1]->TryGetNumber(R)||!FMath::IsFinite(Z)||!FMath::IsFinite(R)||Z<-.5||Z>.5||Z<=Last||R<0||R>.5)return false;
+                        Last=Z;Obj.Profile.Add(FVector2D(Z,R));}
+                    if(Obj.Profile[0].Y>0||Obj.Profile.Last().Y>0)return false;
+                }
+                if(Obj.Shape==TEXT("lathe")&&Obj.Profile.Num()<3)return false;
 				if(N->HasField(TEXT("motions"))) {
 					const TArray<TSharedPtr<FJsonValue>>* A; if(!N->TryGetArrayField(TEXT("motions"),A)||A->Num()>6) return false;
 					for(const auto& V2:*A) {
@@ -404,6 +424,10 @@ FString FLightBoxStyle::Instruction(const FLightBoxStyle& Current)
 		"When the requested SUBJECT is made of light (light ring, neon, glowing shapes, 光輪, 光の輪), make that subject visibly emissive (emission 1.2..3), not merely a metallic object lit from outside. Keep ordinary objects non-emissive. "
 		"Requested motion must be VISIBLE: a uniform ring/cylinder spinning around its symmetry axis appears stationary; use a tilted rotation axis or a small contrasting rim detail. A uniform sphere needs a visible surface detail or an orbit to show movement. "
 		"REQUIRED base: schema:3,title:Japanese 1..24 chars,color/accent:#RRGGBB,motion:.2..2,viscosity:0..1,swirl:-2..2,attraction:0..1,tilt:0..2,glow:.3..2,trail:0..1,shakeThreshold:1.3..3,shake:scatter/gather/none,note:Japanese<=100 chars. "
+		"NEW REQUESTS DEFAULT TO PARTICLE SCULPTURE: include pointCloud:{enabled:true,count:65536,floor:false,duration:5,arc:65,twist:1.25,stagger:.35}. objects describe the COLOURED TARGET SURFACES; no solid objects or floor are drawn in this mode. Particles visibly fly from their current positions to those surfaces. Use 32768..131072 normally; request up to1000000 only for unusually fine detail or an explicit user count. particles.count:0 for sculptures. Preserve pointCloud on edits. "
+		"A new object noun by itself means build that recognizable complete subject, not just recolour the previous object. You may invent shapes using lathe profile, polygon outlines and curved tubes. lathe requires profile:[[height,radius],...] with 3..32 strictly increasing heights within -.5...5, radius0...5; first/last radius0 to close the body. size scales the profile. Optional curve points (local cm) offset the lathe centreline, allowing curved fruit, bottles, vases, vegetables, limbs. Compose distinctive body, cap, stem and leaves with separate IDs/colours. No predetermined noun-to-preset mapping exists. "
+		"Orient each part for its actual 3D contact surface: polygon/star/leaf lie in localXY with thicknessZ, so rotation[0,0,0] makes a horizontal cap. The X90 rule is ONLY for front-facing silhouettes, never an automatic rule for caps. Use parent anchors or explicit contact points to connect stems/caps/leaves, including when a body is tilted. Preserve distinctive proportions and curvature rather than replacing every subject with a round sphere. "
+		"Particle sculpture animates assembly, colour transitions, whole-form tilt and scatter; target surfaces are sampled at time0. For continuous articulated animation (flapping, slurping, flowing tubes, gear rotation) use pointCloud.enabled:false with the existing object motion channels; do not promise that those channels deform point sculptures continuously. "
 		"particles:{count:int0..1024,size:.25..5,behavior:drift/flock/orbit/rain/snow/fire/fountain/fireworks/form,formation:volume/sphere/ring/heart/star/helix/galaxy/grid/wave/torus/cube/fish/bird/butterfly/flower/custom,"
 		"shape:sphere/fish,colorMode:solid/alternate/rainbow/height/speed/leader,center:[x,y,z] (xy+-260,z45..320),wind:3numbers+-2,gravity:-2..2,turbulence:0..2,spread:20..250,formationStrength:0..4,cohesion/alignment/separation:0..2,groups:int1..6,"
 		"formationNext:none or another formation,formationPeriod:2..60 seconds,travel:0..80 cm,formationRotation:[x,y,z] degrees+-180,points:2..128 normalized xyz points within+-1 for custom}. "
@@ -411,7 +435,7 @@ FString FLightBoxStyle::Instruction(const FLightBoxStyle& Current)
 		"world:{background/floor:#RRGGBB,ambient:.1..3,bloom:0..2,box:boolean,keyColor/fillColor:#RRGGBB,keyIntensity:.1..12,keyDirection:[pitch,yaw,roll] degrees,lights:[{position:[x,y,z],color:#RRGGBB,intensity:0..20000,radius:50..1200}] up to4 local lights}. "
 		"camera:{autoFrame:true,yaw:-65..65,pitch:15..80,zoom:.65..2.2,fill:.4.. .88,focus:[x,y,z]}. autoFrame fits the animated subject bounds; use fill .72,zoom1. Disable box normally; no visible grid for object scenes. "
 		"objects:[up to48 object groups, <=256 total copies]. REQUIRED object fields: id<=32chars,shape,color:#RRGGBB,position:[x,y,z],size:[width,depth,height]1..600 cm. "
-		"Shapes: sphere/box/cylinder/cone/torus/disk/star/heart/leaf/fish/flower/polygon/group/bird/bowl/tube/ribbon/water/rock/tree/elephant/giraffe/lion/butterfly/whale/petal/roof/gear/blossom. "
+		"Shapes: lathe/sphere/box/cylinder/cone/torus/disk/star/heart/leaf/fish/flower/polygon/group/bird/bowl/tube/ribbon/water/rock/tree/elephant/giraffe/lion/butterfly/whale/petal/roof/gear/blossom. "
 		"Prefer native assemblies when available: blossom includes stem,leaves,hub and TEN connected petals. blossom animation:bloom,amplitude55,speed1 opens/closes around fixed roots; size[190,190,210],position[0,0,105],color pink. Do NOT add a second stem or hub to blossom. gear is a toothed ring with a central hole, axial direction localZ; gear size[110,110,16],rotation[90,0,0],animation:spinLocal,speed1 or-1 turns about its own axle. Prefer gear+spinLocal for gears over separately calculated rotated teeth. roof is a closed gabled roof: ridge runs alongY, bottom is position.Z-size.Z/2, ridge is position.Z+size.Z/2; put its bottom on top of house walls without rotation. butterfly has thin patterned wings and antennae, whale has eyes/flukes/fins, petal is a curved thin volume; use these silhouettes instead of fat spheres for wings or petals. bird includes eyes,beak,body,wings; tree includes trunk,branches,rounded leafy crowns; animals include FOUR legs,eyes,ears,tail and characteristic features. bowl is HOLLOW; water is a wave surface with specular highlights. "
 		"Objects fit x+-300,y+-200,z0..350; ground z0; viewer NEGATIVE Y, screen RIGHT is NEGATIVE X; zUP. Centered shapes occupy position+-size/2. Bird/butterfly wing span is size.Y: use bird size[75,130,38],butterfly size[55,110,22] so wings are not narrow sticks. bird/fish/whale are already upright and face+X. rotation[0,0,0] gives a readable SIDE silhouette; NEVER apply the polygon X=90 rule to these bodies, which turns them edge-on. Use small Z angles for oblique views. Other animals can rotate Z=-90 to face viewer. "
 		"Optional object: parent:'' or another id (relative position/rotation inherited; parent size is baked, not inherited),pivot:[0,0,0] LOCAL hinge cm,rotation:[x,y,z]deg+-360,roughness:.08..1,metallic:0..1,emission:0..8 ONLY actual lights,focus:true (false for terrain/background/water),"
@@ -463,9 +487,9 @@ bool FLightBoxStyle::CompleteGenerated(const FString& Words,const FLightBoxStyle
     } else if(Has({TEXT("カメラだけ"),TEXT("カメラのみ"),TEXT("camera only")})) {
         Applied.bAutoFrame=Next.bAutoFrame;Applied.CameraFocus=Next.CameraFocus;Applied.CameraYaw=Next.CameraYaw;Applied.CameraPitch=Next.CameraPitch;Applied.CameraZoom=Next.CameraZoom;Applied.CameraFill=Next.CameraFill;
     } else if(Has({TEXT("枠だけ"),TEXT("枠のみ")})) Applied.bShowBox=Next.bShowBox;
-    else if(Has({TEXT("粒の数だけ"),TEXT("粒数だけ")})) Applied.Count=Next.Count;
+    else if(Has({TEXT("粒の数だけ"),TEXT("粒数だけ")})) {if(Applied.bPointCloud)Applied.PointCount=Next.PointCount;else Applied.Count=Next.Count;}
     else if(Has({TEXT("速さだけ"),TEXT("速度だけ"),TEXT("動きだけをゆっくり")})) {
-        Applied.Motion=Next.Motion;
+        Applied.Motion=Next.Motion;Applied.AssembleSeconds=Next.AssembleSeconds;
         for(auto& O:Applied.Objects)if(const auto* N=Next.Objects.FindByPredicate([&](const auto& X){return X.Id==O.Id;})){O.Speed=N->Speed;for(int32 M=0;M<FMath::Min(O.Motions.Num(),N->Motions.Num());++M)if(O.Motions[M].Type==N->Motions[M].Type)O.Motions[M].Period=N->Motions[M].Period;}
     } else Scoped=false;
     if(Scoped){Applied.Title=Next.Title;Applied.Note=Next.Note;Next=MoveTemp(Applied);}
@@ -490,7 +514,7 @@ bool FLightBoxStyle::ValidateIntent(const FString& Words,const FLightBoxStyle& S
 			Diagnostic=TEXT("Requested slurping: add tube curves from bowl to mouth with flow motion. Static noodles/steam do not satisfy ingestion.");return false;
 		}
 	}
-	if(Words.Contains(TEXT("スイミー"))||(Words.Contains(TEXT("群れ"))&&(Words.Contains(TEXT("形"))||Words.Contains(TEXT("かたち"))))) {
+	if(!Scene.bPointCloud&&(Words.Contains(TEXT("スイミー"))||(Words.Contains(TEXT("群れ"))&&(Words.Contains(TEXT("形"))||Words.Contains(TEXT("かたち")))))) {
 		if(Scene.Count<32||Scene.Formation==TEXT("volume")||(Scene.Behavior!=TEXT("flock")&&Scene.Behavior!=TEXT("form"))) {Diagnostic=TEXT("Requested a collective silhouette: use particles behavior flock/form, non-volume formation (fish/custom etc), count>=32. A separate fixed fish is insufficient.");return false;}
 	}
 	if(Words.Contains(TEXT("群れ"))&&(Words.Contains(TEXT("泳"))||Words.Contains(TEXT("swim"),ESearchCase::IgnoreCase))) {

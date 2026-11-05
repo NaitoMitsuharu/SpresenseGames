@@ -200,6 +200,16 @@ FLightBoxMesh FLightBoxMesh::Build(const FLightBoxObject& O,float Time)
 		const TArray<FVector2D> Profile={{0,-.48},{.20,-.48},{.28,-.40},{.43,.04},{.50,.40},{.50,.47},{.47,.50},{.435,.44},{.40,.08},{.24,-.34},{0,-.34}};
 		Surface(40,40,[&](double U,double V){const double T=V*(Profile.Num()-1);const int32 K=FMath::Min(Profile.Num()-2,FMath::FloorToInt(T));const FVector2D P=FMath::Lerp(Profile[K],Profile[K+1],T-K);return FVector(P.X*FMath::Cos(U*2*PI),-P.X*FMath::Sin(U*2*PI),P.Y);});
 	}
+    else if(O.Shape==TEXT("lathe")&&O.Profile.Num()>=3) Surface(64,48,[&](double U,double V){
+        const double Z=FMath::Lerp(O.Profile[0].X,O.Profile.Last().X,V);int32 J=1;while(J<O.Profile.Num()-1&&O.Profile[J].X<Z)++J;
+        const auto A=O.Profile[J-1],B=O.Profile[J];const double D=FMath::Max(.00001,B.X-A.X),T=(Z-A.X)/D;
+        const auto Prev=O.Profile[FMath::Max(0,J-2)],Next=O.Profile[FMath::Min(O.Profile.Num()-1,J+1)];
+        const double MA=(B.Y-Prev.Y)/FMath::Max(.00001,B.X-Prev.X),MB=(Next.Y-A.Y)/FMath::Max(.00001,Next.X-A.X);
+        const double R=FMath::Clamp(FMath::CubicInterp(A.Y,MA*D,B.Y,MB*D,T),0.,.5);
+        FVector P(R*FMath::Cos(U*2*PI),R*FMath::Sin(U*2*PI),Z);
+        if(O.Curve.Num()>1){const FVector C=FLightBoxMotionSystem::Curve(O.Curve,V,false);P.X+=C.X/O.Size.X;P.Y+=C.Y/O.Size.Y;}
+        return P;
+    });
 	else if(O.Shape==TEXT("torus")) Surface(36,12,[&](double U,double V){const double A=U*2*PI,B=V*2*PI,Minor=FMath::Clamp(O.Radius/FMath::Max(1.,FMath::Min(O.Size.X,O.Size.Y)),.015,.24),R=.5-Minor+Minor*FMath::Cos(B);return FVector(R*FMath::Cos(A),R*FMath::Sin(A),.5*FMath::Sin(B));});
 	else {
 		TArray<FVector2D> Outline;

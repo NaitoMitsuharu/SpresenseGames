@@ -4,6 +4,7 @@
 #include "../LightBoxGeometry.h"
 #include "../LightBoxMotion.h"
 #include "../LightBoxJournal.h"
+#include "../LightBoxPointData.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Dom/JsonObject.h"
@@ -14,6 +15,42 @@
 #include "Serialization/JsonSerializer.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxPointShapeTest,"SpresenseMaze.LightBox.PointSculptureGeometryAndLimits",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FLightBoxPointShapeTest::RunTest(const FString&)
+{
+    FLightBoxStyle S;S.bPointCloud=true;S.PointCount=1000000;S.Count=0;
+    FLightBoxObject O;O.Shape=TEXT("lathe");O.Color=FLinearColor(.3f,.02f,.6f);O.Size=FVector(100,90,180);O.Position.Z=160;O.Profile={{-.5,0},{-.2,.46},{.1,.5},{.4,.15},{.5,0}};S.Objects.Add(O);
+    FLightBoxStyle Parsed;FString Error;
+    TestTrue(TEXT("A million is accepted as a ceiling, independently of CPU particles"),FLightBoxStyle::Parse(S.ToJson(),Parsed,Error));
+    TestEqual(TEXT("Point budget round trips"),Parsed.PointCount,1000000);TestFalse(TEXT("Floor is optional and off"),Parsed.bPointFloor);
+    auto Points=LightBoxPoints::Sample(Parsed);TestEqual(TEXT("Exactly the requested number of surface samples"),Points.Num(),1000000);
+    for(int32 I=0;I<Points.Num();I+=997){TestFalse(TEXT("Finite surface positions"),Points[I].Position.ContainsNaN());TestTrue(TEXT("Target remains within the model bounds"),Points[I].Position.Z>=69&&Points[I].Position.Z<=251);}
+    S.PointCount=1000001;TestFalse(TEXT("Above the agreed maximum is rejected"),FLightBoxStyle::Parse(S.ToJson(),Parsed,Error));
+    S.PointCount=65536;S.Objects[0].Profile[2].X=-.3;TestFalse(TEXT("Folded/unsorted lathe profile is rejected atomically"),FLightBoxStyle::Parse(S.ToJson(),Parsed,Error));
+    return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxPointTransitionTest,"SpresenseMaze.LightBox.PointSculptureTransitionContinuity",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FLightBoxPointTransitionTest::RunTest(const FString&)
+{
+    FLightBoxPoint A,B,C;A.Position=FVector3f(-80,25,60);B.Position=FVector3f(40,5,200);C.Position=FVector3f(5,-50,150);
+    for(uint32 I=0;I<128;++I){
+        TestTrue(TEXT("No jump at the start"),LightBoxPoints::Position(A,B,I,0,65,1.25,.35).Equals(A.Position,.0001f));
+        TestTrue(TEXT("All particles arrive at the new shape"),LightBoxPoints::Position(A,B,I,1,65,1.25,.35).Equals(B.Position,.0001f));
+        FLightBoxPoint Snapshot=A;Snapshot.Position=LightBoxPoints::Position(A,B,I,.47,65,1.25,.35);
+        TestTrue(TEXT("Retargeting during flight resumes at the current position"),LightBoxPoints::Position(Snapshot,C,I,0,65,1.25,.35).Equals(Snapshot.Position,.0001f));
+        TestFalse(TEXT("The journey includes visible curved movement"),Snapshot.Position.Equals(FMath::Lerp(A.Position,B.Position,LightBoxPoints::Ease(I,.47,.35)),.1f));
+    }return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxPointLightingTest,"SpresenseMaze.LightBox.PointSculptureLighting",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FLightBoxPointLightingTest::RunTest(const FString&)
+{
+    FLightBoxStyle S;S.bPointCloud=true;S.PointCount=256;S.Count=0;S.Ambient=.1f;S.KeyIntensity=.1f;S.Objects.Add(FLightBoxObject());
+    const auto Dark=LightBoxPoints::Sample(S);S.Ambient=3;S.KeyIntensity=8;const auto Bright=LightBoxPoints::Sample(S);
+    float Before=0,After=0;for(int32 I=0;I<Dark.Num();++I){Before+=Dark[I].Color.GetLuminance();After+=Bright[I].Color.GetLuminance();TestTrue(TEXT("Lighting preserves point destinations"),Dark[I].Position.Equals(Bright[I].Position));}
+    TestTrue(TEXT("Ambient and key intensity brighten point sculptures"),After>Before*2);return true;
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxStyleTest, "SpresenseMaze.LightBox.StyleValidation", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FLightBoxStyleTest::RunTest(const FString&)
@@ -522,7 +559,10 @@ bool FLightBoxScopedEditTest::RunTest(const FString&)
     Next.Objects[0].Color=FLinearColor::Red;TestTrue(TEXT("Lighting-only patch is accepted"),FLightBoxStyle::CompleteGenerated(TEXT("照明だけを明るくして"),Base,Next,Why));
     TestTrue(TEXT("Part color remains unchanged"),Next.Objects[0].Color.Equals(Base.Objects[0].Color));
     Next=Base;Next.CameraPitch=50;TestTrue(TEXT("Camera edit accepted"),FLightBoxStyle::CompleteGenerated(TEXT("カメラだけ上から"),Base,Next,Why));
-    Next.Count+=1;TestTrue(TEXT("Camera-only patch is accepted"),FLightBoxStyle::CompleteGenerated(TEXT("カメラだけ上から"),Base,Next,Why));TestEqual(TEXT("Camera edit preserves count"),Next.Count,Base.Count);return true;
+    Next.Count+=1;TestTrue(TEXT("Camera-only patch is accepted"),FLightBoxStyle::CompleteGenerated(TEXT("カメラだけ上から"),Base,Next,Why));TestEqual(TEXT("Camera edit preserves count"),Next.Count,Base.Count);
+    auto Sculpture=Base;Sculpture.bPointCloud=true;Sculpture.Count=0;Next=Sculpture;Next.PointCount=1000000;Next.Objects[0].Color=FLinearColor::Red;
+    TestTrue(TEXT("Point budget edit accepted"),FLightBoxStyle::CompleteGenerated(TEXT("粒数だけ100万にして"),Sculpture,Next,Why));
+    TestEqual(TEXT("Point budget changes the GPU point count"),Next.PointCount,1000000);TestEqual(TEXT("CPU particles remain off"),Next.Count,0);TestTrue(TEXT("Point count edit preserves the subject"),Next.Objects[0].Color.Equals(Sculpture.Objects[0].Color));return true;
 }
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxInheritedParticlesTest,"SpresenseMaze.LightBox.InheritedDecorationIsRemoved",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
 bool FLightBoxInheritedParticlesTest::RunTest(const FString&)

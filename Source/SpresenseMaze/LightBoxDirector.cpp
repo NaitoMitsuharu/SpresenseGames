@@ -67,6 +67,7 @@ void ULightBoxDirector::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 	#if !UE_BUILD_SHIPPING
 	FString BatchDirectory;
+	if(FParse::Param(FCommandLine::Get(),TEXT("PointCloudReview"))) {bJournalEnabled=false;Journal.bPersistent=false;return;}
 	if(FParse::Value(FCommandLine::Get(),TEXT("LightBoxBatch="),BatchDirectory)) {bJournalEnabled=false;Journal.bPersistent=false;return;}
 #endif
 	bJournalEnabled=true; Journal.bPersistent=true; Journal.Load();

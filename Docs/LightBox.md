@@ -1,11 +1,17 @@
 # ひかりの箱
 
 SpresenseMazeのトップ画面から選べる3つ目の体験です。同じAPKに含まれます。
-箱のSpresenseとPDT-FP1をUSB接続し、PDT-FP1の画面で光の粒を動かします。
+箱のSpresenseとXperia 1 VIIをUSB接続し、Xperia 1 VIIの画面で光の粒を動かします。
 展示画面とデモ名にはOpenClawやCopilotの名称を表示しません。
 
-APKは既存プロジェクトと同じAndroid 14以上・arm64向けです。PDT-FP1はOS更新済みの端末を使用します。
-[ソニーのPDT-FP1更新情報](https://support.sony.jp/electronics/support/software/00380408)
+APKは既存プロジェクトと同じAndroid 14以上・arm64向けです。対象実機はXperia 1 VII（XQ-FS54／Android 16）です。
+[ソニーのXperia 1 VII型番資料](https://helpguide.sony.net/mobile/xperia-1m7/v1/en/contents/about_help_guide.html)
+
+## 粒子が立体を作る演出
+
+新しいAI生成は粒子彫刻が標準です。「なす」などの指示で、AIが作る輪郭・ヘタ・茎などの立体を粒子の到着位置に変換し、粒が移動して形を作ります。現在の形から次の形へも連続して移動します。羽ばたきなど継続的に部品を動かす指示には、従来の立体描画を使います。
+
+標準65,536粒、最大1,000,000粒。数は必要に応じて指定し、床は標準非表示です。箱を傾けると立体が傾き、振る反応が「散開」の景色では粒が散って再び形へ集まります。詳しい仕組みと実機計測は[粒子彫刻](PointSculpture.md)を参照してください。
 
 ## 操作
 
@@ -13,7 +19,7 @@ APKは既存プロジェクトと同じAndroid 14以上・arm64向けです。PD
 - 箱を回す：渦の流れに影響します。IMUの姿勢から回転速度を求めます。
 - 箱を短く振る：光が散る／集まる反応。景色の設定で変わります。
 - 静かに保つ：光が少しずつまとまります。
-- 入力欄上のマイクアイコン：PDT-FP1のマイクで日本語を認識し、認識した言葉を表示して自動で演出を変更します。聞き取り中にもう一度マイクを押すと取り消します。
+- 入力欄上のマイクアイコン：Xperia 1 VIIのマイクで日本語を認識し、認識した言葉を表示して自動で演出を変更します。聞き取り中にもう一度マイクを押すと取り消します。
 - 下部の半透明入力欄：直接文字を入力し、右端の矢印で送信します。Androidではキーボードを閉じる操作だけでは送信しません。PCではEnterも使えます。作成中は矢印が停止アイコンになり、依頼を取り消せます。
 - 右上のハンバーガーメニュー →「星」「海」「蛍」：端末内の景色を選びます。これらはAIへの依頼ではありません。
 - メニュー → 時計アイコン「記録」：指示と設定差分、利用トークン、推定クレジットを確認し、過去の景色を追加のAI通信なしで呼び出せます。
@@ -49,7 +55,7 @@ PCでは矢印／WASDで傾け、Q/Eで回転、Spaceで振る、Vで文字入�
 
 ```text
 Spresense → USB / SPR-BOX Service → UE5の姿勢入力 → 端末内の光のシミュレーション
-PDT-FP1のマイク → Android音声認識 → 端末内OpenClaw → SIM回線 → GitHub Copilot
+Xperia 1 VIIのマイク → Android音声認識 → 端末内OpenClaw → SIM回線 → GitHub Copilot
                                              ↓ 検証済みの景色JSON
                                           UE5へ反映
 ```
@@ -59,10 +65,10 @@ PDT-FP1のマイク → Android音声認識 → 端末内OpenClaw → SIM回線 
 日本語認識を設定するか文字入力を使用します。
 
 OpenClawやTermuxをAPK内に同梱したり、アプリから自動インストールしたりはしません。
-追加PCを使わない実機構成には、PDT-FP1上で別途Gatewayを起動する準備が必要です。
+追加PCを使わない実機構成には、Xperia 1 VII上で別途Gatewayを起動する準備が必要です。
 Android上のOpenClawホスティングは公式の管理サービス対象外です。
 
-## PDT-FP1での演出サービス準備
+## Xperia 1 VIIでの演出サービス準備
 
 1. Termux上（必要に応じてそのLinux環境内）で、互換性のあるNode.jsとOpenClawを用意します。
    `openclaw --version` と `openclaw gateway run --help` が動くことを確認してください。
@@ -77,7 +83,7 @@ Android上のOpenClawホスティングは公式の管理サービス対象外�
 
    モデルIDの部分は表示されたものへ置き換えます。契約・組織ポリシーによって使用可能なモデルが異なります。
    [Copilot接続の公式資料](https://docs.openclaw.ai/providers/github-copilot)
-3. このリポジトリの `Tools/OpenClaw/start-lightbox.sh`、`lightbox-token.cjs`、`lightbox-observer.cjs`、`lightbox-pricing.json` をPDT-FP1の同じフォルダーへコピーし、実行します。
+3. このリポジトリの `Tools/OpenClaw/start-lightbox.sh`、`lightbox-token.cjs`、`lightbox-observer.cjs`、`lightbox-pricing.json` をXperia 1 VIIの同じフォルダーへコピーし、実行します。
 
    ```bash
    bash start-lightbox.sh
@@ -122,8 +128,7 @@ python Tools/LightBoxMockGateway.py
 & 'D:\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor-Cmd.exe' SpresenseMaze.uproject -unattended -nullrhi -LightBoxMockGateway '-ExecCmds=Automation RunTests SpresenseMaze' '-TestExit=Automation Test Queue Empty'
 ```
 
-PDT-FP1上でのGateway起動、実際のCopilot応答、マイク認識精度、USB接続との同時動作、
-UE5前面表示中のTermux継続とフレームレートは実機で別途確認が必要です。
+Xperia 1 VII上のGatewayと実際のCopilotによる文字入力、粒子彫刻のフレームレートは[粒子彫刻の実機記録](PointSculpture.md)を参照してください。SIM単独、Spresense USB併用、直接の発話精度、長時間展示時の発熱は別途確認が必要です。
 
 ### 2026-11-04の確認結果
 
@@ -134,7 +139,7 @@ UE5前面表示中のTermux継続とフレームレートは実機で別途確�
 - トップ、ひかりの箱、文字入力、接続設定を1600×900で描画し、画像を確認。
 - 起動用Bashスクリプトの構文とPython補助スクリプトの構文を確認。
 - XQ-FS54／Android 16をADB接続し、新しいAPKを更新インストール。Termux OpenClawと本物のCopilotへの日本語指示9件の応答を検証。
-- PDT-FP1そのもの、SIM単独、Spresense USB併用、実際の発話は未検証。詳細は [拡張機能と実機検証](LightBoxScene.md) を参照。
+- この時点では対象機種の同定、SIM単独、Spresense USB併用、実際の発話は未検証。詳細は [拡張機能と実機検証](LightBoxScene.md) を参照。
 
 画面画像は `Saved/AutoShots/00_title.png`、`03_lightbox.png`、
 `03_lightbox_words.png`、`03_lightbox_settings.png` に保存しています。

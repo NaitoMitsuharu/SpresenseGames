@@ -12,6 +12,7 @@
 #include "LightBoxGeometry.h"
 #include "LightBoxMotion.h"
 #include "LightBoxBatchReview.h"
+#include "LightBoxPointCloud.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/SkyLightComponent.h"
@@ -45,6 +46,7 @@ ALightBoxPawn::ALightBoxPawn()
 		Mesh->SetMobility(EComponentMobility::Movable);
 	}
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
+	PointCloud=CreateDefaultSubobject<ULightBoxPointCloud>(TEXT("ParticleSculpture"));PointCloud->SetupAttachment(SceneRoot);
 }
 
 void ALightBoxPawn::BeginPlay()
@@ -90,6 +92,7 @@ void ALightBoxPawn::BeginPlay()
 		FString Json, Error; FLightBoxStyle Review;
 		if (FFileHelper::LoadFileToString(Json, *SceneFile) && FLightBoxStyle::Parse(Json, Review, Error))
 		{ GetGameInstance()->GetSubsystem<ULightBoxDirector>()->ApplyScene(Review); }
+		else UE_LOG(LogTemp,Warning,TEXT("LightBox review scene rejected: %s"),*Error);
 	}
 #endif
 }
@@ -110,6 +113,7 @@ void ALightBoxPawn::BuildChamber()
 	};
 	UInstancedStaticMeshComponent* Dark = Group(TEXT("Chamber"), Surface, FLinearColor(0.012f, 0.024f, 0.04f));
 	FloorMaterial = Cast<UMaterialInstanceDynamic>(Dark->GetMaterial(0));
+	StageFloor=Dark;
 	Dark->AddInstance(FTransform(FQuat::Identity, FVector(0, 0, -6), FVector(6.2, 4.2, 0.12)));
 	Backdrop = Group(TEXT("Backdrop"), LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/LightBox/M_LightBackdrop.M_LightBackdrop")), FLinearColor::Black);
 	Backdrop->SetMobility(EComponentMobility::Movable);
@@ -155,7 +159,13 @@ void ALightBoxPawn::BuildChamber()
 
 void ALightBoxPawn::ApplyScene(const FLightBoxStyle& Style)
 {
-	if (Simulation.Motes.Num() != Style.Count) { Simulation.Reset(Style.Count); }
+	const int32 CPUCount=Style.bPointCloud?0:Style.Count;
+	if (Simulation.Motes.Num() != CPUCount) { Simulation.Reset(CPUCount); }
+	if(Style.bPointCloud){
+		for(auto C:ParticleMeshes)C->ClearInstances();for(auto C:TailMeshes)C->ClearInstances();
+		PointCloud->Assemble(Style);
+	}else PointCloud->HideCloud();
+	if(StageFloor)StageFloor->SetVisibility(!Style.bPointCloud||Style.bPointFloor);
 	for (UProceduralMeshComponent* C : SceneObjects) { if (C) { C->DestroyComponent(); } }
 	SceneObjects.Reset(); ObjectMaterials.Reset(); ObjectBurst = 0; Elapsed=0;GeometryClock=1;
 	UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/LightBox/M_LightObject.M_LightObject"));
@@ -163,6 +173,7 @@ void ALightBoxPawn::ApplyScene(const FLightBoxStyle& Style)
 	const auto InitialObjects=FLightBoxMotionSystem::ResolveBindings(Style,FLightBoxMotionSystem::Evaluate(Style,0));
 	for (const FLightBoxObject& O : InitialObjects)
 	{
+		if(Style.bPointCloud)break;
 		auto* C = NewObject<UProceduralMeshComponent>(this);
 		C->SetupAttachment(SceneRoot); C->SetMobility(EComponentMobility::Movable);
 		C->SetCollisionEnabled(ECollisionEnabled::NoCollision); C->SetCastShadow(O.Shape!=TEXT("water")&&O.Shape!=TEXT("group")); C->RegisterComponent();
@@ -183,7 +194,8 @@ void ALightBoxPawn::ApplyScene(const FLightBoxStyle& Style)
 	if(Grid) Grid->SetVisibility(Style.bShowBox&&Style.Objects.IsEmpty());
 	if(PostProcess) PostProcess->Settings.BloomIntensity=Style.Bloom*.55f;
 	int32 Width=16,Height=9;if(auto* PC=Cast<APlayerController>(GetController())) PC->GetViewportSize(Width,Height);
-	LastAspect=float(Width)/FMath::Max(1,Height); Camera->SetRelativeTransform(FLightBoxMotionSystem::Camera(Style,LastAspect));
+	LastAspect=float(Width)/FMath::Max(1,Height);CameraStart=Camera->GetRelativeTransform();CameraTarget=FLightBoxMotionSystem::Camera(Style,LastAspect);CameraBlendAge=Style.bPointCloud?0:100;
+	if(!Style.bPointCloud)Camera->SetRelativeTransform(CameraTarget);
 	if(Backdrop) Backdrop->UpdateInstanceTransform(0,FTransform(FRotationMatrix::MakeFromZ(-Camera->GetForwardVector()).ToQuat(),Camera->GetRelativeLocation()+Camera->GetForwardVector()*2800,FVector(140,140,.01)),false,true);
 
 }
@@ -248,6 +260,7 @@ void ALightBoxPawn::EndPlay(const EEndPlayReason::Type Reason)
 void ALightBoxPawn::Pulse()
 {
 	Simulation.Impulse(GetGameInstance()->GetSubsystem<ULightBoxDirector>()->GetStyle());
+	if(PointCloud)PointCloud->ScatterPulse();
 	ObjectBurst = 1;
 }
 
@@ -310,8 +323,14 @@ void ALightBoxPawn::Tick(float DeltaSeconds)
 			}
 		}
 	}
-	Simulation.Step(Dt, Tilt, Twist, Style);
-	AnimateScene(Dt, Tilt, Style); RenderParticles(Style);
+	if(Style.bPointCloud){
+		CameraBlendAge+=DeltaSeconds;
+#if !UE_BUILD_SHIPPING
+		float ReviewPhase;if(FParse::Value(FCommandLine::Get(),TEXT("PointCloudPhase="),ReviewPhase))CameraBlendAge=Style.AssembleSeconds;
+#endif
+		const float A=FMath::SmoothStep(0.f,1.f,FMath::Clamp(CameraBlendAge/Style.AssembleSeconds,0.f,1.f));FTransform C;C.Blend(CameraStart,CameraTarget,A);Camera->SetRelativeTransform(C);
+		PointCloud->Advance(DeltaSeconds,Tilt,Camera->GetRightVector(),Camera->GetUpVector());
+	}else{Simulation.Step(Dt, Tilt, Twist, Style);AnimateScene(Dt, Tilt, Style); RenderParticles(Style);}
 #if !UE_BUILD_SHIPPING
 	if (!bAutoShot && GetWorld()->GetTimeSeconds() > 3 && FParse::Param(FCommandLine::Get(), TEXT("LightBoxAutoShot")))
 	{

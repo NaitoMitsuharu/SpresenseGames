@@ -1,0 +1,699 @@
+{
+  "date": "2026-11-05",
+  "device": {
+    "name": "Xperia 1 VII",
+    "model": "XQ-FS54",
+    "android": 16,
+    "screen": [
+      2340,
+      1080
+    ]
+  },
+  "conditions": {
+    "build": "Android ASTC Development",
+    "measurement": "completed shape, ~8 seconds, no warmup exclusion",
+    "rendering": "GPU vertex animation, not a physical swarm simulation"
+  },
+  "automation": {
+    "passed": 40,
+    "failed": 0
+  },
+  "benchmark": [
+    {
+      "points": 10000,
+      "instances": 10000,
+      "fps": 59.734397888183594,
+      "frameMsP95": 17.372915267944336,
+      "frameMsMax": 46.34849166870117,
+      "seconds": 8.002089500427246,
+      "gpuVertexAnimation": true,
+      "requested": 10000
+    },
+    {
+      "points": 65536,
+      "instances": 65536,
+      "fps": 55.68954849243164,
+      "frameMsP95": 27.38739585876465,
+      "frameMsMax": 42.0139045715332,
+      "seconds": 8.008684158325195,
+      "gpuVertexAnimation": true,
+      "requested": 65536
+    },
+    {
+      "points": 100000,
+      "instances": 100000,
+      "fps": 50.24656295776367,
+      "frameMsP95": 32.58234405517578,
+      "frameMsMax": 55.48390579223633,
+      "seconds": 8.000547409057617,
+      "gpuVertexAnimation": true,
+      "requested": 100000
+    },
+    {
+      "points": 300000,
+      "instances": 300000,
+      "fps": 40.71420669555664,
+      "frameMsP95": 58.891563415527344,
+      "frameMsMax": 144.852294921875,
+      "seconds": 8.105278968811035,
+      "gpuVertexAnimation": true,
+      "requested": 300000
+    },
+    {
+      "points": 1000000,
+      "instances": 1000000,
+      "fps": 12.370830535888672,
+      "frameMsP95": 174.4241180419922,
+      "frameMsMax": 310.691650390625,
+      "seconds": 8.00269603729248,
+      "gpuVertexAnimation": true,
+      "requested": 1000000
+    }
+  ],
+  "liveTextCases": [
+    {
+      "words": "なす",
+      "result": "反映済み",
+      "model": "gpt-6-luna",
+      "credits": 0.2122675,
+      "seconds": 33.741005247997236,
+      "repair": false,
+      "scene": {
+        "title": "つややかななす",
+        "color": "#57317D",
+        "accent": "#6E9948",
+        "motion": 0.4000000059604645,
+        "viscosity": 0.3499999940395355,
+        "swirl": 0.20000000298023224,
+        "attraction": 0.30000001192092896,
+        "tilt": 0.5,
+        "glow": 0.5,
+        "trail": 0.10000000149011612,
+        "shakeThreshold": 2,
+        "shake": "none",
+        "schema": 3,
+        "note": "紫のふっくらした実に、緑の星形のがくと短い茎を添えたなす。",
+        "pointCloud": {
+          "enabled": true,
+          "floor": false,
+          "count": 65536,
+          "duration": 5,
+          "arc": 65,
+          "twist": 1.25,
+          "stagger": 0.3499999940395355
+        },
+        "particles": {
+          "count": 0,
+          "size": 1,
+          "behavior": "drift",
+          "formation": "volume",
+          "shape": "sphere",
+          "colorMode": "solid",
+          "center": [
+            0,
+            0,
+            120
+          ],
+          "wind": [
+            0,
+            0,
+            0
+          ],
+          "gravity": 0,
+          "turbulence": 0,
+          "spread": 50,
+          "formationStrength": 1,
+          "cohesion": 0.5,
+          "alignment": 0.5,
+          "separation": 0.5,
+          "groups": 1,
+          "formationNext": "none",
+          "formationPeriod": 10,
+          "travel": 0,
+          "formationRotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "world": {
+          "background": "#18243A",
+          "floor": "#253345",
+          "ambient": 1,
+          "bloom": 0.3499999940395355,
+          "box": false,
+          "keyColor": "#FFE2A8",
+          "fillColor": "#A9D7FF",
+          "keyIntensity": 4,
+          "keyDirection": [
+            -35,
+            25,
+            0
+          ],
+          "lights": []
+        },
+        "camera": {
+          "yaw": 0,
+          "pitch": 28,
+          "zoom": 1,
+          "autoFrame": true,
+          "fill": 0.7200000286102295,
+          "focus": [
+            0,
+            0,
+            120
+          ]
+        },
+        "objects": [
+          {
+            "id": "eggplant",
+            "shape": "lathe",
+            "color": "#57317D",
+            "position": [
+              0,
+              0,
+              112
+            ],
+            "size": [
+              128,
+              128,
+              168
+            ],
+            "rotation": [
+              8,
+              0,
+              -12
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "profile": [
+              [
+                -0.5,
+                0
+              ],
+              [
+                -0.43,
+                0.2
+              ],
+              [
+                -0.34,
+                0.34
+              ],
+              [
+                -0.2,
+                0.44
+              ],
+              [
+                0,
+                0.48
+              ],
+              [
+                0.18,
+                0.45
+              ],
+              [
+                0.32,
+                0.37
+              ],
+              [
+                0.42,
+                0.27
+              ],
+              [
+                0.47,
+                0.17
+              ],
+              [
+                0.49,
+                0.08
+              ],
+              [
+                0.5,
+                0
+              ]
+            ],
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.20000000298023224,
+            "metallic": 0.07999999821186066,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "calyx",
+            "shape": "polygon",
+            "color": "#6E9948",
+            "position": [
+              0,
+              0,
+              190
+            ],
+            "size": [
+              62,
+              62,
+              8
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.550000011920929,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true,
+            "outline": [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.12,
+                0.14
+              ],
+              [
+                0.48,
+                0.15
+              ],
+              [
+                0.18,
+                -0.05
+              ],
+              [
+                0.3,
+                -0.42
+              ],
+              [
+                0,
+                -0.18
+              ],
+              [
+                -0.3,
+                -0.42
+              ],
+              [
+                -0.18,
+                -0.05
+              ],
+              [
+                -0.48,
+                0.15
+              ],
+              [
+                -0.12,
+                0.14
+              ]
+            ]
+          },
+          {
+            "id": "stem",
+            "shape": "tube",
+            "color": "#748747",
+            "position": [
+              0,
+              0,
+              188
+            ],
+            "size": [
+              1,
+              1,
+              1
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.6499999761581421,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true,
+            "curve": [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                2,
+                0,
+                5
+              ],
+              [
+                6,
+                0,
+                12
+              ],
+              [
+                10,
+                0,
+                18
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "words": "りんご",
+      "result": "反映済み",
+      "model": "gpt-6-luna",
+      "credits": 0.16879249999999998,
+      "seconds": 15.378230358997826,
+      "repair": false,
+      "scene": {
+        "title": "赤く実ったりんご",
+        "color": "#C9343D",
+        "accent": "#6E9948",
+        "motion": 0.4000000059604645,
+        "viscosity": 0.3499999940395355,
+        "swirl": 0.20000000298023224,
+        "attraction": 0.30000001192092896,
+        "tilt": 0.5,
+        "glow": 0.5,
+        "trail": 0.10000000149011612,
+        "shakeThreshold": 2,
+        "shake": "none",
+        "schema": 3,
+        "note": "丸く赤いつやのある実に、短い茶色の茎と緑の葉を添えたりんご。",
+        "pointCloud": {
+          "enabled": true,
+          "floor": false,
+          "count": 65536,
+          "duration": 5,
+          "arc": 65,
+          "twist": 1.25,
+          "stagger": 0.3499999940395355
+        },
+        "particles": {
+          "count": 0,
+          "size": 1,
+          "behavior": "drift",
+          "formation": "volume",
+          "shape": "sphere",
+          "colorMode": "solid",
+          "center": [
+            0,
+            0,
+            100
+          ],
+          "wind": [
+            0,
+            0,
+            0
+          ],
+          "gravity": 0,
+          "turbulence": 0,
+          "spread": 50,
+          "formationStrength": 1,
+          "cohesion": 0.5,
+          "alignment": 0.5,
+          "separation": 0.5,
+          "groups": 1,
+          "formationNext": "none",
+          "formationPeriod": 10,
+          "travel": 0,
+          "formationRotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "world": {
+          "background": "#18243A",
+          "floor": "#253345",
+          "ambient": 1,
+          "bloom": 0.3499999940395355,
+          "box": false,
+          "keyColor": "#FFE2A8",
+          "fillColor": "#A9D7FF",
+          "keyIntensity": 4,
+          "keyDirection": [
+            -35,
+            25,
+            0
+          ],
+          "lights": []
+        },
+        "camera": {
+          "yaw": 0,
+          "pitch": 28,
+          "zoom": 1,
+          "autoFrame": true,
+          "fill": 0.7200000286102295,
+          "focus": [
+            0,
+            0,
+            100
+          ]
+        },
+        "objects": [
+          {
+            "id": "apple",
+            "shape": "lathe",
+            "color": "#C9343D",
+            "position": [
+              0,
+              0,
+              78
+            ],
+            "size": [
+              142,
+              142,
+              132
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "profile": [
+              [
+                -0.5,
+                0
+              ],
+              [
+                -0.44,
+                0.16
+              ],
+              [
+                -0.34,
+                0.3
+              ],
+              [
+                -0.16,
+                0.42
+              ],
+              [
+                0.06,
+                0.48
+              ],
+              [
+                0.22,
+                0.44
+              ],
+              [
+                0.34,
+                0.34
+              ],
+              [
+                0.42,
+                0.23
+              ],
+              [
+                0.46,
+                0.12
+              ],
+              [
+                0.5,
+                0
+              ]
+            ],
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.2199999988079071,
+            "metallic": 0.03999999910593033,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "stem",
+            "shape": "tube",
+            "color": "#725038",
+            "position": [
+              0,
+              0,
+              142
+            ],
+            "size": [
+              1,
+              1,
+              1
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.800000011920929,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true,
+            "curve": [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                1,
+                0,
+                5
+              ],
+              [
+                0,
+                0,
+                12
+              ],
+              [
+                -2,
+                0,
+                18
+              ]
+            ]
+          },
+          {
+            "id": "leaf",
+            "shape": "leaf",
+            "color": "#6E9948",
+            "position": [
+              -9,
+              0,
+              151
+            ],
+            "size": [
+              38,
+              18,
+              5
+            ],
+            "rotation": [
+              90,
+              0,
+              -28
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.6000000238418579,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          }
+        ]
+      }
+    }
+  ],
+  "creditsTotal": 0.38105999999999995,
+  "liveVoice": "Automatic speaker-to-microphone replay did not produce recognition; not counted as passed",
+  "savedScenePreserved": true,
+  "benchmarkJournalPreserved": true
+}
