@@ -10,6 +10,7 @@ public:
 	static TArray<FTransform> Evaluate(const FLightBoxStyle& Scene,float Time,const FVector2D& Tilt=FVector2D::ZeroVector,float Burst=0);
 	static FBox Bounds(const FLightBoxStyle& Scene);
 	static FTransform Camera(const FLightBoxStyle& Scene,float AspectRatio,FVector* Focus=nullptr);
+	static FTransform CameraForBounds(const FLightBoxStyle& Scene,const FBox& Bounds,float AspectRatio,const FVector2D& Angles=FVector2D::ZeroVector,float DistanceScale=1,FVector* Focus=nullptr);
 	static FVector Anchor(const FLightBoxObject& Object,const FString& Name);
 	static TArray<FLightBoxObject> ResolveBindings(const FLightBoxStyle& Scene,const TArray<FTransform>& World);
 };

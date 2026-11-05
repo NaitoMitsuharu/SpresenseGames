@@ -1,0 +1,2445 @@
+{
+  "date": "2026-11-05",
+  "device": "Xperia 1 VII / XQ-FS54 / Android 16",
+  "automation": {
+    "passed": 42,
+    "failed": 0
+  },
+  "nativeControls": {
+    "drag": "Viewing angle changed on a point sculpture",
+    "pinch": {
+      "inputScale": 1.6,
+      "beforeWidthPx": 384,
+      "afterWidthPx": 623
+    },
+    "autoOrbit": "Menu start/stop and reset tapped; recorded while birds and water animate",
+    "navigationInsetPx": 120
+  },
+  "liveTextCases": [
+    {
+      "words": "星空の下でホタルがゆっくり飛び交う景色にして",
+      "result": "反映済み",
+      "model": "gpt-6-luna",
+      "credits": 0.20006749999999998,
+      "seconds": 24.32905780299916,
+      "repair": false,
+      "scene": {
+        "title": "星空とホタル",
+        "color": "#D9E88A",
+        "accent": "#FFD875",
+        "motion": 0.44999998807907104,
+        "viscosity": 0.3499999940395355,
+        "swirl": 0.25,
+        "attraction": 0.20000000298023224,
+        "tilt": 0.5,
+        "glow": 0.6499999761581421,
+        "trail": 0.15000000596046448,
+        "shakeThreshold": 2,
+        "shake": "none",
+        "schema": 3,
+        "note": "星がまたたく夜空の下、淡く光るホタルがゆっくり漂います。",
+        "pointCloud": {
+          "enabled": false,
+          "floor": false,
+          "count": 65536,
+          "duration": 5,
+          "arc": 65,
+          "twist": 1.25,
+          "stagger": 0.3499999940395355
+        },
+        "particles": {
+          "count": 120,
+          "size": 1.5,
+          "behavior": "drift",
+          "formation": "volume",
+          "shape": "sphere",
+          "colorMode": "alternate",
+          "center": [
+            0,
+            0,
+            100
+          ],
+          "wind": [
+            0.15,
+            0,
+            0
+          ],
+          "gravity": 0,
+          "turbulence": 0.25,
+          "spread": 180,
+          "formationStrength": 1,
+          "cohesion": 0.5,
+          "alignment": 0.5,
+          "separation": 0.5,
+          "groups": 1,
+          "formationNext": "none",
+          "formationPeriod": 10,
+          "travel": 0,
+          "formationRotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "world": {
+          "background": "#101A35",
+          "floor": "#18262C",
+          "ambient": 0.6499999761581421,
+          "bloom": 0.550000011920929,
+          "box": false,
+          "keyColor": "#FFE8B0",
+          "fillColor": "#7794C8",
+          "keyIntensity": 1.2000000476837158,
+          "keyDirection": [
+            -35,
+            25,
+            0
+          ],
+          "lights": []
+        },
+        "camera": {
+          "orbit": 0,
+          "yaw": 0,
+          "pitch": 27,
+          "zoom": 1,
+          "autoFrame": true,
+          "fill": 0.7200000286102295,
+          "focus": [
+            0,
+            0,
+            100
+          ]
+        },
+        "objects": [
+          {
+            "id": "ground",
+            "shape": "box",
+            "color": "#20342F",
+            "position": [
+              0,
+              0,
+              3
+            ],
+            "size": [
+              600,
+              400,
+              6
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.949999988079071,
+            "metallic": 0,
+            "radius": 3,
+            "focus": false
+          },
+          {
+            "id": "tree-left",
+            "shape": "tree",
+            "color": "#18332D",
+            "position": [
+              -170,
+              25,
+              44
+            ],
+            "size": [
+              75,
+              75,
+              88
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.949999988079071,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "tree-right",
+            "shape": "tree",
+            "color": "#1A382E",
+            "position": [
+              155,
+              35,
+              55
+            ],
+            "size": [
+              90,
+              85,
+              110
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.949999988079071,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "moon",
+            "shape": "polygon",
+            "color": "#FFE7B0",
+            "position": [
+              112,
+              70,
+              200
+            ],
+            "size": [
+              44,
+              44,
+              4
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 1.399999976158142,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.699999988079071,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true,
+            "outline": [
+              [
+                0.15,
+                0.5
+              ],
+              [
+                0.42,
+                0.34
+              ],
+              [
+                0.5,
+                0.08
+              ],
+              [
+                0.43,
+                -0.2
+              ],
+              [
+                0.22,
+                -0.42
+              ],
+              [
+                -0.08,
+                -0.5
+              ],
+              [
+                -0.34,
+                -0.37
+              ],
+              [
+                -0.48,
+                -0.13
+              ],
+              [
+                -0.5,
+                0.17
+              ],
+              [
+                -0.35,
+                0.42
+              ],
+              [
+                -0.08,
+                0.5
+              ],
+              [
+                0.12,
+                0.46
+              ],
+              [
+                -0.04,
+                0.3
+              ],
+              [
+                -0.16,
+                0.08
+              ],
+              [
+                -0.14,
+                -0.16
+              ],
+              [
+                0.02,
+                -0.34
+              ],
+              [
+                0.22,
+                -0.38
+              ],
+              [
+                0.08,
+                -0.2
+              ],
+              [
+                0.03,
+                0.02
+              ],
+              [
+                0.08,
+                0.25
+              ]
+            ]
+          },
+          {
+            "id": "star-1",
+            "shape": "star",
+            "color": "#F9E8B4",
+            "position": [
+              -125,
+              55,
+              188
+            ],
+            "size": [
+              9,
+              9,
+              3
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 1.100000023841858,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "star-2",
+            "shape": "star",
+            "color": "#DCE7FF",
+            "position": [
+              -55,
+              65,
+              224
+            ],
+            "size": [
+              7,
+              7,
+              3
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 0.800000011920929,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "star-3",
+            "shape": "star",
+            "color": "#F9E8B4",
+            "position": [
+              18,
+              55,
+              192
+            ],
+            "size": [
+              8,
+              8,
+              3
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 1,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "star-4",
+            "shape": "star",
+            "color": "#DCE7FF",
+            "position": [
+              72,
+              30,
+              225
+            ],
+            "size": [
+              6,
+              6,
+              3
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 0.800000011920929,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "star-5",
+            "shape": "star",
+            "color": "#F9E8B4",
+            "position": [
+              -170,
+              10,
+              218
+            ],
+            "size": [
+              7,
+              7,
+              3
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 0.8999999761581421,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "star-6",
+            "shape": "star",
+            "color": "#DCE7FF",
+            "position": [
+              158,
+              10,
+              188
+            ],
+            "size": [
+              8,
+              8,
+              3
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 0.8999999761581421,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          }
+        ]
+      },
+      "before": {
+        "title": "赤く実ったりんご",
+        "color": "#C9343D",
+        "accent": "#6E9948",
+        "motion": 0.4000000059604645,
+        "viscosity": 0.3499999940395355,
+        "swirl": 0.20000000298023224,
+        "attraction": 0.30000001192092896,
+        "tilt": 0.5,
+        "glow": 0.5,
+        "trail": 0.10000000149011612,
+        "shakeThreshold": 2,
+        "shake": "none",
+        "schema": 3,
+        "note": "丸く赤いつやのある実に、短い茶色の茎と緑の葉を添えたりんご。",
+        "pointCloud": {
+          "enabled": true,
+          "floor": false,
+          "count": 65536,
+          "duration": 5,
+          "arc": 65,
+          "twist": 1.25,
+          "stagger": 0.3499999940395355
+        },
+        "particles": {
+          "count": 0,
+          "size": 1,
+          "behavior": "drift",
+          "formation": "volume",
+          "shape": "sphere",
+          "colorMode": "solid",
+          "center": [
+            0,
+            0,
+            100
+          ],
+          "wind": [
+            0,
+            0,
+            0
+          ],
+          "gravity": 0,
+          "turbulence": 0,
+          "spread": 50,
+          "formationStrength": 1,
+          "cohesion": 0.5,
+          "alignment": 0.5,
+          "separation": 0.5,
+          "groups": 1,
+          "formationNext": "none",
+          "formationPeriod": 10,
+          "travel": 0,
+          "formationRotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "world": {
+          "background": "#18243A",
+          "floor": "#253345",
+          "ambient": 1,
+          "bloom": 0.3499999940395355,
+          "box": false,
+          "keyColor": "#FFE2A8",
+          "fillColor": "#A9D7FF",
+          "keyIntensity": 4,
+          "keyDirection": [
+            -35,
+            25,
+            0
+          ],
+          "lights": []
+        },
+        "camera": {
+          "orbit": 0,
+          "yaw": 0,
+          "pitch": 28,
+          "zoom": 1,
+          "autoFrame": true,
+          "fill": 0.7200000286102295,
+          "focus": [
+            0,
+            0,
+            100
+          ]
+        },
+        "objects": [
+          {
+            "id": "apple",
+            "shape": "lathe",
+            "color": "#C9343D",
+            "position": [
+              0,
+              0,
+              78
+            ],
+            "size": [
+              142,
+              142,
+              132
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "profile": [
+              [
+                -0.5,
+                0
+              ],
+              [
+                -0.44,
+                0.16
+              ],
+              [
+                -0.34,
+                0.3
+              ],
+              [
+                -0.16,
+                0.42
+              ],
+              [
+                0.06,
+                0.48
+              ],
+              [
+                0.22,
+                0.44
+              ],
+              [
+                0.34,
+                0.34
+              ],
+              [
+                0.42,
+                0.23
+              ],
+              [
+                0.46,
+                0.12
+              ],
+              [
+                0.5,
+                0
+              ]
+            ],
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.2199999988079071,
+            "metallic": 0.03999999910593033,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "stem",
+            "shape": "tube",
+            "color": "#725038",
+            "position": [
+              0,
+              0,
+              142
+            ],
+            "size": [
+              1,
+              1,
+              1
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.800000011920929,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true,
+            "curve": [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                1,
+                0,
+                5
+              ],
+              [
+                0,
+                0,
+                12
+              ],
+              [
+                -2,
+                0,
+                18
+              ]
+            ]
+          },
+          {
+            "id": "leaf",
+            "shape": "leaf",
+            "color": "#6E9948",
+            "position": [
+              -9,
+              0,
+              151
+            ],
+            "size": [
+              38,
+              18,
+              5
+            ],
+            "rotation": [
+              90,
+              0,
+              -28
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.6000000238418579,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          }
+        ]
+      }
+    },
+    {
+      "words": "夕焼けの海を3羽のカモメが羽ばたきながら飛ぶ景色にして",
+      "result": "反映済み",
+      "model": "gpt-6-luna",
+      "credits": 0.18496749999999998,
+      "seconds": 9.307252861006418,
+      "repair": true,
+      "scene": {
+        "title": "夕焼けの海とカモメ",
+        "color": "#F08A61",
+        "accent": "#FFD28A",
+        "motion": 0.800000011920929,
+        "viscosity": 0.30000001192092896,
+        "swirl": 0.20000000298023224,
+        "attraction": 0.20000000298023224,
+        "tilt": 0.5,
+        "glow": 0.6499999761581421,
+        "trail": 0.10000000149011612,
+        "shakeThreshold": 2,
+        "shake": "none",
+        "schema": 3,
+        "note": "夕焼けに染まる海の上を、3羽のカモメが羽ばたきながら飛びます。",
+        "pointCloud": {
+          "enabled": false,
+          "floor": false,
+          "count": 256,
+          "duration": 5,
+          "arc": 65,
+          "twist": 1.25,
+          "stagger": 0.3499999940395355
+        },
+        "particles": {
+          "count": 0,
+          "size": 1.5,
+          "behavior": "drift",
+          "formation": "volume",
+          "shape": "sphere",
+          "colorMode": "solid",
+          "center": [
+            0,
+            0,
+            100
+          ],
+          "wind": [
+            0,
+            0,
+            0
+          ],
+          "gravity": 0,
+          "turbulence": 0,
+          "spread": 100,
+          "formationStrength": 1,
+          "cohesion": 0.5,
+          "alignment": 0.5,
+          "separation": 0.5,
+          "groups": 1,
+          "formationNext": "none",
+          "formationPeriod": 10,
+          "travel": 0,
+          "formationRotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "world": {
+          "background": "#6D4661",
+          "floor": "#273C50",
+          "ambient": 0.800000011920929,
+          "bloom": 0.44999998807907104,
+          "box": false,
+          "keyColor": "#FFC18C",
+          "fillColor": "#788BA8",
+          "keyIntensity": 1.399999976158142,
+          "keyDirection": [
+            -35,
+            25,
+            0
+          ],
+          "lights": []
+        },
+        "camera": {
+          "orbit": 0,
+          "yaw": 0,
+          "pitch": 27,
+          "zoom": 1,
+          "autoFrame": true,
+          "fill": 0.7200000286102295,
+          "focus": [
+            0,
+            0,
+            100
+          ]
+        },
+        "objects": [
+          {
+            "id": "sea",
+            "shape": "water",
+            "color": "#31566A",
+            "position": [
+              0,
+              55,
+              8
+            ],
+            "size": [
+              600,
+              300,
+              12
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "wave",
+            "speed": 0.44999998807907104,
+            "amplitude": 3,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.2800000011920929,
+            "metallic": 0,
+            "radius": 3,
+            "focus": false
+          },
+          {
+            "id": "sunset-sun",
+            "shape": "disk",
+            "color": "#FF9B68",
+            "position": [
+              55,
+              110,
+              145
+            ],
+            "size": [
+              78,
+              78,
+              5
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 1.2999999523162842,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.699999988079071,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "gull-one",
+            "shape": "bird",
+            "color": "#292D3C",
+            "position": [
+              -85,
+              -45,
+              130
+            ],
+            "size": [
+              75,
+              130,
+              38
+            ],
+            "rotation": [
+              0,
+              0,
+              8
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "fly",
+            "speed": 0.6499999761581421,
+            "amplitude": 17,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "gull-two",
+            "shape": "bird",
+            "color": "#292D3C",
+            "position": [
+              -5,
+              -35,
+              165
+            ],
+            "size": [
+              68,
+              118,
+              35
+            ],
+            "rotation": [
+              0,
+              0,
+              -5
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "fly",
+            "speed": 0.7200000286102295,
+            "amplitude": 15,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "gull-three",
+            "shape": "bird",
+            "color": "#292D3C",
+            "position": [
+              85,
+              -50,
+              115
+            ],
+            "size": [
+              72,
+              125,
+              36
+            ],
+            "rotation": [
+              0,
+              0,
+              12
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "fly",
+            "speed": 0.6000000238418579,
+            "amplitude": 18,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          }
+        ]
+      },
+      "before": {
+        "title": "星空とホタル",
+        "color": "#D9E88A",
+        "accent": "#FFD875",
+        "motion": 0.44999998807907104,
+        "viscosity": 0.3499999940395355,
+        "swirl": 0.25,
+        "attraction": 0.20000000298023224,
+        "tilt": 0.5,
+        "glow": 0.6499999761581421,
+        "trail": 0.15000000596046448,
+        "shakeThreshold": 2,
+        "shake": "none",
+        "schema": 3,
+        "note": "星がまたたく夜空の下、淡く光るホタルがゆっくり漂います。",
+        "pointCloud": {
+          "enabled": false,
+          "floor": false,
+          "count": 65536,
+          "duration": 5,
+          "arc": 65,
+          "twist": 1.25,
+          "stagger": 0.3499999940395355
+        },
+        "particles": {
+          "count": 120,
+          "size": 1.5,
+          "behavior": "drift",
+          "formation": "volume",
+          "shape": "sphere",
+          "colorMode": "alternate",
+          "center": [
+            0,
+            0,
+            100
+          ],
+          "wind": [
+            0.15,
+            0,
+            0
+          ],
+          "gravity": 0,
+          "turbulence": 0.25,
+          "spread": 180,
+          "formationStrength": 1,
+          "cohesion": 0.5,
+          "alignment": 0.5,
+          "separation": 0.5,
+          "groups": 1,
+          "formationNext": "none",
+          "formationPeriod": 10,
+          "travel": 0,
+          "formationRotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "world": {
+          "background": "#101A35",
+          "floor": "#18262C",
+          "ambient": 0.6499999761581421,
+          "bloom": 0.550000011920929,
+          "box": false,
+          "keyColor": "#FFE8B0",
+          "fillColor": "#7794C8",
+          "keyIntensity": 1.2000000476837158,
+          "keyDirection": [
+            -35,
+            25,
+            0
+          ],
+          "lights": []
+        },
+        "camera": {
+          "orbit": 0,
+          "yaw": 0,
+          "pitch": 27,
+          "zoom": 1,
+          "autoFrame": true,
+          "fill": 0.7200000286102295,
+          "focus": [
+            0,
+            0,
+            100
+          ]
+        },
+        "objects": [
+          {
+            "id": "ground",
+            "shape": "box",
+            "color": "#20342F",
+            "position": [
+              0,
+              0,
+              3
+            ],
+            "size": [
+              600,
+              400,
+              6
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.949999988079071,
+            "metallic": 0,
+            "radius": 3,
+            "focus": false
+          },
+          {
+            "id": "tree-left",
+            "shape": "tree",
+            "color": "#18332D",
+            "position": [
+              -170,
+              25,
+              44
+            ],
+            "size": [
+              75,
+              75,
+              88
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.949999988079071,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "tree-right",
+            "shape": "tree",
+            "color": "#1A382E",
+            "position": [
+              155,
+              35,
+              55
+            ],
+            "size": [
+              90,
+              85,
+              110
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.949999988079071,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "moon",
+            "shape": "polygon",
+            "color": "#FFE7B0",
+            "position": [
+              112,
+              70,
+              200
+            ],
+            "size": [
+              44,
+              44,
+              4
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 1.399999976158142,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.699999988079071,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true,
+            "outline": [
+              [
+                0.15,
+                0.5
+              ],
+              [
+                0.42,
+                0.34
+              ],
+              [
+                0.5,
+                0.08
+              ],
+              [
+                0.43,
+                -0.2
+              ],
+              [
+                0.22,
+                -0.42
+              ],
+              [
+                -0.08,
+                -0.5
+              ],
+              [
+                -0.34,
+                -0.37
+              ],
+              [
+                -0.48,
+                -0.13
+              ],
+              [
+                -0.5,
+                0.17
+              ],
+              [
+                -0.35,
+                0.42
+              ],
+              [
+                -0.08,
+                0.5
+              ],
+              [
+                0.12,
+                0.46
+              ],
+              [
+                -0.04,
+                0.3
+              ],
+              [
+                -0.16,
+                0.08
+              ],
+              [
+                -0.14,
+                -0.16
+              ],
+              [
+                0.02,
+                -0.34
+              ],
+              [
+                0.22,
+                -0.38
+              ],
+              [
+                0.08,
+                -0.2
+              ],
+              [
+                0.03,
+                0.02
+              ],
+              [
+                0.08,
+                0.25
+              ]
+            ]
+          },
+          {
+            "id": "star-1",
+            "shape": "star",
+            "color": "#F9E8B4",
+            "position": [
+              -125,
+              55,
+              188
+            ],
+            "size": [
+              9,
+              9,
+              3
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 1.100000023841858,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "star-2",
+            "shape": "star",
+            "color": "#DCE7FF",
+            "position": [
+              -55,
+              65,
+              224
+            ],
+            "size": [
+              7,
+              7,
+              3
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 0.800000011920929,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "star-3",
+            "shape": "star",
+            "color": "#F9E8B4",
+            "position": [
+              18,
+              55,
+              192
+            ],
+            "size": [
+              8,
+              8,
+              3
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 1,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "star-4",
+            "shape": "star",
+            "color": "#DCE7FF",
+            "position": [
+              72,
+              30,
+              225
+            ],
+            "size": [
+              6,
+              6,
+              3
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 0.800000011920929,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "star-5",
+            "shape": "star",
+            "color": "#F9E8B4",
+            "position": [
+              -170,
+              10,
+              218
+            ],
+            "size": [
+              7,
+              7,
+              3
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 0.8999999761581421,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "star-6",
+            "shape": "star",
+            "color": "#DCE7FF",
+            "position": [
+              158,
+              10,
+              188
+            ],
+            "size": [
+              8,
+              8,
+              3
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 0.8999999761581421,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          }
+        ]
+      }
+    },
+    {
+      "words": "カメラだけゆっくり回って",
+      "result": "反映済み",
+      "model": "gpt-6-luna",
+      "credits": 0.181755,
+      "seconds": 11.71461608899699,
+      "repair": false,
+      "scene": {
+        "title": "夕焼けの海とカモメ",
+        "color": "#F08A61",
+        "accent": "#FFD28A",
+        "motion": 0.800000011920929,
+        "viscosity": 0.30000001192092896,
+        "swirl": 0.20000000298023224,
+        "attraction": 0.20000000298023224,
+        "tilt": 0.5,
+        "glow": 0.6499999761581421,
+        "trail": 0.10000000149011612,
+        "shakeThreshold": 2,
+        "shake": "none",
+        "schema": 3,
+        "note": "夕焼けに染まる海の上を、3羽のカモメが羽ばたきながら飛びます。",
+        "pointCloud": {
+          "enabled": false,
+          "floor": false,
+          "count": 256,
+          "duration": 5,
+          "arc": 65,
+          "twist": 1.25,
+          "stagger": 0.3499999940395355
+        },
+        "particles": {
+          "count": 0,
+          "size": 1.5,
+          "behavior": "drift",
+          "formation": "volume",
+          "shape": "sphere",
+          "colorMode": "solid",
+          "center": [
+            0,
+            0,
+            100
+          ],
+          "wind": [
+            0,
+            0,
+            0
+          ],
+          "gravity": 0,
+          "turbulence": 0,
+          "spread": 100,
+          "formationStrength": 1,
+          "cohesion": 0.5,
+          "alignment": 0.5,
+          "separation": 0.5,
+          "groups": 1,
+          "formationNext": "none",
+          "formationPeriod": 10,
+          "travel": 0,
+          "formationRotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "world": {
+          "background": "#6D4661",
+          "floor": "#273C50",
+          "ambient": 0.800000011920929,
+          "bloom": 0.44999998807907104,
+          "box": false,
+          "keyColor": "#FFC18C",
+          "fillColor": "#788BA8",
+          "keyIntensity": 1.399999976158142,
+          "keyDirection": [
+            -35,
+            25,
+            0
+          ],
+          "lights": []
+        },
+        "camera": {
+          "orbit": 10,
+          "yaw": 0,
+          "pitch": 27,
+          "zoom": 1,
+          "autoFrame": true,
+          "fill": 0.7200000286102295,
+          "focus": [
+            0,
+            0,
+            100
+          ]
+        },
+        "objects": [
+          {
+            "id": "sea",
+            "shape": "water",
+            "color": "#31566A",
+            "position": [
+              0,
+              55,
+              8
+            ],
+            "size": [
+              600,
+              300,
+              12
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "wave",
+            "speed": 0.44999998807907104,
+            "amplitude": 3,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.2800000011920929,
+            "metallic": 0,
+            "radius": 3,
+            "focus": false
+          },
+          {
+            "id": "sunset-sun",
+            "shape": "disk",
+            "color": "#FF9B68",
+            "position": [
+              55,
+              110,
+              145
+            ],
+            "size": [
+              78,
+              78,
+              5
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 1.2999999523162842,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.699999988079071,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "gull-one",
+            "shape": "bird",
+            "color": "#292D3C",
+            "position": [
+              -85,
+              -45,
+              130
+            ],
+            "size": [
+              75,
+              130,
+              38
+            ],
+            "rotation": [
+              0,
+              0,
+              8
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "fly",
+            "speed": 0.6499999761581421,
+            "amplitude": 17,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "gull-two",
+            "shape": "bird",
+            "color": "#292D3C",
+            "position": [
+              -5,
+              -35,
+              165
+            ],
+            "size": [
+              68,
+              118,
+              35
+            ],
+            "rotation": [
+              0,
+              0,
+              -5
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "fly",
+            "speed": 0.7200000286102295,
+            "amplitude": 15,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "gull-three",
+            "shape": "bird",
+            "color": "#292D3C",
+            "position": [
+              85,
+              -50,
+              115
+            ],
+            "size": [
+              72,
+              125,
+              36
+            ],
+            "rotation": [
+              0,
+              0,
+              12
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "fly",
+            "speed": 0.6000000238418579,
+            "amplitude": 18,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          }
+        ]
+      },
+      "before": {
+        "title": "夕焼けの海とカモメ",
+        "color": "#F08A61",
+        "accent": "#FFD28A",
+        "motion": 0.800000011920929,
+        "viscosity": 0.30000001192092896,
+        "swirl": 0.20000000298023224,
+        "attraction": 0.20000000298023224,
+        "tilt": 0.5,
+        "glow": 0.6499999761581421,
+        "trail": 0.10000000149011612,
+        "shakeThreshold": 2,
+        "shake": "none",
+        "schema": 3,
+        "note": "夕焼けに染まる海の上を、3羽のカモメが羽ばたきながら飛びます。",
+        "pointCloud": {
+          "enabled": false,
+          "floor": false,
+          "count": 256,
+          "duration": 5,
+          "arc": 65,
+          "twist": 1.25,
+          "stagger": 0.3499999940395355
+        },
+        "particles": {
+          "count": 0,
+          "size": 1.5,
+          "behavior": "drift",
+          "formation": "volume",
+          "shape": "sphere",
+          "colorMode": "solid",
+          "center": [
+            0,
+            0,
+            100
+          ],
+          "wind": [
+            0,
+            0,
+            0
+          ],
+          "gravity": 0,
+          "turbulence": 0,
+          "spread": 100,
+          "formationStrength": 1,
+          "cohesion": 0.5,
+          "alignment": 0.5,
+          "separation": 0.5,
+          "groups": 1,
+          "formationNext": "none",
+          "formationPeriod": 10,
+          "travel": 0,
+          "formationRotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "world": {
+          "background": "#6D4661",
+          "floor": "#273C50",
+          "ambient": 0.800000011920929,
+          "bloom": 0.44999998807907104,
+          "box": false,
+          "keyColor": "#FFC18C",
+          "fillColor": "#788BA8",
+          "keyIntensity": 1.399999976158142,
+          "keyDirection": [
+            -35,
+            25,
+            0
+          ],
+          "lights": []
+        },
+        "camera": {
+          "orbit": 0,
+          "yaw": 0,
+          "pitch": 27,
+          "zoom": 1,
+          "autoFrame": true,
+          "fill": 0.7200000286102295,
+          "focus": [
+            0,
+            0,
+            100
+          ]
+        },
+        "objects": [
+          {
+            "id": "sea",
+            "shape": "water",
+            "color": "#31566A",
+            "position": [
+              0,
+              55,
+              8
+            ],
+            "size": [
+              600,
+              300,
+              12
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "wave",
+            "speed": 0.44999998807907104,
+            "amplitude": 3,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.2800000011920929,
+            "metallic": 0,
+            "radius": 3,
+            "focus": false
+          },
+          {
+            "id": "sunset-sun",
+            "shape": "disk",
+            "color": "#FF9B68",
+            "position": [
+              55,
+              110,
+              145
+            ],
+            "size": [
+              78,
+              78,
+              5
+            ],
+            "rotation": [
+              90,
+              0,
+              0
+            ],
+            "emission": 1.2999999523162842,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "none",
+            "speed": 1,
+            "amplitude": 20,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.699999988079071,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "gull-one",
+            "shape": "bird",
+            "color": "#292D3C",
+            "position": [
+              -85,
+              -45,
+              130
+            ],
+            "size": [
+              75,
+              130,
+              38
+            ],
+            "rotation": [
+              0,
+              0,
+              8
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "fly",
+            "speed": 0.6499999761581421,
+            "amplitude": 17,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "gull-two",
+            "shape": "bird",
+            "color": "#292D3C",
+            "position": [
+              -5,
+              -35,
+              165
+            ],
+            "size": [
+              68,
+              118,
+              35
+            ],
+            "rotation": [
+              0,
+              0,
+              -5
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "fly",
+            "speed": 0.7200000286102295,
+            "amplitude": 15,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          },
+          {
+            "id": "gull-three",
+            "shape": "bird",
+            "color": "#292D3C",
+            "position": [
+              85,
+              -50,
+              115
+            ],
+            "size": [
+              72,
+              125,
+              36
+            ],
+            "rotation": [
+              0,
+              0,
+              12
+            ],
+            "emission": 0,
+            "wobble": 0,
+            "copies": 1,
+            "layout": "ring",
+            "spacing": 80,
+            "animation": "fly",
+            "speed": 0.6000000238418579,
+            "amplitude": 18,
+            "reaction": "none",
+            "anchor": "center",
+            "parentAnchor": "center",
+            "closed": false,
+            "parent": "",
+            "pivot": [
+              0,
+              0,
+              0
+            ],
+            "roughness": 0.47999998927116394,
+            "metallic": 0,
+            "radius": 3,
+            "focus": true
+          }
+        ]
+      }
+    }
+  ],
+  "requestsIncludingRepair": [
+    {
+      "words": "星空の下でホタルがゆっくり飛び交う景色にして",
+      "result": "反映済み",
+      "credits": 0.20006749999999998,
+      "seconds": 24.32905780299916,
+      "repair": false
+    },
+    {
+      "words": "夕焼けの海を3羽のカモメが羽ばたきながら飛ぶ景色にして",
+      "result": "検証失敗・組み直し",
+      "credits": 0.18830499999999997,
+      "seconds": 12.14236874600465,
+      "repair": false
+    },
+    {
+      "words": "夕焼けの海を3羽のカモメが羽ばたきながら飛ぶ景色にして",
+      "result": "反映済み",
+      "credits": 0.18496749999999998,
+      "seconds": 9.307252861006418,
+      "repair": true
+    },
+    {
+      "words": "カメラだけゆっくり回って",
+      "result": "反映済み",
+      "credits": 0.181755,
+      "seconds": 11.71461608899699,
+      "repair": false
+    }
+  ],
+  "creditsTotal": 0.755095,
+  "voiceTested": false,
+  "limits": [
+    "Continuous wing deformation of million-point sculptures is not implemented",
+    "Generated bird silhouette is dark",
+    "Sun is a flat disk and appears thin from side views"
+  ]
+}

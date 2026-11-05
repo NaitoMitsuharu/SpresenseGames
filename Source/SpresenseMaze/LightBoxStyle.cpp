@@ -162,7 +162,7 @@ FString FLightBoxStyle::ToJson() const
 	World->SetArrayField(TEXT("lights"),LightValues);
 	O->SetObjectField(TEXT("world"), World);
 	auto Camera = MakeShared<FJsonObject>();
-	Camera->SetNumberField(TEXT("yaw"), CameraYaw); Camera->SetNumberField(TEXT("pitch"), CameraPitch); Camera->SetNumberField(TEXT("zoom"), CameraZoom);
+	Camera->SetNumberField(TEXT("orbit"), CameraOrbit); Camera->SetNumberField(TEXT("yaw"), CameraYaw); Camera->SetNumberField(TEXT("pitch"), CameraPitch); Camera->SetNumberField(TEXT("zoom"), CameraZoom);
 	Camera->SetBoolField(TEXT("autoFrame"),bAutoFrame); Camera->SetNumberField(TEXT("fill"),CameraFill); Camera->SetArrayField(TEXT("focus"),Vec(CameraFocus));
 	O->SetObjectField(TEXT("camera"), Camera);
 	TArray<TSharedPtr<FJsonValue>> Nodes;
@@ -171,6 +171,13 @@ FString FLightBoxStyle::ToJson() const
 	FString Result;
 	FJsonSerializer::Serialize(O, TJsonWriterFactory<TCHAR,TCondensedJsonPrintPolicy<TCHAR>>::Create(&Result));
 	return Result;
+}
+
+FString FLightBoxStyle::RenderContentJson() const
+{
+	TSharedPtr<FJsonObject> O;FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(ToJson()),O);
+	O->RemoveField(TEXT("camera"));O->RemoveField(TEXT("title"));O->RemoveField(TEXT("note"));
+	FString Json;FJsonSerializer::Serialize(O.ToSharedRef(),TJsonWriterFactory<>::Create(&Json));return Json;
 }
 
 bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Error, FString* Diagnostic)
@@ -282,9 +289,9 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 		}
 		if (O->HasField(TEXT("camera")))
 		{
-			Context = TEXT("camera: yaw -65..65, pitch 15..80, zoom 0.65..2.2,fill .4...88");
-			if (!O->TryGetObjectField(TEXT("camera"), P) || !KnownFields(*P, { TEXT("yaw"), TEXT("pitch"), TEXT("zoom"),TEXT("autoFrame"),TEXT("fill"),TEXT("focus") })
-				|| !Number(*P, TEXT("yaw"), Candidate.CameraYaw, -65, 65) || !Number(*P, TEXT("pitch"), Candidate.CameraPitch, 15, 80)
+			Context = TEXT("camera: yaw -360..360, pitch 10..85, orbit -30..30 deg/sec, zoom 0.65..2.2,fill .4...88");
+			if (!O->TryGetObjectField(TEXT("camera"), P) || !KnownFields(*P, { TEXT("yaw"), TEXT("pitch"), TEXT("zoom"),TEXT("autoFrame"),TEXT("fill"),TEXT("focus"),TEXT("orbit") })
+				|| !Number(*P, TEXT("yaw"), Candidate.CameraYaw, -360, 360) || !Number(*P, TEXT("pitch"), Candidate.CameraPitch, 10, 85) || !Number(*P,TEXT("orbit"),Candidate.CameraOrbit,-30,30)
 				|| !Number(*P, TEXT("zoom"), Candidate.CameraZoom, 0.65, 2.2)
 				|| !Number(*P,TEXT("fill"),Candidate.CameraFill,.4,.88) || !Vector(*P,TEXT("focus"),Candidate.CameraFocus,-400,450)
 				|| ((*P)->HasField(TEXT("autoFrame"))&&!(*P)->TryGetBoolField(TEXT("autoFrame"),Candidate.bAutoFrame))) { return false; }
@@ -427,13 +434,13 @@ FString FLightBoxStyle::Instruction(const FLightBoxStyle& Current)
 		"NEW REQUESTS DEFAULT TO PARTICLE SCULPTURE: include pointCloud:{enabled:true,count:65536,floor:false,duration:5,arc:65,twist:1.25,stagger:.35}. objects describe the COLOURED TARGET SURFACES; no solid objects or floor are drawn in this mode. Particles visibly fly from their current positions to those surfaces. Use 32768..131072 normally; request up to1000000 only for unusually fine detail or an explicit user count. particles.count:0 for sculptures. Preserve pointCloud on edits. "
 		"A new object noun by itself means build that recognizable complete subject, not just recolour the previous object. You may invent shapes using lathe profile, polygon outlines and curved tubes. lathe requires profile:[[height,radius],...] with 3..32 strictly increasing heights within -.5...5, radius0...5; first/last radius0 to close the body. size scales the profile. Optional curve points (local cm) offset the lathe centreline, allowing curved fruit, bottles, vases, vegetables, limbs. Compose distinctive body, cap, stem and leaves with separate IDs/colours. No predetermined noun-to-preset mapping exists. "
 		"Orient each part for its actual 3D contact surface: polygon/star/leaf lie in localXY with thicknessZ, so rotation[0,0,0] makes a horizontal cap. The X90 rule is ONLY for front-facing silhouettes, never an automatic rule for caps. Use parent anchors or explicit contact points to connect stems/caps/leaves, including when a body is tilted. Preserve distinctive proportions and curvature rather than replacing every subject with a round sphere. "
-		"Particle sculpture animates assembly, colour transitions, whole-form tilt and scatter; target surfaces are sampled at time0. For continuous articulated animation (flapping, slurping, flowing tubes, gear rotation) use pointCloud.enabled:false with the existing object motion channels; do not promise that those channels deform point sculptures continuously. "
+		"Particle sculpture animates assembly, colour transitions, whole-form tilt and scatter; target surfaces are sampled at time0. For ambient/live phenomena (fireflies, drifting stars, snow, fire, weather, independently swimming fish) and continuous articulated animation (flapping, slurping, flowing tubes, gear rotation) use pointCloud.enabled:false with the existing object motion channels; do not promise that those channels deform point sculptures continuously. A sunset with flying seagulls is an animated scene: pointCloud.enabled:false, warm background/sun/cloud objects, bird animation:fly. Fireflies/stars must keep their continuous particle simulation. A sculpture shaped like a bird/star is instead pointCloud.enabled:true. Choose by the requested action, not only the noun; preserve an explicit user choice where supported. "
 		"particles:{count:int0..1024,size:.25..5,behavior:drift/flock/orbit/rain/snow/fire/fountain/fireworks/form,formation:volume/sphere/ring/heart/star/helix/galaxy/grid/wave/torus/cube/fish/bird/butterfly/flower/custom,"
 		"shape:sphere/fish,colorMode:solid/alternate/rainbow/height/speed/leader,center:[x,y,z] (xy+-260,z45..320),wind:3numbers+-2,gravity:-2..2,turbulence:0..2,spread:20..250,formationStrength:0..4,cohesion/alignment/separation:0..2,groups:int1..6,"
 		"formationNext:none or another formation,formationPeriod:2..60 seconds,travel:0..80 cm,formationRotation:[x,y,z] degrees+-180,points:2..128 normalized xyz points within+-1 for custom}. "
 		"Flock + formation!=volume really swims in that silhouette. form gathers points; formationNext smoothly morphs between shapes. custom draws a closed point contour. leader makes particle0 accent at the fish eye; all others main color. "
 		"world:{background/floor:#RRGGBB,ambient:.1..3,bloom:0..2,box:boolean,keyColor/fillColor:#RRGGBB,keyIntensity:.1..12,keyDirection:[pitch,yaw,roll] degrees,lights:[{position:[x,y,z],color:#RRGGBB,intensity:0..20000,radius:50..1200}] up to4 local lights}. "
-		"camera:{autoFrame:true,yaw:-65..65,pitch:15..80,zoom:.65..2.2,fill:.4.. .88,focus:[x,y,z]}. autoFrame fits the animated subject bounds; use fill .72,zoom1. Disable box normally; no visible grid for object scenes. "
+		"camera:{autoFrame:true,yaw:-360..360,pitch:10..85,orbit:-30..30 DEGREES/SECOND (0=stopped; 8..15=slow continuous orbit around subject),zoom:.65..2.2,fill:.4.. .88,focus:[x,y,z]}. Camera-only requests preserve geometry and particle settings; use orbit for a moving camera, not object spin. autoFrame fits the animated subject bounds; use fill .72,zoom1. Disable box normally; no visible grid for object scenes. "
 		"objects:[up to48 object groups, <=256 total copies]. REQUIRED object fields: id<=32chars,shape,color:#RRGGBB,position:[x,y,z],size:[width,depth,height]1..600 cm. "
 		"Shapes: lathe/sphere/box/cylinder/cone/torus/disk/star/heart/leaf/fish/flower/polygon/group/bird/bowl/tube/ribbon/water/rock/tree/elephant/giraffe/lion/butterfly/whale/petal/roof/gear/blossom. "
 		"Prefer native assemblies when available: blossom includes stem,leaves,hub and TEN connected petals. blossom animation:bloom,amplitude55,speed1 opens/closes around fixed roots; size[190,190,210],position[0,0,105],color pink. Do NOT add a second stem or hub to blossom. gear is a toothed ring with a central hole, axial direction localZ; gear size[110,110,16],rotation[90,0,0],animation:spinLocal,speed1 or-1 turns about its own axle. Prefer gear+spinLocal for gears over separately calculated rotated teeth. roof is a closed gabled roof: ridge runs alongY, bottom is position.Z-size.Z/2, ridge is position.Z+size.Z/2; put its bottom on top of house walls without rotation. butterfly has thin patterned wings and antennae, whale has eyes/flukes/fins, petal is a curved thin volume; use these silhouettes instead of fat spheres for wings or petals. bird includes eyes,beak,body,wings; tree includes trunk,branches,rounded leafy crowns; animals include FOUR legs,eyes,ears,tail and characteristic features. bowl is HOLLOW; water is a wave surface with specular highlights. "
@@ -485,7 +492,7 @@ bool FLightBoxStyle::CompleteGenerated(const FString& Words,const FLightBoxStyle
         Applied.Ambient=Next.Ambient;Applied.Bloom=Next.Bloom;Applied.Glow=Next.Glow;Applied.KeyColor=Next.KeyColor;Applied.FillColor=Next.FillColor;Applied.KeyIntensity=Next.KeyIntensity;Applied.KeyDirection=Next.KeyDirection;Applied.Lights=Next.Lights;
         for(auto& O:Applied.Objects)if(const auto* N=Next.Objects.FindByPredicate([&](const auto& X){return X.Id==O.Id;}))O.Emission=N->Emission;
     } else if(Has({TEXT("カメラだけ"),TEXT("カメラのみ"),TEXT("camera only")})) {
-        Applied.bAutoFrame=Next.bAutoFrame;Applied.CameraFocus=Next.CameraFocus;Applied.CameraYaw=Next.CameraYaw;Applied.CameraPitch=Next.CameraPitch;Applied.CameraZoom=Next.CameraZoom;Applied.CameraFill=Next.CameraFill;
+        Applied.bAutoFrame=Next.bAutoFrame;Applied.CameraFocus=Next.CameraFocus;Applied.CameraYaw=Next.CameraYaw;Applied.CameraOrbit=Next.CameraOrbit;Applied.CameraPitch=Next.CameraPitch;Applied.CameraZoom=Next.CameraZoom;Applied.CameraFill=Next.CameraFill;
     } else if(Has({TEXT("枠だけ"),TEXT("枠のみ")})) Applied.bShowBox=Next.bShowBox;
     else if(Has({TEXT("粒の数だけ"),TEXT("粒数だけ")})) {if(Applied.bPointCloud)Applied.PointCount=Next.PointCount;else Applied.Count=Next.Count;}
     else if(Has({TEXT("速さだけ"),TEXT("速度だけ"),TEXT("動きだけをゆっくり")})) {
@@ -502,6 +509,9 @@ bool FLightBoxStyle::CompleteGenerated(const FString& Words,const FLightBoxStyle
 bool FLightBoxStyle::ValidateIntent(const FString& Words,const FLightBoxStyle& Scene,FString& Diagnostic)
 {
 	auto Any=[&](TFunction<bool(const FLightBoxObject&)> Test){return Scene.Objects.ContainsByPredicate(Test);};
+	if(Scene.bPointCloud&&(Scene.Count>0||Any([](const auto& O){return O.Animation!=TEXT("none")||!O.Motions.IsEmpty();}))){
+		Diagnostic=TEXT("Particle sculpture samples surfaces at time0 and does not run particles.count or object motion channels. For live fireflies/stars/flapping/continuous motions use pointCloud.enabled:false and keep the animation. For a static target sculpture set particles.count:0 and remove unused object animation/motions. Do not silently freeze a requested animation.");return false;
+	}
 	if(Words.Contains(TEXT("彫刻"))&&Scene.Objects.IsEmpty()){Diagnostic=TEXT("The request needs a visible sculpture. There is no current sculpture to relight. Create a recognizable object assembly, count0, warm keyColor and cool fillColor. Returning the unchanged empty particle scene is insufficient.");return false;}
 	const bool BirdRequest=(Words.Contains(TEXT("かもめ"))||Words.Contains(TEXT("カモメ"))||Words.Contains(TEXT("鳥"))||Words.Contains(TEXT("蝶"))||Words.Contains(TEXT("bird"),ESearchCase::IgnoreCase));
 	if(BirdRequest&&(Words.Contains(TEXT("飛"))||Words.Contains(TEXT("fly"),ESearchCase::IgnoreCase))&&!Words.Contains(TEXT("飛ばない"))) {

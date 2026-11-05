@@ -52,6 +52,37 @@ bool FLightBoxPointLightingTest::RunTest(const FString&)
     TestTrue(TEXT("Ambient and key intensity brighten point sculptures"),After>Before*2);return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxAnimationModeTest,"SpresenseMaze.LightBox.PointSculptureAnimationCompatibility",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FLightBoxAnimationModeTest::RunTest(const FString&)
+{
+    FLightBoxStyle S;S.bPointCloud=true;S.Count=0;FLightBoxObject Bird;Bird.Shape=TEXT("bird");Bird.Animation=TEXT("fly");S.Objects.Add(Bird);FString Why;
+    TestFalse(TEXT("Do not silently freeze flapping in sculpture mode"),FLightBoxStyle::ValidateIntent(TEXT("カモメが飛ぶ"),S,Why));
+    S.bPointCloud=false;TestTrue(TEXT("Seagull flight remains supported in animated mode"),FLightBoxStyle::ValidateIntent(TEXT("カモメが飛ぶ"),S,Why));
+    S=FLightBoxStyle::Preset(2);S.bPointCloud=true;TestFalse(TEXT("Live fireflies must not be replaced with frozen samples"),FLightBoxStyle::ValidateIntent(TEXT("ホタルが飛び交う"),S,Why));
+    S.bPointCloud=false;TestTrue(TEXT("Existing firefly simulation is retained"),FLightBoxStyle::ValidateIntent(TEXT("ホタルが飛び交う"),S,Why));return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxOrbitTest,"SpresenseMaze.LightBox.CameraOrbitAndFraming",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FLightBoxOrbitTest::RunTest(const FString&)
+{
+    auto S=FLightBoxStyle::Example(5);S.CameraOrbit=12;S.CameraYaw=180;S.CameraPitch=28;
+    FLightBoxStyle Parsed;FString Error;TestTrue(TEXT("Full orbit settings parse"),FLightBoxStyle::Parse(S.ToJson(),Parsed,Error));TestEqual(TEXT("Orbit speed survives saving"),Parsed.CameraOrbit,12.f);
+    S.CameraOrbit=31;TestFalse(TEXT("Excessive orbit speed rejected"),FLightBoxStyle::Parse(S.ToJson(),Parsed,Error));S.CameraOrbit=12;
+    const FBox Box=FLightBoxMotionSystem::Bounds(S);const float Aspect=2340.f/1080;
+    for(float Yaw:{0.f,90.f,180.f,270.f,360.f})for(float Pitch:{10.f,28.f,80.f}){
+        const auto C=FLightBoxMotionSystem::CameraForBounds(S,Box,Aspect,FVector2D(Yaw,Pitch-S.CameraPitch));
+        TestTrue(TEXT("Camera looks at the subject from every side"),FVector::DotProduct(C.GetRotation().GetForwardVector(),(Box.GetCenter()-C.GetLocation()).GetSafeNormal())>.999);
+        for(int32 K=0;K<8;++K){const FVector V=C.InverseTransformPosition(FVector(K&1?Box.Max.X:Box.Min.X,K&2?Box.Max.Y:Box.Min.Y,K&4?Box.Max.Z:Box.Min.Z));
+            TestTrue(TEXT("Complete animated subject stays in frame during orbit"),V.X>0&&FMath::Abs(V.Y/V.X)<FMath::Tan(FMath::DegreesToRadians(29.))*.89&&FMath::Abs(V.Z/V.X)<FMath::Tan(FMath::DegreesToRadians(29.))/Aspect*.89);}
+    }
+    const auto Front=FLightBoxMotionSystem::CameraForBounds(S,Box,Aspect),Back=FLightBoxMotionSystem::CameraForBounds(S,Box,Aspect,FVector2D(180,0));
+    TestTrue(TEXT("Half orbit actually changes viewing side"),FVector::DotProduct((Front.GetLocation()-Box.GetCenter()).GetSafeNormal2D(),(Back.GetLocation()-Box.GetCenter()).GetSafeNormal2D())<-.99);
+    auto Next=S;Next.CameraOrbit=-8;Next.bPointCloud=true;Next.Count=0;FString Why;FLightBoxStyle::CompleteGenerated(TEXT("カメラだけゆっくり回って"),S,Next,Why);
+    TestEqual(TEXT("Camera-only command sets orbit"),Next.CameraOrbit,-8.f);TestEqual(TEXT("Camera-only command retains animated rendering"),Next.bPointCloud,S.bPointCloud);TestEqual(TEXT("Camera-only command retains live particles"),Next.Count,S.Count);
+    Next.Title=TEXT("見回す景色");Next.Note=TEXT("カメラだけ変更");TestEqual(TEXT("Camera-only edits reuse the running renderer"),Next.RenderContentJson(),S.RenderContentJson());
+    Next.Count+=1;TestNotEqual(TEXT("Changing particles rebuilds the scene"),Next.RenderContentJson(),S.RenderContentJson());return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxStyleTest, "SpresenseMaze.LightBox.StyleValidation", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FLightBoxStyleTest::RunTest(const FString&)
 {

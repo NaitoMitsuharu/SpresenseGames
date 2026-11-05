@@ -135,6 +135,8 @@ void ALightBoxHUD::NotifyHitBoxClick(FName Name)
 	else if (Name == TEXT("Save")) { D->SaveScene(); }
 	else if (Name == TEXT("Restore")) { D->RestoreScene(); }
 	else if (Name == TEXT("Neutral")) { GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>()->ResetNeutral(); }
+	else if (Name == TEXT("Orbit")) { if(auto* P=Cast<ALightBoxPawn>(GetOwningPlayerController()->GetPawn()))P->ToggleCameraOrbit(); }
+	else if (Name == TEXT("ViewReset")) { if(auto* P=Cast<ALightBoxPawn>(GetOwningPlayerController()->GetPawn()))P->ResetCameraView(); }
 	else if (Name == TEXT("Settings")) { OpenSettings(); }
 	else if (Name == TEXT("Words")) { OpenWords(); }
 	else if (Name == TEXT("Examples")) { OpenExamples(); }

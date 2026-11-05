@@ -53,6 +53,10 @@
             }
         }});
     }
+    public int AndroidThunkJava_LightBoxRightInset() {
+        android.view.WindowInsets insets = getWindow().getDecorView().getRootWindowInsets();
+        return insets == null ? 0 : insets.getInsets(android.view.WindowInsets.Type.navigationBars() | android.view.WindowInsets.Type.displayCutout()).right;
+    }
     private com.lati.lightbox.LightBoxVoice lightBoxVoice;
     public void AndroidThunkJava_LightBoxStartVoice() {
         if (lightBoxVoice == null) { lightBoxVoice = new com.lati.lightbox.LightBoxVoice(this); }

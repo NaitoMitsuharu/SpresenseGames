@@ -19,6 +19,10 @@
 #include "Widgets/SLeafWidget.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/Text/STextBlock.h"
+#if PLATFORM_ANDROID
+#include "Android/AndroidApplication.h"
+#include "Android/AndroidJNI.h"
+#endif
 
 namespace {
 const FLinearColor Paper(.94f,.98f,1.f), Mint(.42f,.94f,.80f);
@@ -69,6 +73,8 @@ public:
         else if(Name==TEXT("clock")) {Arc({12,12},9,0,360);Line({{12,6},{12,12},{16,14}});}
         else if(Name==TEXT("undo")||Name==TEXT("redo")) {const bool R=Name==TEXT("redo");if(R){Arc({11,13},7,-145,30);Line({{19,5},{19,11},{13,11}});}else{Arc({13,13},7,150,325);Line({{5,5},{5,11},{11,11}});}}
         else if(Name==TEXT("neutral")) {Arc({12,12},6,0,360);Line({{12,2},{12,7}});Line({{12,17},{12,22}});Line({{2,12},{7,12}});Line({{17,12},{22,12}});}
+        else if(Name==TEXT("orbit")) {Arc({12,12},3,0,360);Arc({12,12},9,35,325);Line({{20,4},{21,10},{15,8}});}
+        else if(Name==TEXT("view")) {Line({{3,8},{8,8},{10,5},{16,5},{18,8},{21,8},{21,20},{3,20},{3,8}});Arc({12,14},4,0,360);}
         else if(Name==TEXT("settings")) {Line({{4,6},{20,6}});Line({{4,12},{20,12}});Line({{4,18},{20,18}});Arc({9,6},2,0,360);Arc({16,12},2,0,360);Arc({7,18},2,0,360);}
         else if(Name==TEXT("grid")) {for(double X:{4.,14.})for(double Y:{4.,14.})Line({{X,Y},{X+6,Y},{X+6,Y+6},{X,Y+6},{X,Y}});}
         else if(Name==TEXT("star")) {TArray<FVector2D> P;for(int32 I=0;I<=10;++I){double A=(I*36-90)*PI/180,R=I%2?4.:9.;P.Add(Offset+(FVector2D(12)+FVector2D(FMath::Cos(A),FMath::Sin(A))*R)*Unit);}FSlateDrawElement::MakeLines(Out,L,G.ToPaintGeometry(),P,ESlateDrawEffect::None,Color,true,float(Unit*1.65));}
@@ -144,11 +150,15 @@ void SLightBoxControls::Construct(const FArguments& Args)
     const TCHAR* PresetIcons[]={TEXT("star"),TEXT("water"),TEXT("spark")};
     const TCHAR* PresetNames[]={TEXT("星"),TEXT("海"),TEXT("蛍")};
     for(int32 I=0;I<3;++I)Presets->AddSlot().FillWidth(1).Padding(5.f)[Action(FName(*FString::Printf(TEXT("Preset%d"),I)),PresetIcons[I],PresetNames[I])];
+    TSharedRef<SHorizontalBox> View=SNew(SHorizontalBox);
+    View->AddSlot().FillWidth(1).Padding(5.f)[Action(TEXT("Orbit"),TEXT("orbit"),TEXT("自動回転"))];
+    View->AddSlot().FillWidth(1).Padding(5.f)[Action(TEXT("ViewReset"),TEXT("view"),TEXT("視点を戻す"))];
     Menu=SNew(SBorder).BorderImage(Glass()).BorderBackgroundColor(FLinearColor(.015f,.033f,.045f,.66f)).Padding(18.f)
     [SNew(SVerticalBox)
         +SVerticalBox::Slot().AutoHeight().Padding(10,0,10,14)[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",19)).ColorAndOpacity(Paper.CopyWithNewOpacity(.8f)).Text_Lambda([D](){return FText::FromString(D()?D()->GetStyle().Title:FString());})]
         +SVerticalBox::Slot().AutoHeight()[Presets]
         +SVerticalBox::Slot().AutoHeight().Padding(0,8,0,0)[Grid]
+        +SVerticalBox::Slot().AutoHeight().Padding(0,8,0,0)[View]
         +SVerticalBox::Slot().AutoHeight().Padding(10,15,10,2)[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(Paper.CopyWithNewOpacity(.55f)).Text_Lambda([D](){
             if(!D())return FText::GetEmpty();FString Label=D()->GetJournal().Summary();if(D()->GetStyle().bPointCloud)Label+=TEXT("\n")+FText::AsNumber(D()->GetStyle().PointCount).ToString()+TEXT("粒");return FText::FromString(Label);
         })]
@@ -211,9 +221,9 @@ void SLightBoxControls::Construct(const FArguments& Args)
         [SNew(SButton).ButtonStyle(&FCoreStyle::Get().GetWidgetStyle<FButtonStyle>("NoBorder")).ContentPadding(0)
             .Visibility_Lambda([this](){return bMenu?EVisibility::Visible:EVisibility::Collapsed;})
             .OnClicked_Lambda([this](){CloseMenu();return FReply::Handled();})]
-        +SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Top).Padding(0,126,42,0)
+        +SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Top).Padding(TAttribute<FMargin>::CreateLambda([this](){return FMargin(0,126,42+RightInset/Scale,0);}))
         [SNew(SBox).WidthOverride(390).Visibility_Lambda([this](){return Progress>0?EVisibility::SelfHitTestInvisible:EVisibility::Collapsed;})[Menu.ToSharedRef()]]
-        +SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Top).Padding(0,42,42,0)
+        +SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Top).Padding(TAttribute<FMargin>::CreateLambda([this](){return FMargin(0,42,42+RightInset/Scale,0);}))
         [SNew(SBox).WidthOverride(64).HeightOverride(64)
         [SNew(SButton).ButtonStyle(LightBoxUI::ButtonStyle()).ContentPadding(18).ToolTipText(FText::FromString(TEXT("メニュー")))
             .OnClicked_Lambda([this](){if(bMenu)CloseMenu();else OpenMenu();return FReply::Handled();})
@@ -232,12 +242,21 @@ TSharedRef<SWidget> SLightBoxControls::Action(FName Id,const TCHAR* Name,const T
         .OnClicked_Lambda([this,Id](){return Activate(Id);})
         [SNew(SVerticalBox)
             +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)[SNew(SBox).WidthOverride(26).HeightOverride(26)[LightBoxUI::Icon(Name)]]
-            +SVerticalBox::Slot().AutoHeight().Padding(0,7,0,0).HAlign(HAlign_Center)[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",14)).Text(FText::FromString(Label))]
+            +SVerticalBox::Slot().AutoHeight().Padding(0,7,0,0).HAlign(HAlign_Center)[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",14)).Text_Lambda([this,Id,Caption=FString(Label)](){
+                if(Id==TEXT("Orbit")&&HUD.IsValid())if(auto* P=Cast<ALightBoxPawn>(HUD->GetOwningPlayerController()->GetPawn()))if(P->IsCameraOrbiting())return FText::FromString(TEXT("回転を止める"));
+                return FText::FromString(Caption);
+            })]
         ];
 }
 void SLightBoxControls::Tick(const FGeometry& G,double Time,float Dt)
 {
     SCompoundWidget::Tick(G,Time,Dt);HostSize=G.GetLocalSize();Scale=FMath::Clamp(float(HostSize.Y/1080),.45f,1.6f);
+#if PLATFORM_ANDROID
+    InsetAge+=Dt;if(InsetAge>.5f){InsetAge=0;if(JNIEnv* Env=FAndroidApplication::GetJavaEnv()){
+        const jmethodID Method=FJavaWrapper::FindMethod(Env,FJavaWrapper::GameActivityClassID,"AndroidThunkJava_LightBoxRightInset","()I",false);
+        if(Method)RightInset=FJavaWrapper::CallIntMethod(Env,FJavaWrapper::GameActivityThis,Method);
+    }}
+#endif
     Progress=FMath::Clamp(Progress+(bMenu?1.f:-1.f)*Dt/.22f,0.f,1.f);const float Ease=1-FMath::Pow(1-Progress,3.f);
     Menu->SetRenderOpacity(Ease);Menu->SetRenderTransform(FSlateRenderTransform(FVector2D(0,(1-Ease)*-20)));
     Menu->SetVisibility(bMenu?EVisibility::SelfHitTestInvisible:EVisibility::HitTestInvisible);

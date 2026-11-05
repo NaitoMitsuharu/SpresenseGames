@@ -93,6 +93,7 @@ struct FLightBoxStyle
 	float Ambient = 1;
 	float Bloom = 0.7f;
 	float CameraYaw = 0;
+	float CameraOrbit = 0; // degrees/second; zero stops the camera
 	float CameraPitch = 28;
 	float CameraZoom = 1;
 	bool bShowBox = true;
@@ -119,6 +120,7 @@ struct FLightBoxStyle
 	static FLightBoxStyle Exhibit(int32 Index);
 	FLinearColor ParticleColor(int32 Index, const FVector& Position, float Speed, float Time) const;
 	FString ToJson() const;
+	FString RenderContentJson() const; // Excludes camera and display-only title/note.
 	static bool Parse(const FString& Json, FLightBoxStyle& Out, FString& Error, FString* Diagnostic = nullptr);
 	static bool ParseCompletion(const FString& Json, FLightBoxStyle& Out, FString& Error, FString* Diagnostic = nullptr);
 	static FString Instruction(const FLightBoxStyle& Current);

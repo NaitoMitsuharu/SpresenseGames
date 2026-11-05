@@ -4,4 +4,5 @@
     <application android:label="LightBox input review" android:testOnly="true">
         <activity android:name=".AudioPromptActivity" android:exported="true" android:theme="@android:style/Theme.NoTitleBar" />
     </application>
+    <instrumentation android:name=".GestureReview" android:targetPackage="com.lati.lightbox.inputreview" />
 </manifest>

@@ -134,7 +134,7 @@ FString FLightBoxJournal::Difference(const FString& Before,const FString& After)
 		if(ObjectsA.ToJson()!=ObjectsB.ToJson()) Changes.Add(TEXT("物体の形・配置"));
 	}
 	if(!A.Background.Equals(B.Background)||!A.Floor.Equals(B.Floor)||!FMath::IsNearlyEqual(A.Ambient,B.Ambient)) Changes.Add(TEXT("背景・明るさ"));
-	if(A.CameraYaw!=B.CameraYaw||A.CameraPitch!=B.CameraPitch||A.CameraZoom!=B.CameraZoom) Changes.Add(TEXT("視点"));
+	if(A.CameraYaw!=B.CameraYaw||A.CameraPitch!=B.CameraPitch||A.CameraZoom!=B.CameraZoom||A.CameraOrbit!=B.CameraOrbit||A.bAutoFrame!=B.bAutoFrame||A.CameraFill!=B.CameraFill||!A.CameraFocus.Equals(B.CameraFocus)) Changes.Add(TEXT("視点"));
 	if(A.Shake!=B.Shake) Changes.Add(TEXT("振った反応"));
 	if(Changes.IsEmpty()) Changes.Add(A.ToJson()==B.ToJson()?TEXT("設定の変更なし"):TEXT("演出設定"));
 	return FString::Join(Changes,TEXT(" / "));

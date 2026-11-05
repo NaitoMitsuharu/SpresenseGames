@@ -114,8 +114,13 @@ FBox FLightBoxMotionSystem::Bounds(const FLightBoxStyle& S)
 
 FTransform FLightBoxMotionSystem::Camera(const FLightBoxStyle& S,float Aspect,FVector* OutFocus)
 {
-	const FBox Box=Bounds(S); const FVector Focus=S.bAutoFrame?Box.GetCenter():S.CameraFocus;
-	const float Yaw=FMath::DegreesToRadians(S.CameraYaw),Pitch=FMath::DegreesToRadians(S.CameraPitch);
+	return CameraForBounds(S,Bounds(S),Aspect,FVector2D::ZeroVector,1,OutFocus);
+}
+
+FTransform FLightBoxMotionSystem::CameraForBounds(const FLightBoxStyle& S,const FBox& Box,float Aspect,const FVector2D& Angles,float DistanceScale,FVector* OutFocus)
+{
+	const FVector Focus=S.bAutoFrame?Box.GetCenter():S.CameraFocus;
+	const float Yaw=FMath::DegreesToRadians(S.CameraYaw+Angles.X),Pitch=FMath::DegreesToRadians(FMath::Clamp(S.CameraPitch+float(Angles.Y),10.f,85.f));
 	const FVector Back(FMath::Sin(Yaw)*FMath::Cos(Pitch),-FMath::Cos(Yaw)*FMath::Cos(Pitch),FMath::Sin(Pitch));
 	const FQuat Rotation=(-Back).Rotation().Quaternion();
 	float Distance=1300/S.CameraZoom;
@@ -130,7 +135,7 @@ FTransform FLightBoxMotionSystem::Camera(const FLightBoxStyle& S,float Aspect,FV
 		Distance=FMath::Clamp(Distance/FMath::Clamp(S.CameraZoom,.85f,1.f),180.f,2400.f);
 	}
 	if(OutFocus) *OutFocus=Focus;
-	return FTransform(Rotation,Focus+Back*Distance);
+	return FTransform(Rotation,Focus+Back*Distance*FMath::Clamp(DistanceScale,.55f,2.5f));
 }
 
 FVector FLightBoxMotionSystem::Anchor(const FLightBoxObject& O,const FString& Name)

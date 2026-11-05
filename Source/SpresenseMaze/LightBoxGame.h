@@ -20,6 +20,7 @@ class SWidget;
 class FLightBoxBatchReview;
 class SLightBoxControls;
 class ULightBoxPointCloud;
+class APlayerController;
 
 UCLASS()
 class SPRESENSEMAZE_API ALightBoxGameMode : public AGameModeBase
@@ -39,6 +40,9 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 	virtual void Tick(float DeltaSeconds) override;
 	void Pulse();
+	void ToggleCameraOrbit();
+	void ResetCameraView();
+	bool IsCameraOrbiting() const { return !FMath::IsNearlyZero(ViewOrbitSpeed); }
 	FLightBoxSimulation Simulation;
 
 	UPROPERTY() TObjectPtr<USceneComponent> SceneRoot;
@@ -71,6 +75,8 @@ private:
 	void ApplyScene(const FLightBoxStyle& Style);
 	void AnimateScene(float Dt, const FVector2D& Tilt, const FLightBoxStyle& Style);
 	void RenderParticles(const FLightBoxStyle& Style);
+	void UpdateCameraInput(APlayerController* PC,bool Blocked);
+	void UpdateCameraView(const FLightBoxStyle& Style,float Dt);
 	uint64 AppliedRevision = MAX_uint64;
 	float ObjectBurst = 0;
 	float ShakeCooldown = 0;
@@ -85,6 +91,12 @@ private:
 	float GeometryClock=0, LastAspect=0;
 	FTransform CameraStart,CameraTarget;
 	float CameraBlendAge=100;
+	float CameraBlendSeconds=1;
+	FBox CameraBounds=FBox(ForceInit);
+	FVector2D ViewAngles=FVector2D::ZeroVector,LastViewTouch=FVector2D::ZeroVector;
+	float ViewDistance=1,ViewOrbitSpeed=0,LastPinchDistance=0;
+	bool bViewDragging=false;
+	FString AppliedContent;
 };
 
 UCLASS()

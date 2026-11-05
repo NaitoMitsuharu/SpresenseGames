@@ -11,7 +11,7 @@ build=sdk/'build-tools/35.0.1'
 android=sdk/'platforms/android-35/android.jar'
 jdk=Path('C:/Program Files/Android/Android Studio/jbr/bin')
 def run(*args): subprocess.run([str(a) for a in args],check=True)
-run(jdk/'javac.exe','-source','17','-target','17','-cp',android,'-d',out/'classes',source/'AudioPromptActivity.java')
+run(jdk/'javac.exe','-source','17','-target','17','-cp',android,'-d',out/'classes',*list(source.glob('*.java')))
 run(build/'d8.bat','--lib',android,'--output',out/'dex',*list((out/'classes').rglob('*.class')))
 run(build/'aapt2.exe','link','-I',android,'--manifest',source/'AndroidManifest.xml','-o',out/'helper.apk')
 with zipfile.ZipFile(out/'helper.apk','a') as z:z.write(out/'dex/classes.dex','classes.dex')

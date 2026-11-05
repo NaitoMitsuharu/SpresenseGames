@@ -159,6 +159,13 @@ void ALightBoxPawn::BuildChamber()
 
 void ALightBoxPawn::ApplyScene(const FLightBoxStyle& Style)
 {
+	const FString Content=Style.RenderContentJson();
+	if(Content==AppliedContent){
+		// Changing only the camera must not restart flight, reset live motes or scatter a formed sculpture.
+		ViewAngles=FVector2D::ZeroVector;ViewDistance=1;ViewOrbitSpeed=Style.CameraOrbit;bViewDragging=false;LastPinchDistance=0;
+		CameraStart=Camera->GetRelativeTransform();CameraBlendAge=0;CameraBlendSeconds=.6f;return;
+	}
+	AppliedContent=Content;
 	const int32 CPUCount=Style.bPointCloud?0:Style.Count;
 	if (Simulation.Motes.Num() != CPUCount) { Simulation.Reset(CPUCount); }
 	if(Style.bPointCloud){
@@ -194,7 +201,9 @@ void ALightBoxPawn::ApplyScene(const FLightBoxStyle& Style)
 	if(Grid) Grid->SetVisibility(Style.bShowBox&&Style.Objects.IsEmpty());
 	if(PostProcess) PostProcess->Settings.BloomIntensity=Style.Bloom*.55f;
 	int32 Width=16,Height=9;if(auto* PC=Cast<APlayerController>(GetController())) PC->GetViewportSize(Width,Height);
-	LastAspect=float(Width)/FMath::Max(1,Height);CameraStart=Camera->GetRelativeTransform();CameraTarget=FLightBoxMotionSystem::Camera(Style,LastAspect);CameraBlendAge=Style.bPointCloud?0:100;
+	LastAspect=float(Width)/FMath::Max(1,Height);CameraBounds=FLightBoxMotionSystem::Bounds(Style);
+	ViewAngles=FVector2D::ZeroVector;ViewDistance=1;ViewOrbitSpeed=Style.CameraOrbit;bViewDragging=false;LastPinchDistance=0;
+	CameraStart=Camera->GetRelativeTransform();CameraTarget=FLightBoxMotionSystem::CameraForBounds(Style,CameraBounds,LastAspect);CameraBlendAge=Style.bPointCloud?0:100;CameraBlendSeconds=Style.AssembleSeconds;
 	if(!Style.bPointCloud)Camera->SetRelativeTransform(CameraTarget);
 	if(Backdrop) Backdrop->UpdateInstanceTransform(0,FTransform(FRotationMatrix::MakeFromZ(-Camera->GetForwardVector()).ToQuat(),Camera->GetRelativeLocation()+Camera->GetForwardVector()*2800,FVector(140,140,.01)),false,true);
 
@@ -264,6 +273,59 @@ void ALightBoxPawn::Pulse()
 	ObjectBurst = 1;
 }
 
+void ALightBoxPawn::ToggleCameraOrbit()
+{
+	ViewOrbitSpeed=IsCameraOrbiting()?0:12;
+	GetGameInstance()->GetSubsystem<ULightBoxDirector>()->Status=IsCameraOrbiting()?TEXT("ゆっくり見回しています"):TEXT("カメラを止めました");
+}
+
+void ALightBoxPawn::ResetCameraView()
+{
+	ViewAngles=FVector2D::ZeroVector;ViewDistance=1;ViewOrbitSpeed=0;
+	CameraStart=Camera->GetRelativeTransform();CameraBlendAge=0;CameraBlendSeconds=.45f;
+	GetGameInstance()->GetSubsystem<ULightBoxDirector>()->Status=TEXT("正面の視点に戻しました");
+}
+
+void ALightBoxPawn::UpdateCameraInput(APlayerController* PC,bool Blocked)
+{
+	if(Blocked||!PC){bViewDragging=false;LastPinchDistance=0;return;}
+	int32 Width,Height;PC->GetViewportSize(Width,Height);if(Width<=0||Height<=0)return;
+	float X=0,Y=0,X2=0,Y2=0;bool Down=false,Down2=false;
+	PC->GetInputTouchState(ETouchIndex::Touch1,X,Y,Down);PC->GetInputTouchState(ETouchIndex::Touch2,X2,Y2,Down2);
+#if !PLATFORM_ANDROID
+	if(!Down&&PC->IsInputKeyDown(EKeys::RightMouseButton))Down=PC->GetMousePosition(X,Y);
+	const float Wheel=PC->GetInputAnalogKeyState(EKeys::MouseWheelAxis);if(Wheel!=0)ViewDistance=FMath::Clamp(ViewDistance*FMath::Pow(.85f,Wheel),.55f,2.5f);
+#endif
+	// Reserve the SDK control at left, menu at top and microphone/input at bottom.
+	auto InScene=[&](float A,float B){return A>Width*.23f&&A<Width*.96f&&B>Height*.16f&&B<Height*.77f;};
+	if(Down&&Down2&&InScene(X,Y)&&InScene(X2,Y2)){
+		const float Distance=FVector2D::Distance(FVector2D(X,Y),FVector2D(X2,Y2));
+		if(LastPinchDistance>8&&Distance>8)ViewDistance=FMath::Clamp(ViewDistance*LastPinchDistance/Distance,.55f,2.5f);
+		LastPinchDistance=Distance;bViewDragging=false;return;
+	}
+	if(LastPinchDistance>0){LastPinchDistance=0;bViewDragging=false;return;}
+	if(Down&&InScene(X,Y)){
+		const FVector2D Touch(X,Y);
+		if(bViewDragging){const FVector2D Delta=Touch-LastViewTouch;ViewAngles.X=FMath::UnwindDegrees(ViewAngles.X-Delta.X/Height*180);
+			const float Pitch=GetGameInstance()->GetSubsystem<ULightBoxDirector>()->GetStyle().CameraPitch;
+			ViewAngles.Y=FMath::Clamp(ViewAngles.Y+Delta.Y/Height*140,10.f-Pitch,85.f-Pitch);if(Delta.SizeSquared()>1)ViewOrbitSpeed=0;}
+		LastViewTouch=Touch;bViewDragging=true;
+	}else bViewDragging=false;
+}
+
+void ALightBoxPawn::UpdateCameraView(const FLightBoxStyle& Style,float Dt)
+{
+	ViewAngles.X=FMath::UnwindDegrees(ViewAngles.X+ViewOrbitSpeed*Dt);CameraBlendAge+=Dt;
+#if !UE_BUILD_SHIPPING
+	float ReviewPhase;if(FParse::Value(FCommandLine::Get(),TEXT("PointCloudPhase="),ReviewPhase))CameraBlendAge=CameraBlendSeconds;
+#endif
+	if(auto* PC=Cast<APlayerController>(GetController())){int32 W,H;PC->GetViewportSize(W,H);if(H>0)LastAspect=float(W)/H;}
+	CameraTarget=FLightBoxMotionSystem::CameraForBounds(Style,CameraBounds,LastAspect,ViewAngles,ViewDistance);
+	const float A=FMath::SmoothStep(0.f,1.f,FMath::Clamp(CameraBlendAge/FMath::Max(.01f,CameraBlendSeconds),0.f,1.f));
+	FTransform C;C.Blend(CameraStart,CameraTarget,A);Camera->SetRelativeTransform(C);
+	if(Backdrop)Backdrop->UpdateInstanceTransform(0,FTransform(FRotationMatrix::MakeFromZ(-Camera->GetForwardVector()).ToQuat(),Camera->GetRelativeLocation()+Camera->GetForwardVector()*2800,FVector(140,140,.01)),false,true);
+}
+
 void ALightBoxPawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -303,6 +365,7 @@ void ALightBoxPawn::Tick(float DeltaSeconds)
 	{
 		const ALightBoxHUD* HUD = Cast<ALightBoxHUD>(PC->GetHUD());
 		const bool bDialog = HUD && HUD->HasDialog();
+		UpdateCameraInput(PC,bDialog);
 		if (!bDialog)
 		{
 			if (PC->WasInputKeyJustPressed(EKeys::SpaceBar)) { Pulse(); }
@@ -312,23 +375,10 @@ void ALightBoxPawn::Tick(float DeltaSeconds)
 			if (PC->WasInputKeyJustPressed(EKeys::R)) { Attitude->ResetNeutral(); }
 			if (PC->WasInputKeyJustPressed(EKeys::V)) { if (ALightBoxHUD* H = Cast<ALightBoxHUD>(PC->GetHUD())) { H->OpenWords(); } }
 			if (PC->WasInputKeyJustPressed(EKeys::Escape)) { UGameplayStatics::OpenLevel(this, ATitleGameMode::TitleMapName); }
-			if (Att.Source == EAttitudeSource::None)
-			{
-				float X, Y; bool Down; PC->GetInputTouchState(ETouchIndex::Touch1, X, Y, Down);
-				int32 Width, Height; PC->GetViewportSize(Width, Height);
-				if (Down && Width > 0 && Height > 0 && Y > Height * 0.2 && Y < Height * 0.7 && X > Width * 0.25)
-				{
-					Tilt = FVector2D(FMath::Clamp((X / Width - 0.5f) * 3, -1.f, 1.f), FMath::Clamp((0.45f - Y / Height) * 4, -1.f, 1.f));
-				}
-			}
 		}
 	}
+	UpdateCameraView(Style,DeltaSeconds);
 	if(Style.bPointCloud){
-		CameraBlendAge+=DeltaSeconds;
-#if !UE_BUILD_SHIPPING
-		float ReviewPhase;if(FParse::Value(FCommandLine::Get(),TEXT("PointCloudPhase="),ReviewPhase))CameraBlendAge=Style.AssembleSeconds;
-#endif
-		const float A=FMath::SmoothStep(0.f,1.f,FMath::Clamp(CameraBlendAge/Style.AssembleSeconds,0.f,1.f));FTransform C;C.Blend(CameraStart,CameraTarget,A);Camera->SetRelativeTransform(C);
 		PointCloud->Advance(DeltaSeconds,Tilt,Camera->GetRightVector(),Camera->GetUpVector());
 	}else{Simulation.Step(Dt, Tilt, Twist, Style);AnimateScene(Dt, Tilt, Style); RenderParticles(Style);}
 #if !UE_BUILD_SHIPPING

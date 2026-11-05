@@ -27,6 +27,7 @@ private:
     TSharedPtr<SEditableTextBox> Input;
     TSharedPtr<SWidget> Menu;
     float Scale=1, Progress=0, StatusAge=10;
+    float RightInset=0,InsetAge=100;
     FVector2D HostSize=FVector2D(1600,900);
     bool bMenu=false;
     FString LastStatus;
