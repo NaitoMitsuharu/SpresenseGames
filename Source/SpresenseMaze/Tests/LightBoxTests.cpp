@@ -5,6 +5,9 @@
 #include "../LightBoxMotion.h"
 #include "../LightBoxJournal.h"
 #include "../LightBoxPointData.h"
+#include "../LightBoxPointCloud.h"
+#include "../LightBoxGame.h"
+#include "Components/PrimitiveComponent.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Dom/JsonObject.h"
@@ -52,14 +55,46 @@ bool FLightBoxPointLightingTest::RunTest(const FString&)
     TestTrue(TEXT("Ambient and key intensity brighten point sculptures"),After>Before*2);return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxAnimationModeTest,"SpresenseMaze.LightBox.PointSculptureAnimationCompatibility",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxPointAppearanceTest,"SpresenseMaze.LightBox.ParticleAppearanceControls",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FLightBoxPointAppearanceTest::RunTest(const FString&)
+{
+    FLightBoxStyle S;S.Count=0;S.PointCount=2048;S.Glow=.5f;S.Objects.Add(FLightBoxObject());const auto A=LightBoxPoints::Sample(S);
+    S.ParticleSize=2;S.Glow=2;const auto B=LightBoxPoints::Sample(S);float BeforeSize=0,AfterSize=0,BeforeLight=0,AfterLight=0;
+    for(int32 I=0;I<A.Num();++I){TestTrue(TEXT("Brightness/size edits preserve the target shape"),A[I].Position.Equals(B[I].Position));BeforeSize+=A[I].Radius;AfterSize+=B[I].Radius;BeforeLight+=A[I].Color.GetLuminance();AfterLight+=B[I].Color.GetLuminance();}
+    TestTrue(TEXT("Particle size changes apply to formed surfaces too"),AfterSize>BeforeSize*1.4f);TestTrue(TEXT("Global glow brightens particle surfaces"),AfterLight>BeforeLight*1.4f);return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxAnimationModeTest,"SpresenseMaze.LightBox.ParticleOnlyAnimatedSurfaces",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
 bool FLightBoxAnimationModeTest::RunTest(const FString&)
 {
-    FLightBoxStyle S;S.bPointCloud=true;S.Count=0;FLightBoxObject Bird;Bird.Shape=TEXT("bird");Bird.Animation=TEXT("fly");S.Objects.Add(Bird);FString Why;
-    TestFalse(TEXT("Do not silently freeze flapping in sculpture mode"),FLightBoxStyle::ValidateIntent(TEXT("カモメが飛ぶ"),S,Why));
-    S.bPointCloud=false;TestTrue(TEXT("Seagull flight remains supported in animated mode"),FLightBoxStyle::ValidateIntent(TEXT("カモメが飛ぶ"),S,Why));
-    S=FLightBoxStyle::Preset(2);S.bPointCloud=true;TestFalse(TEXT("Live fireflies must not be replaced with frozen samples"),FLightBoxStyle::ValidateIntent(TEXT("ホタルが飛び交う"),S,Why));
-    S.bPointCloud=false;TestTrue(TEXT("Existing firefly simulation is retained"),FLightBoxStyle::ValidateIntent(TEXT("ホタルが飛び交う"),S,Why));return true;
+    FLightBoxStyle S;S.Count=0;S.PointCount=4096;S.Background=FLinearColor::Black;
+    FLightBoxObject Bird;Bird.Shape=TEXT("bird");Bird.Animation=TEXT("fly");Bird.Size=FVector(75,130,38);S.Objects.Add(Bird);FString Why;
+    TestTrue(TEXT("Flapping is supported by the particle renderer"),FLightBoxStyle::ValidateIntent(TEXT("カモメが飛ぶ"),S,Why));
+    const auto L=LightBoxPoints::Build(S);TestEqual(TEXT("Particle budget is exact"),L.Points.Num(),4096);TestTrue(TEXT("Flying birds have animated point bindings"),L.bAnimated);
+    TestTrue(TEXT("Only a smaller set of control vertices is uploaded"),L.InitialVertices.Num()<L.Points.Num());
+    const auto A=LightBoxPoints::Frame(L,S,0,FVector2D::ZeroVector,0,{}),B=LightBoxPoints::Frame(L,S,.35f,FVector2D::ZeroVector,0,{});
+    int32 Moving=0;for(const auto& P:L.Points){const auto X=LightBoxPoints::Destination(P,A,A,1),Y=LightBoxPoints::Destination(P,B,B,1);Moving+=!X.Equals(Y,.01f);TestFalse(TEXT("Animated point positions are finite"),Y.ContainsNaN());}
+    TestTrue(TEXT("The particles themselves fly and deform"),Moving>3000);
+    FLightBoxPoint Sample=L.Points[0];const auto Middle=LightBoxPoints::Destination(Sample,A,B,.5f);
+    TestTrue(TEXT("GPU frame interpolation is continuous"),Middle.Equals((LightBoxPoints::Destination(Sample,A,A,1)+LightBoxPoints::Destination(Sample,B,B,1))*.5f,.001f));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxParticleMigrationTest,"SpresenseMaze.LightBox.ParticleOnlySaveMigration",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FLightBoxParticleMigrationTest::RunTest(const FString&)
+{
+    auto S=FLightBoxStyle::Example(8);TSharedPtr<FJsonObject> J;FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(S.ToJson()),J);
+    J->GetObjectField(TEXT("pointCloud"))->SetBoolField(TEXT("enabled"),false);J->GetObjectField(TEXT("pointCloud"))->SetNumberField(TEXT("count"),256);J->GetObjectField(TEXT("pointCloud"))->SetBoolField(TEXT("floor"),true);
+    FString Old;FJsonSerializer::Serialize(J.ToSharedRef(),TJsonWriterFactory<>::Create(&Old));FLightBoxStyle Read;FString Error;
+    TestTrue(TEXT("Previously saved scenes still open"),FLightBoxStyle::Parse(Old,Read,Error));TestTrue(TEXT("Old solid renderer is migrated to particles"),Read.bPointCloud);TestFalse(TEXT("Old floor cannot reactivate solid drawing"),Read.bPointFloor);TestEqual(TEXT("Unused legacy point budget is raised so the migrated scene remains recognizable"),Read.PointCount,65536);TestEqual(TEXT("Shape descriptions are retained"),Read.Objects.Num(),S.Objects.Num());return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxParticleComponentsTest,"SpresenseMaze.LightBox.ParticleOnlyComponents",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FLightBoxParticleComponentsTest::RunTest(const FString&)
+{
+    TArray<UPrimitiveComponent*> Components;GetDefault<ALightBoxPawn>()->GetComponents(Components);
+    TestEqual(TEXT("Only one scene primitive is constructed"),Components.Num(),1);
+    for(auto* C:Components)TestNotNull(TEXT("The only primitive is the particle renderer"),Cast<ULightBoxPointCloud>(C));return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxOrbitTest,"SpresenseMaze.LightBox.CameraOrbitAndFraming",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)

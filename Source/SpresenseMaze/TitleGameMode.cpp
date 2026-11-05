@@ -1,4 +1,6 @@
-﻿#include "TitleGameMode.h"
+#include "TitleGameMode.h"
+#include "LightBoxPointCloud.h"
+#include "LightBoxStyle.h"
 
 #include "AttitudeInputSubsystem.h"
 #include "Camera/CameraComponent.h"
@@ -54,7 +56,8 @@ ATitlePawn::ATitlePawn()
 	MazePreview->SetVisibility(false, true);
 	LightBoxPreview = CreateDefaultSubobject<USceneComponent>(TEXT("LightBoxPreview"));
 	LightBoxPreview->SetupAttachment(Root);
-	LightBoxPreview->SetRelativeLocation(FVector(520.f, 520.f, 0.f));
+	LightBoxPreview->SetRelativeLocation(FVector(-260.f, -260.f, 0.f));
+	LightBoxPreview->SetRelativeScale3D(FVector(1.6f));
 	LightBoxPreview->SetVisibility(false, true);
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 }
@@ -91,8 +94,6 @@ void ATitlePawn::BeginPlay()
 	UStaticMesh* Sphere = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 	UMaterialInterface* MazeMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_MazeTile.M_MazeTile"));
 	UMaterialInterface* BallMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_Ball.M_Ball"));
-	UMaterialInterface* LightMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/LightBox/M_LightObject.M_LightObject"));
-	UMaterialInterface* GlowMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/LightBox/M_LightGlow.M_LightGlow"));
 	auto AddPreviewMesh = [this](USceneComponent* Parent, const TCHAR* Name, UStaticMesh* Mesh,
 		const FVector& Location, const FVector& Scale, UMaterialInterface* Material)
 	{
@@ -119,15 +120,10 @@ void ATitlePawn::BeginPlay()
 		AddPreviewMesh(MazePreview, *FString::Printf(TEXT("MazeWallPreview%d"), I), Cube, WallLocations[I], WallScale, MazeMaterial);
 	}
 	AddPreviewMesh(MazePreview, TEXT("MazeBallPreview"), Sphere, FVector(-125, -125, 48), FVector(.34f), BallMaterial);
-	const FVector FrameScale(.12f, .12f, 2.3f);
-	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxPostA"), Cube, FVector(-115,-115,115), FrameScale, GlowMaterial);
-	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxPostB"), Cube, FVector(115,-115,115), FrameScale, GlowMaterial);
-	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxPostC"), Cube, FVector(-115,115,115), FrameScale, GlowMaterial);
-	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxPostD"), Cube, FVector(115,115,115), FrameScale, GlowMaterial);
-	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxTop"), Cube, FVector(0,0,225), FVector(2.4f,.12f,.12f), GlowMaterial);
-	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxTopSide"), Cube, FVector(0,0,225), FVector(.12f,2.4f,.12f), GlowMaterial);
-	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxObject"), Sphere, FVector(0,0,105), FVector(.78f), LightMaterial);
-	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxAccent"), Sphere, FVector(65,35,135), FVector(.22f), GlowMaterial);
+    LightPoints=NewObject<ULightBoxPointCloud>(this,TEXT("LightBoxParticlePreview"));LightPoints->SetupAttachment(LightBoxPreview);LightPoints->RegisterComponent();AddInstanceComponent(LightPoints);
+    FLightBoxStyle Preview;Preview.Count=0;Preview.PointCount=24576;Preview.Background=FLinearColor::Black;Preview.AssembleSeconds=2;
+    FLightBoxObject Orb;Orb.Id=TEXT("light");Orb.Shape=TEXT("sphere");Orb.Size=FVector(140);Orb.Position=FVector(0,0,115);Orb.Color=FLinearColor(.1,.65,.8);Orb.Emission=1;Preview.Objects.Add(Orb);
+    FLightBoxObject Ring=Orb;Ring.Id=TEXT("ring");Ring.Shape=TEXT("torus");Ring.Size=FVector(230,230,10);Ring.Radius=3;Ring.Color=FLinearColor(.8,.4,.12);Ring.Rotation=FVector(55,20,0);Preview.Objects.Add(Ring);LightPoints->Assemble(Preview);
 	MazePreview->SetVisibility(false, true);
 	LightBoxPreview->SetVisibility(false, true);
 	if (UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>())
@@ -146,8 +142,9 @@ void ATitlePawn::Tick(float DeltaSeconds)
 		-6.f + FMath::Sin(T * 0.35f) * 4.f));
 	MazePreview->SetRelativeLocation(FVector(520.f, 520.f, FMath::Sin(T * 0.7f) * 14.f));
 	MazePreview->SetRelativeRotation(FRotator(0.f, T * 12.f, 0.f));
-	LightBoxPreview->SetRelativeLocation(FVector(520.f, 520.f, FMath::Sin(T * 0.8f) * 14.f));
+	LightBoxPreview->SetRelativeLocation(FVector(-260.f, -260.f, FMath::Sin(T * 0.8f) * 14.f));
 	LightBoxPreview->SetRelativeRotation(FRotator(0.f, T * 10.f, 0.f));
+	if(LightPoints){LightPoints->SetVisibility(LightBoxPreview->IsVisible()&&!LightPoints->IsPreparing());if(LightBoxPreview->IsVisible())LightPoints->Advance(DeltaSeconds,FVector2D::ZeroVector,Camera->GetRightVector(),Camera->GetUpVector());}
 	if (Parts.PlumeGlow)
 	{
 		Parts.PlumeGlow->SetVectorParameterValue(TEXT("Color"),

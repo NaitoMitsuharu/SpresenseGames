@@ -8,14 +8,7 @@
 #include "LightBoxGame.generated.h"
 
 class UCameraComponent;
-class UInstancedStaticMeshComponent;
-class UMaterialInstanceDynamic;
-class UTexture2D;
-class UProceduralMeshComponent;
 class UPostProcessComponent;
-class UDirectionalLightComponent;
-class UPointLightComponent;
-class USkyLightComponent;
 class SWidget;
 class FLightBoxBatchReview;
 class SLightBoxControls;
@@ -47,34 +40,13 @@ public:
 
 	UPROPERTY() TObjectPtr<USceneComponent> SceneRoot;
 	UPROPERTY() TObjectPtr<UCameraComponent> Camera;
-	UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> Motes;
-	UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> WarmMotes;
-	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> CoolMaterial;
-	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> WarmMaterial;
-	UPROPERTY() TArray<TObjectPtr<UInstancedStaticMeshComponent>> ParticleMeshes;
-	UPROPERTY() TArray<TObjectPtr<UInstancedStaticMeshComponent>> TailMeshes;
-	UPROPERTY() TArray<TObjectPtr<UMaterialInstanceDynamic>> ParticleMaterials;
-	UPROPERTY() TArray<TObjectPtr<UProceduralMeshComponent>> SceneObjects;
-	UPROPERTY() TArray<TObjectPtr<UMaterialInstanceDynamic>> ObjectMaterials;
-	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> FloorMaterial;
-	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> BackgroundMaterial;
-	UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> Backdrop;
-	UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> Rim;
-	UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> Grid;
 	UPROPERTY() TObjectPtr<UPostProcessComponent> PostProcess;
-	UPROPERTY() TObjectPtr<UDirectionalLightComponent> KeyLight;
-	UPROPERTY() TObjectPtr<UDirectionalLightComponent> FillLight;
-	UPROPERTY() TObjectPtr<USkyLightComponent> StudioSky;
-	UPROPERTY() TArray<TObjectPtr<UPointLightComponent>> AccentLights;
 	UPROPERTY() TObjectPtr<ULightBoxPointCloud> PointCloud;
-	UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> StageFloor;
 private:
 	friend class FLightBoxBatchReview;
 	TSharedPtr<FLightBoxBatchReview> BatchReview;
-	void BuildChamber();
+	void ConfigureParticles();
 	void ApplyScene(const FLightBoxStyle& Style);
-	void AnimateScene(float Dt, const FVector2D& Tilt, const FLightBoxStyle& Style);
-	void RenderParticles(const FLightBoxStyle& Style);
 	void UpdateCameraInput(APlayerController* PC,bool Blocked);
 	void UpdateCameraView(const FLightBoxStyle& Style,float Dt);
 	uint64 AppliedRevision = MAX_uint64;
@@ -88,7 +60,7 @@ private:
 	bool bAutoShot = false;
 	double UIShotAt=0;
 	FString UIShotName;
-	float GeometryClock=0, LastAspect=0;
+	float LastAspect=0;
 	FTransform CameraStart,CameraTarget;
 	float CameraBlendAge=100;
 	float CameraBlendSeconds=1;
@@ -118,9 +90,6 @@ public:
 private:
 	void EnsureControls();
 	void AttachDialog(TSharedPtr<SWidget> Focus = nullptr);
-	void Glow(float X, float Y, float Radius, const FLinearColor& Color);
-	void EnsureGlow();
-	UPROPERTY() TObjectPtr<UTexture2D> GlowTexture;
 	TSharedPtr<SWidget> Dialog;
 	TSharedPtr<SLightBoxControls> Controls;
 };

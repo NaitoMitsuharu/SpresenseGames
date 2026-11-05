@@ -1,5 +1,6 @@
 #include "LightBoxBatchReview.h"
 #include "LightBoxGame.h"
+#include "LightBoxPointCloud.h"
 #include "LightBoxDirector.h"
 #include "LightBoxGeometry.h"
 #include "LightBoxMotion.h"
@@ -144,14 +145,14 @@ void FLightBoxBatchReview::Tick(ALightBoxPawn& P)
             if(!Accepted)continue;
             const FString Final=Directory/(Id+TEXT("_t2.png"));if(IFileManager::Get().FileExists(*Final))continue;
             Tag=Id;Shot=0;WaitFrames=0;bWaiting=false;
-            P.GetGameInstance()->GetSubsystem<ULightBoxDirector>()->ApplyScene(Scene);P.ApplyScene(Scene);P.Simulation.Reset(Scene);P.Elapsed=0;P.GeometryClock=1;P.AnimateScene(0,FVector2D::ZeroVector,Scene);P.RenderParticles(Scene);AppliedAt=FPlatformTime::Seconds();return;
+            P.GetGameInstance()->GetSubsystem<ULightBoxDirector>()->ApplyScene(Scene);P.ApplyScene(Scene);P.Simulation.Reset(Scene);P.Elapsed=0;AppliedAt=FPlatformTime::Seconds();return;
         }
         if(IFileManager::Get().FileExists(*(Directory/TEXT("generation.done.json")))&&FPlatformTime::Seconds()-LastWork>3) {
             auto Done=MakeShared<FJsonObject>();Done->SetNumberField(TEXT("processed"),Processed.Num());Write(Directory/TEXT("render.done.json"),Done);FPlatformMisc::RequestExit(false);
         }
         return;
     }
-    if(FPlatformTime::Seconds()-AppliedAt<.3)return;
+    if(FPlatformTime::Seconds()-AppliedAt<.3||P.PointCloud->IsPreparing())return;
     if(bWaiting) {
         if(!IFileManager::Get().FileExists(*ShotPath))return;
         bWaiting=false;++Shot;WaitFrames=0;
@@ -159,7 +160,7 @@ void FLightBoxBatchReview::Tick(ALightBoxPawn& P)
     }
     const float Times[]={.2f,2.5f,6.f};const float Target=Times[Shot];
     while(P.Elapsed<Target-.0001f){const float Dt=FMath::Min(1.f/60,Target-P.Elapsed);P.Simulation.Step(Dt,FVector2D::ZeroVector,0,Scene);P.Elapsed+=Dt;}
-    P.GeometryClock=1;P.AnimateScene(0,FVector2D::ZeroVector,Scene);P.RenderParticles(Scene);
+    P.PointCloud->SetPlaybackTime(Target);P.UpdateCameraView(Scene,0);P.PointCloud->Advance(0,FVector2D::ZeroVector,P.Camera->GetRightVector(),P.Camera->GetUpVector(),&P.Simulation);if(P.PointCloud->IsUpdatingFrame())return;
     if(++WaitFrames<5)return;
     ShotPath=Directory/(Tag+FString::Printf(TEXT("_t%d.png"),Shot));
     FScreenshotRequest::RequestScreenshot(ShotPath,true,false);bWaiting=true;

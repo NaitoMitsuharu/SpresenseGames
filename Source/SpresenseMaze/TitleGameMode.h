@@ -8,6 +8,7 @@
 #include "TitleGameMode.generated.h"
 
 class UCameraComponent;
+class ULightBoxPointCloud;
 
 /** Experience-select screen shown at launch. */
 UCLASS()
@@ -53,6 +54,7 @@ public:
 
 private:
 	FFlightShipParts Parts;
+	UPROPERTY() TObjectPtr<ULightBoxPointCloud> LightPoints;
 };
 
 UCLASS()

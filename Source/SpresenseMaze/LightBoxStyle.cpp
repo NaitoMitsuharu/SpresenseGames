@@ -139,7 +139,7 @@ FString FLightBoxStyle::ToJson() const
 	O->SetNumberField(TEXT("trail"), Trail); O->SetNumberField(TEXT("shakeThreshold"), ShakeThreshold);
 	O->SetStringField(TEXT("shake"), Shake);
 	O->SetNumberField(TEXT("schema"), 3); O->SetStringField(TEXT("note"), Note);
-	auto Cloud=MakeShared<FJsonObject>();Cloud->SetBoolField(TEXT("enabled"),bPointCloud);Cloud->SetBoolField(TEXT("floor"),bPointFloor);Cloud->SetNumberField(TEXT("count"),PointCount);
+	auto Cloud=MakeShared<FJsonObject>();Cloud->SetBoolField(TEXT("enabled"),true);Cloud->SetBoolField(TEXT("floor"),false);Cloud->SetNumberField(TEXT("count"),PointCount);
 	Cloud->SetNumberField(TEXT("duration"),AssembleSeconds);Cloud->SetNumberField(TEXT("arc"),AssembleArc);Cloud->SetNumberField(TEXT("twist"),AssembleTwist);Cloud->SetNumberField(TEXT("stagger"),AssembleStagger);O->SetObjectField(TEXT("pointCloud"),Cloud);
 	auto P = MakeShared<FJsonObject>();
 	P->SetNumberField(TEXT("count"), Count); P->SetNumberField(TEXT("size"), ParticleSize);
@@ -397,6 +397,8 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 		return true;
 	};
 	if (!Extended()) { if (Diagnostic) { *Diagnostic = Context; } Error = TEXT("景色の形や数を読み取れませんでした。少し分けてお願いしてください"); return false; }
+	if(!Candidate.bPointCloud)Candidate.PointCount=FMath::Max(65536,Candidate.PointCount);
+	Candidate.bPointCloud=true;Candidate.bPointFloor=false;
 	Out = Candidate; // Atomic: a malformed response never partly changes the scene.
 	Error.Reset();
 	return true;
@@ -426,15 +428,15 @@ bool FLightBoxStyle::ParseCompletion(const FString& Json, FLightBoxStyle& Out, F
 FString FLightBoxStyle::Instruction(const FLightBoxStyle& Current)
 {
 	return TEXT("You compose polished animated miniature exhibits from Japanese requests. Return ONE compact complete JSON, no prose/markdown/tools/code. "
-		"Distinguish a NEW SUBJECT from an EDIT. For a new subject reset irrelevant particle settings: ALWAYS count:0 for an object scene unless the user asks for particles, schools, precipitation,fire,smoke,stars or swarms. Do not inherit decorative particles from the previous scene. "
+		"EVERYTHING IS PARTICLES. A named concrete subject, even when the user says particles gather into its shape, means a complete FILLED THREE-DIMENSIONAL point sculpture: use objects target surfaces (lathe, tube, sphere, polygon, etc) and particles.count:0. objects are mathematical particle-placement recipes, NOT rendered 3D models; DO use them. pointCloud.count controls sculpture density. Use custom point contours ONLY for an explicit outline/line drawing; never substitute a flat contour for a complete tangible subject. particles.count is only for independent freely moving lights/weather/schools, NOT the sculpture itself. "
+		"Distinguish a NEW SUBJECT from an EDIT. Reset irrelevant independent lights for a new subject, count:0 unless separately requested fireflies, weather, free stars or schools. Do not inherit decorative particles from the previous scene. "
 		"For edits (only/keep/as-is/add/change-speed), preserve every unmentioned object, motion and light exactly. Keep ids stable; make the smallest requested change. "
 		"When the requested SUBJECT is made of light (light ring, neon, glowing shapes, 光輪, 光の輪), make that subject visibly emissive (emission 1.2..3), not merely a metallic object lit from outside. Keep ordinary objects non-emissive. "
 		"Requested motion must be VISIBLE: a uniform ring/cylinder spinning around its symmetry axis appears stationary; use a tilted rotation axis or a small contrasting rim detail. A uniform sphere needs a visible surface detail or an orbit to show movement. "
 		"REQUIRED base: schema:3,title:Japanese 1..24 chars,color/accent:#RRGGBB,motion:.2..2,viscosity:0..1,swirl:-2..2,attraction:0..1,tilt:0..2,glow:.3..2,trail:0..1,shakeThreshold:1.3..3,shake:scatter/gather/none,note:Japanese<=100 chars. "
-		"NEW REQUESTS DEFAULT TO PARTICLE SCULPTURE: include pointCloud:{enabled:true,count:65536,floor:false,duration:5,arc:65,twist:1.25,stagger:.35}. objects describe the COLOURED TARGET SURFACES; no solid objects or floor are drawn in this mode. Particles visibly fly from their current positions to those surfaces. Use 32768..131072 normally; request up to1000000 only for unusually fine detail or an explicit user count. particles.count:0 for sculptures. Preserve pointCloud on edits. "
+		"PARTICLE-ONLY RENDERER: ALL scenery, animals, water, sky, suns and lights are drawn exclusively as discrete camera-facing particles. No solid mesh, floor, backdrop, grid, reflection or alternate renderer exists. Always pointCloud:{enabled:true,count:65536,floor:false,duration:5,arc:65,twist:1.25,stagger:.35}. Count is the TOTAL ceiling, up to1000000; normally32768..131072. objects are mathematical target surfaces, NEVER rendered models. Their animation and motion channels move the particles themselves, including bird wing deformation, waves, flowing tubes and hierarchy motion. particles.count0..1024 adds freely simulated point lights within the same total budget; use for fireflies, stars, snow, flock etc, or0 for a pure sculpture. Large surfaces should be focus:false so they do not consume the particles needed by the main subject. No automatic solid ground is drawn; add a particle surface object only when requested. Background colour only tints sparse distant points; use coloured particles for sky/sunset, never a backdrop sheet. "
 		"A new object noun by itself means build that recognizable complete subject, not just recolour the previous object. You may invent shapes using lathe profile, polygon outlines and curved tubes. lathe requires profile:[[height,radius],...] with 3..32 strictly increasing heights within -.5...5, radius0...5; first/last radius0 to close the body. size scales the profile. Optional curve points (local cm) offset the lathe centreline, allowing curved fruit, bottles, vases, vegetables, limbs. Compose distinctive body, cap, stem and leaves with separate IDs/colours. No predetermined noun-to-preset mapping exists. "
 		"Orient each part for its actual 3D contact surface: polygon/star/leaf lie in localXY with thicknessZ, so rotation[0,0,0] makes a horizontal cap. The X90 rule is ONLY for front-facing silhouettes, never an automatic rule for caps. Use parent anchors or explicit contact points to connect stems/caps/leaves, including when a body is tilted. Preserve distinctive proportions and curvature rather than replacing every subject with a round sphere. "
-		"Particle sculpture animates assembly, colour transitions, whole-form tilt and scatter; target surfaces are sampled at time0. For ambient/live phenomena (fireflies, drifting stars, snow, fire, weather, independently swimming fish) and continuous articulated animation (flapping, slurping, flowing tubes, gear rotation) use pointCloud.enabled:false with the existing object motion channels; do not promise that those channels deform point sculptures continuously. A sunset with flying seagulls is an animated scene: pointCloud.enabled:false, warm background/sun/cloud objects, bird animation:fly. Fireflies/stars must keep their continuous particle simulation. A sculpture shaped like a bird/star is instead pointCloud.enabled:true. Choose by the requested action, not only the noun; preserve an explicit user choice where supported. "
 		"particles:{count:int0..1024,size:.25..5,behavior:drift/flock/orbit/rain/snow/fire/fountain/fireworks/form,formation:volume/sphere/ring/heart/star/helix/galaxy/grid/wave/torus/cube/fish/bird/butterfly/flower/custom,"
 		"shape:sphere/fish,colorMode:solid/alternate/rainbow/height/speed/leader,center:[x,y,z] (xy+-260,z45..320),wind:3numbers+-2,gravity:-2..2,turbulence:0..2,spread:20..250,formationStrength:0..4,cohesion/alignment/separation:0..2,groups:int1..6,"
 		"formationNext:none or another formation,formationPeriod:2..60 seconds,travel:0..80 cm,formationRotation:[x,y,z] degrees+-180,points:2..128 normalized xyz points within+-1 for custom}. "
@@ -494,7 +496,7 @@ bool FLightBoxStyle::CompleteGenerated(const FString& Words,const FLightBoxStyle
     } else if(Has({TEXT("カメラだけ"),TEXT("カメラのみ"),TEXT("camera only")})) {
         Applied.bAutoFrame=Next.bAutoFrame;Applied.CameraFocus=Next.CameraFocus;Applied.CameraYaw=Next.CameraYaw;Applied.CameraOrbit=Next.CameraOrbit;Applied.CameraPitch=Next.CameraPitch;Applied.CameraZoom=Next.CameraZoom;Applied.CameraFill=Next.CameraFill;
     } else if(Has({TEXT("枠だけ"),TEXT("枠のみ")})) Applied.bShowBox=Next.bShowBox;
-    else if(Has({TEXT("粒の数だけ"),TEXT("粒数だけ")})) {if(Applied.bPointCloud)Applied.PointCount=Next.PointCount;else Applied.Count=Next.Count;}
+    else if(Has({TEXT("粒の数だけ"),TEXT("粒数だけ")})) {Applied.PointCount=Next.PointCount;Applied.Count=Next.Count;}
     else if(Has({TEXT("速さだけ"),TEXT("速度だけ"),TEXT("動きだけをゆっくり")})) {
         Applied.Motion=Next.Motion;Applied.AssembleSeconds=Next.AssembleSeconds;
         for(auto& O:Applied.Objects)if(const auto* N=Next.Objects.FindByPredicate([&](const auto& X){return X.Id==O.Id;})){O.Speed=N->Speed;for(int32 M=0;M<FMath::Min(O.Motions.Num(),N->Motions.Num());++M)if(O.Motions[M].Type==N->Motions[M].Type)O.Motions[M].Period=N->Motions[M].Period;}
@@ -509,9 +511,6 @@ bool FLightBoxStyle::CompleteGenerated(const FString& Words,const FLightBoxStyle
 bool FLightBoxStyle::ValidateIntent(const FString& Words,const FLightBoxStyle& Scene,FString& Diagnostic)
 {
 	auto Any=[&](TFunction<bool(const FLightBoxObject&)> Test){return Scene.Objects.ContainsByPredicate(Test);};
-	if(Scene.bPointCloud&&(Scene.Count>0||Any([](const auto& O){return O.Animation!=TEXT("none")||!O.Motions.IsEmpty();}))){
-		Diagnostic=TEXT("Particle sculpture samples surfaces at time0 and does not run particles.count or object motion channels. For live fireflies/stars/flapping/continuous motions use pointCloud.enabled:false and keep the animation. For a static target sculpture set particles.count:0 and remove unused object animation/motions. Do not silently freeze a requested animation.");return false;
-	}
 	if(Words.Contains(TEXT("彫刻"))&&Scene.Objects.IsEmpty()){Diagnostic=TEXT("The request needs a visible sculpture. There is no current sculpture to relight. Create a recognizable object assembly, count0, warm keyColor and cool fillColor. Returning the unchanged empty particle scene is insufficient.");return false;}
 	const bool BirdRequest=(Words.Contains(TEXT("かもめ"))||Words.Contains(TEXT("カモメ"))||Words.Contains(TEXT("鳥"))||Words.Contains(TEXT("蝶"))||Words.Contains(TEXT("bird"),ESearchCase::IgnoreCase));
 	if(BirdRequest&&(Words.Contains(TEXT("飛"))||Words.Contains(TEXT("fly"),ESearchCase::IgnoreCase))&&!Words.Contains(TEXT("飛ばない"))) {
@@ -524,7 +523,7 @@ bool FLightBoxStyle::ValidateIntent(const FString& Words,const FLightBoxStyle& S
 			Diagnostic=TEXT("Requested slurping: add tube curves from bowl to mouth with flow motion. Static noodles/steam do not satisfy ingestion.");return false;
 		}
 	}
-	if(!Scene.bPointCloud&&(Words.Contains(TEXT("スイミー"))||(Words.Contains(TEXT("群れ"))&&(Words.Contains(TEXT("形"))||Words.Contains(TEXT("かたち")))))) {
+	if(Scene.Objects.IsEmpty()&&(Words.Contains(TEXT("スイミー"))||(Words.Contains(TEXT("群れ"))&&(Words.Contains(TEXT("形"))||Words.Contains(TEXT("かたち")))))) {
 		if(Scene.Count<32||Scene.Formation==TEXT("volume")||(Scene.Behavior!=TEXT("flock")&&Scene.Behavior!=TEXT("form"))) {Diagnostic=TEXT("Requested a collective silhouette: use particles behavior flock/form, non-volume formation (fish/custom etc), count>=32. A separate fixed fish is insufficient.");return false;}
 	}
 	if(Words.Contains(TEXT("群れ"))&&(Words.Contains(TEXT("泳"))||Words.Contains(TEXT("swim"),ESearchCase::IgnoreCase))) {

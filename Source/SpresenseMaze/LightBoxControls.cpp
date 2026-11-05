@@ -1,5 +1,6 @@
 #include "LightBoxControls.h"
 #include "LightBoxGame.h"
+#include "LightBoxPointCloud.h"
 #include "LightBoxDirector.h"
 #include "ExperienceUI.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
@@ -159,8 +160,8 @@ void SLightBoxControls::Construct(const FArguments& Args)
         +SVerticalBox::Slot().AutoHeight()[Presets]
         +SVerticalBox::Slot().AutoHeight().Padding(0,8,0,0)[Grid]
         +SVerticalBox::Slot().AutoHeight().Padding(0,8,0,0)[View]
-        +SVerticalBox::Slot().AutoHeight().Padding(10,15,10,2)[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(Paper.CopyWithNewOpacity(.55f)).Text_Lambda([D](){
-            if(!D())return FText::GetEmpty();FString Label=D()->GetJournal().Summary();if(D()->GetStyle().bPointCloud)Label+=TEXT("\n")+FText::AsNumber(D()->GetStyle().PointCount).ToString()+TEXT("粒");return FText::FromString(Label);
+        +SVerticalBox::Slot().AutoHeight().Padding(10,15,10,2)[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).ColorAndOpacity(Paper.CopyWithNewOpacity(.55f)).Text_Lambda([this,D](){
+            if(!D())return FText::GetEmpty();FString Label=D()->GetJournal().Summary();if(auto* P=Cast<ALightBoxPawn>(HUD->GetOwningPlayerController()->GetPawn()))if(P->PointCloud&&P->PointCloud->PointTotal()>0)Label+=TEXT("\n")+FText::AsNumber(P->PointCloud->PointTotal()).ToString()+TEXT("粒");return FText::FromString(Label);
         })]
     ];
     Input=SNew(SEditableTextBox).Style(LightBoxUI::FieldStyle()).Font(FCoreStyle::GetDefaultFontStyle("Regular",23))

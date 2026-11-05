@@ -27,6 +27,9 @@ def wire(a,b,name,output=''):
     assert ok,(name,output)
 inputs={
  'Index':node('PerInstanceCustomData',data_index=0),
+ 'Eye':node('CameraPositionWS'),
+ 'Viewport':node('ViewSize'),
+ 'HalfFov':node('ViewProperty',property=unreal.MaterialExposedViewProperty.MEVP_TAN_HALF_FIELD_OF_VIEW),
  'QuadUV':node('TextureCoordinate'),
  'World':node('WorldPosition',world_position_shader_offset=unreal.WorldPositionIncludedOffsets.WPT_EXCLUDE_ALL_SHADER_OFFSETS),
  'Right':node('VectorParameter',parameter_name='Right',default_value=unreal.LinearColor(1,0,0,0)),
@@ -34,12 +37,19 @@ inputs={
  'AxisX':node('VectorParameter',parameter_name='AxisX',default_value=unreal.LinearColor(1,0,0,0)),
  'AxisY':node('VectorParameter',parameter_name='AxisY',default_value=unreal.LinearColor(0,1,0,0)),
  'AxisZ':node('VectorParameter',parameter_name='AxisZ',default_value=unreal.LinearColor(0,0,1,0)),
+ 'Origin':node('VectorParameter',parameter_name='Origin',default_value=unreal.LinearColor(0,0,0,0)),
+ 'ObjectX':node('VectorParameter',parameter_name='ObjectX',default_value=unreal.LinearColor(1,0,0,0)),
+ 'ObjectY':node('VectorParameter',parameter_name='ObjectY',default_value=unreal.LinearColor(0,1,0,0)),
+ 'ObjectZ':node('VectorParameter',parameter_name='ObjectZ',default_value=unreal.LinearColor(0,0,1,0)),
  'DataWidth':node('ScalarParameter',parameter_name='DataWidth',default_value=256),
  'Phase':node('ScalarParameter',parameter_name='Phase',default_value=1),
+ 'Animated':node('ScalarParameter',parameter_name='Animated',default_value=0),
+ 'VertexWidth':node('ScalarParameter',parameter_name='VertexWidth',default_value=1),
+ 'FrameMix':node('ScalarParameter',parameter_name='FrameMix',default_value=1),
  'Path':node('VectorParameter',parameter_name='Path',default_value=unreal.LinearColor(65,1.25,.35,0)),
  'Center':node('VectorParameter',parameter_name='Center',default_value=unreal.LinearColor(0,0,160,0)),
 }
-for name in ['FromTex','ToTex']:
+for name in ['FromTex','ToTex','LinksTex','WeightsTex','VertexFrom','VertexTo']:
     inputs[name]=node('TextureObjectParameter',parameter_name=name,texture=texture,sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
 custom=node('Custom',code=(root/'Tools/PointCloud/PointSculpture.hlsl').read_text(),output_type=unreal.CustomMaterialOutputType.CMOT_FLOAT3)
 custom.set_editor_property('inputs',[data('CustomInput',input_name=name) for name in inputs])

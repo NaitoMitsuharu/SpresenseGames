@@ -29,43 +29,85 @@ FLightBoxPoint LightBoxPoints::Scatter(uint32 I,const FLightBoxPoint& Target,con
     P.Position=FVector3f(Center)+FVector3f(R*FMath::Cos(A)*230,R*FMath::Sin(A)*170,Z*170);
     return P;
 }
-TArray<FLightBoxPoint> LightBoxPoints::Sample(const FLightBoxStyle& S)
+FLightBoxPointLayout LightBoxPoints::Build(const FLightBoxStyle& S)
 {
-    struct FTriangle {FVector3f A,B,C;FLinearColor CA,CB,CC;double End;};
-    TArray<FTriangle> Triangles;double Area=0;
+    FLightBoxPointLayout L;
+    struct FTriangle {FIntVector IDs;FLinearColor A,B,C;double Weight,End,DensityArea;};
+    TArray<FTriangle> Triangles;double Area=0,Weight=0;
     const auto Transforms=FLightBoxMotionSystem::Evaluate(S,0);
     const auto Objects=FLightBoxMotionSystem::ResolveBindings(S,Transforms);
     const FVector Light=FRotator(S.KeyDirection.X,S.KeyDirection.Y,0).Vector()*-1;
     for(int32 K=0;K<Objects.Num();++K){
-        const auto& O=Objects[K];if(O.Shape==TEXT("group"))continue;
-        const auto Mesh=FLightBoxMesh::Build(O,0);
-        auto C=[&](int32 I){const FVector N=Transforms[K].TransformVectorNoScale(Mesh.Normals[I]).GetSafeNormal();
+        const auto& O=Objects[K];const auto Mesh=FLightBoxMesh::Build(O,0);
+        const int32 Offset=L.InitialVertices.Num(),First=Triangles.Num();double ObjectArea=0;
+        L.Offsets.Add(Offset);L.LocalVertices.Add(Mesh.Vertices);
+        bool Moving=O.IsDeforming()||O.Animation!=TEXT("none")||!O.Motions.IsEmpty()||O.Reaction!=TEXT("none");
+        const FLightBoxObject* Parent=&O;for(int32 D=0;D<8&&!Parent->Parent.IsEmpty();++D){Parent=S.Objects.FindByPredicate([&](const auto& X){return X.Id==Parent->Parent;});if(!Parent)break;Moving|=Parent->Animation!=TEXT("none")||!Parent->Motions.IsEmpty();}
+        L.Moving.Add(Moving);L.bAnimated|=Moving;
+        for(const auto& V:Mesh.Vertices){const FVector P=Transforms[K].TransformPosition(V);L.InitialVertices.Add(FVector4f(P.X,P.Y,P.Z,1));}
+        auto Color=[&](int32 I){const FVector N=Transforms[K].TransformVectorNoScale(Mesh.Normals[I]).GetSafeNormal();
             const float Diffuse=FMath::Max(0.f,float(FVector::DotProduct(N,Light)));
-            FLinearColor Illumination=FLinearColor::White*(.28f*S.Ambient+.2f*O.Emission)+S.KeyColor*(.68f*S.KeyIntensity/3.5f*Diffuse)+S.FillColor*(.2f*(1-Diffuse*.5f));
+            FLinearColor Illumination=FLinearColor::White*(.36f*S.Ambient+.24f*O.Emission)+S.KeyColor*(.68f*S.KeyIntensity/3.5f*Diffuse)+S.FillColor*.22f;
             const FVector Position=Transforms[K].TransformPosition(Mesh.Vertices[I]);
-            for(const auto& L:S.Lights){const FVector Delta=L.Position-Position;const float Falloff=FMath::Square(FMath::Clamp(1-float(Delta.Size())/L.Radius,0.f,1.f));Illumination+=L.Color*(L.Intensity/2500.f*Falloff*FMath::Max(0.f,float(FVector::DotProduct(N,Delta.GetSafeNormal()))));}
-            const FLinearColor Base=O.Shape==TEXT("blossom")?FLinearColor::White:O.Color;
-            return Mesh.Colors[I]*Base*Illumination;};
+            for(const auto& A:S.Lights){const FVector Delta=A.Position-Position;const float Falloff=FMath::Square(FMath::Clamp(1-float(Delta.Size())/A.Radius,0.f,1.f));Illumination+=A.Color*(A.Intensity/2500.f*Falloff*FMath::Max(0.f,float(FVector::DotProduct(N,Delta.GetSafeNormal()))));}
+            FLinearColor Base=O.Shape==TEXT("blossom")?FLinearColor::White:O.Color;const float Luma=Base.GetLuminance();if(Luma>0&&Luma<.12f)Base*=.12f/Luma;return Mesh.Colors[I]*Base*Illumination*FMath::Sqrt(S.Glow);};
         for(int32 J=0;J<Mesh.Triangles.Num();J+=3){
-            const int32 A=Mesh.Triangles[J],B=Mesh.Triangles[J+1],CIndex=Mesh.Triangles[J+2];
-            const FVector PA=Transforms[K].TransformPosition(Mesh.Vertices[A]),PB=Transforms[K].TransformPosition(Mesh.Vertices[B]),PC=Transforms[K].TransformPosition(Mesh.Vertices[CIndex]);
-            const double Weight=FVector::CrossProduct(PB-PA,PC-PA).Size()*.5;if(Weight<.00001)continue;
-            Area+=Weight;Triangles.Add({FVector3f(PA),FVector3f(PB),FVector3f(PC),C(A),C(B),C(CIndex),Area});
+            const int32 A=Mesh.Triangles[J],B=Mesh.Triangles[J+1],C=Mesh.Triangles[J+2];
+            const FVector PA(L.InitialVertices[Offset+A]),PB(L.InitialVertices[Offset+B]),PC(L.InitialVertices[Offset+C]);
+            const double Size=FVector::CrossProduct(PB-PA,PC-PA).Size()*.5;if(Size<.00001)continue;
+            Area+=Size;ObjectArea+=Size;Triangles.Add({FIntVector(Offset+A,Offset+B,Offset+C),Color(A),Color(B),Color(C),Size,0,0});
         }
+        // Large water/terrain must not consume all the samples and erase birds or small features.
+        const double Scale=(O.bFocus?1.:.3)/FMath::Sqrt(FMath::Max(1.,ObjectArea));
+        for(int32 J=First;J<Triangles.Num();++J){Weight+=Triangles[J].Weight*Scale;Triangles[J].End=Weight;Triangles[J].DensityArea=1/Scale;}
     }
-    const int32 Count=FMath::Clamp(S.PointCount,256,Maximum);
-    TArray<FLightBoxPoint> Points;Points.SetNumUninitialized(Count);
-    const float Radius=FMath::Clamp(float(FMath::Sqrt(FMath::Max(Area,90000.)/Count))*.62f,.12f,4.f);
-    FLightBoxStyle Fallback=S;Fallback.Formation=S.Formation==TEXT("volume")?TEXT("sphere"):S.Formation;
-    for(int32 I=0;I<Count;++I){
-        auto& P=Points[I];P.Radius=Radius;
-        if(Triangles.IsEmpty()){
-            P.Position=FVector3f(FLightBoxSimulation::Target(I,Count,Fallback,0));P.Color=S.ParticleColor(I,FVector(P.Position),0,0);continue;
+    const int32 Budget=FMath::Clamp(S.PointCount,256,Maximum);
+    L.FieldOffset=L.InitialVertices.Num();L.FieldCount=FMath::Clamp(S.Count,0,FMath::Min(1024,Budget));L.bAnimated|=L.FieldCount>0;
+    FLightBoxSimulation Field;auto InitialField=S;InitialField.FormationNext=TEXT("none");Field.Reset(InitialField);
+    for(int32 I=0;I<L.FieldCount;++I){const auto P=Field.Motes[I].Position;L.InitialVertices.Add(FVector4f(P.X,P.Y,P.Z,1));}
+    const int32 Background=(!Triangles.IsEmpty()&&S.Background.GetLuminance()>.012f)?FMath::Min(2048,Budget/16):0;
+    const int32 Surface=Triangles.IsEmpty()&&L.FieldCount>0?0:Budget-L.FieldCount-Background;
+    L.Points.Reserve(Surface+L.FieldCount+Background);
+    const float Radius=FMath::Clamp(float(FMath::Sqrt(FMath::Max(Area,90000.)/FMath::Max(1,Surface)))*.38f,.1f,3.f);
+    FLightBoxStyle Fallback=S;Fallback.FormationNext=TEXT("none");
+    for(int32 I=0;I<Surface;++I){
+        FLightBoxPoint P;P.Radius=Radius;
+        if(Triangles.IsEmpty()){P.Position=FVector3f(FLightBoxSimulation::Target(I,Surface,Fallback,0));P.Color=S.ParticleColor(I,FVector(P.Position),0,0);}
+        else {
+            const double Selected=Random(I,9)*Weight;int32 Low=0,High=Triangles.Num()-1;
+            while(Low<High){const int32 Mid=(Low+High)/2;if(Triangles[Mid].End<Selected)Low=Mid+1;else High=Mid;}
+            const auto& T=Triangles[Low];P.Radius=FMath::Clamp(float(FMath::Sqrt(T.DensityArea*Weight/FMath::Max(1,Surface)))*.38f*S.ParticleSize,.08f,6.f);const float U=FMath::Sqrt(Random(I,10)),V=Random(I,11),A=1-U,B=U*(1-V),C=U*V;
+            P.Vertices=T.IDs;P.Weights=FVector2f(A,B);P.Position=Destination(P,L.InitialVertices,L.InitialVertices,0);P.Color=T.A*A+T.B*B+T.C*C;
+            // Static surfaces need no extra GPU lookups even in an animated scene.
+            const int32 Object=L.Offsets.IndexOfByPredicate([&](int32 Offset){return Offset>T.IDs.X;});
+            const int32 Owner=Object==INDEX_NONE?L.Offsets.Num()-1:Object-1;
+            if(!L.Moving[Owner])P.Vertices=FIntVector(-1,-1,-1);
         }
-        const double Selected=Random(I,9)*Area;int32 Low=0,High=Triangles.Num()-1;
-        while(Low<High){const int32 Mid=(Low+High)/2;if(Triangles[Mid].End<Selected)Low=Mid+1;else High=Mid;}
-        const auto& T=Triangles[Low];const float U=FMath::Sqrt(Random(I,10)),V=Random(I,11),A=1-U,B=U*(1-V),C=U*V;
-        P.Position=T.A*A+T.B*B+T.C*C;P.Color=T.CA*A+T.CB*B+T.CC*C;
+        L.Points.Add(P);
     }
-    return Points;
+    for(int32 I=0;I<L.FieldCount;++I){FLightBoxPoint P;P.Vertices=FIntVector(L.FieldOffset+I);P.Position=FVector3f(Field.Motes[I].Position);P.Radius=FMath::Clamp(S.ParticleSize*1.7f,.3f,8.f);P.Color=S.ParticleColor(I,FVector(P.Position),0,0)*FMath::Max(.7f,S.Glow);L.Points.Add(P);}
+    for(int32 I=0;I<Background;++I){FLightBoxPoint P;const float Z=Random(I,20)*2-1,A=Random(I,21)*2*PI,R=FMath::Sqrt(1-Z*Z);P.Position=FVector3f(R*FMath::Cos(A)*850,R*FMath::Sin(A)*850,180+Z*650);P.Radius=1.4f+Random(I,22)*1.8f;P.Color=FMath::Lerp(S.Background,S.Accent*.18f,Random(I,23)*.3f);L.Points.Add(P);}
+    return L;
+}
+
+TArray<FLightBoxPoint> LightBoxPoints::Sample(const FLightBoxStyle& S){return Build(S).Points;}
+
+FVector3f LightBoxPoints::Destination(const FLightBoxPoint& P,const TArray<FVector4f>& A,const TArray<FVector4f>& B,float Mix)
+{
+    if(P.Vertices.X<0)return P.Position;
+    auto At=[&](int32 I){return FVector3f(FMath::Lerp(A[I],B[I],Mix));};
+    return At(P.Vertices.X)*P.Weights.X+At(P.Vertices.Y)*P.Weights.Y+At(P.Vertices.Z)*(1-P.Weights.X-P.Weights.Y);
+}
+
+TArray<FVector4f> LightBoxPoints::Frame(const FLightBoxPointLayout& L,const FLightBoxStyle& S,float Time,const FVector2D& Tilt,float Burst,const TArray<FVector4f>& Field)
+{
+    auto Result=L.InitialVertices;
+    const auto World=FLightBoxMotionSystem::Evaluate(S,Time,Tilt,Burst);const auto Resolved=FLightBoxMotionSystem::ResolveBindings(S,World);
+    for(int32 I=0;I<S.Objects.Num();++I)if(L.Moving[I]){
+        const auto Vertices=S.Objects[I].IsDeforming()?FLightBoxMesh::Build(Resolved[I],Time).Vertices:L.LocalVertices[I];
+        if(Vertices.Num()!=L.LocalVertices[I].Num())continue;
+        for(int32 J=0;J<Vertices.Num();++J){const FVector P=World[I].TransformPosition(Vertices[J]);Result[L.Offsets[I]+J]=FVector4f(P.X,P.Y,P.Z,1);}
+    }
+    for(int32 I=0;I<FMath::Min(L.FieldCount,Field.Num());++I)Result[L.FieldOffset+I]=Field[I];
+    return Result;
 }

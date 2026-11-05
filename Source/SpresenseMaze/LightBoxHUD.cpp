@@ -44,31 +44,6 @@ namespace
     }
 }
 
-void ALightBoxHUD::EnsureGlow()
-{
-	if (GlowTexture) { return; }
-	constexpr int32 Size = 64;
-	GlowTexture = UTexture2D::CreateTransient(Size, Size, PF_B8G8R8A8);
-	GlowTexture->SRGB = false;
-	FColor* Pixels = static_cast<FColor*>(GlowTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
-	for (int32 Y = 0; Y < Size; ++Y)
-	{
-		for (int32 X = 0; X < Size; ++X)
-		{
-			const float Radius = FVector2D((X + 0.5f - Size / 2) / (Size / 2), (Y + 0.5f - Size / 2) / (Size / 2)).Size();
-			Pixels[Y * Size + X] = FColor(255, 255, 255, FMath::RoundToInt(FMath::Pow(FMath::Max(0.f, 1 - Radius), 2.5f) * 255));
-		}
-	}
-	GlowTexture->GetPlatformData()->Mips[0].BulkData.Unlock(); GlowTexture->UpdateResource();
-}
-
-void ALightBoxHUD::Glow(float X, float Y, float Radius, const FLinearColor& Color)
-{
-	if (!GlowTexture || !Canvas) { return; }
-	FCanvasTileItem Tile(FVector2D(X - Radius, Y - Radius), GlowTexture->GetResource(), FVector2D(Radius * 2), Color);
-	Tile.BlendMode = SE_BLEND_Translucent; Canvas->DrawItem(Tile);
-}
-
 void ALightBoxHUD::EnsureControls()
 {
     if(Controls.IsValid()||!GetWorld()->GetGameViewport())return;
@@ -90,37 +65,6 @@ void ALightBoxHUD::AttachDialog(TSharedPtr<SWidget> Focus)
 void ALightBoxHUD::DrawHUD()
 {
 	Super::DrawHUD(); if (!Canvas) { return; }
-	EnsureGlow();
-	ULightBoxDirector* Director = GetGameInstance()->GetSubsystem<ULightBoxDirector>();
-	const FLightBoxStyle& Style = Director->GetStyle();
-	const float T = GetWorld()->GetTimeSeconds();
-	APlayerController* PC = GetOwningPlayerController();
-	ALightBoxPawn* Pawn = PC ? Cast<ALightBoxPawn>(PC->GetPawn()) : nullptr;
-	if (Pawn)
-	{
-		// Screen-space glow and trails follow the actual 3D mote positions.
-		const int32 GlowStride = FMath::Max(1, FMath::DivideAndRoundUp(Pawn->Simulation.Motes.Num(), 256));
-		for (int32 I = 0; I < Pawn->Simulation.Motes.Num(); I += GlowStride)
-		{
-			const FLightMote& P = Pawn->Simulation.Motes[I];
-			FVector2D Screen;
-			const FLinearColor Color = Style.ParticleColor(I, P.Position, P.Velocity.Size(), T);
-			if (!PC->ProjectWorldLocationToScreen(P.Position, Screen)) { continue; }
-			const float Pulse = 0.7f + 0.3f * FMath::Sin(T * 1.4f + P.Phase);
-			Glow(Screen.X, Screen.Y, (18.f + Pawn->Simulation.Burst * 12.f) * S * FMath::Sqrt(Style.ParticleSize), Color.CopyWithNewOpacity((Style.ParticleShape == TEXT("fish") ? 0.1f : 0.45f) * Pulse * Style.Glow));
-			FVector2D Prev = Screen;
-			const int32 Segments = FMath::RoundToInt(Style.Trail * (Style.Count > 512 ? 3 : 9));
-			for (int32 J = 0; J < Segments; ++J)
-			{
-				FVector2D Next;
-				if (PC->ProjectWorldLocationToScreen(P.Trail[P.Trail.Num() - J - 1], Next))
-				{
-					DrawLine(Prev.X, Prev.Y, Next.X, Next.Y, Color.CopyWithNewOpacity((1.f - float(J) / FMath::Max(1, Segments)) * 0.45f), 1.2f * S);
-					Prev = Next;
-				}
-			}
-		}
-	}
 	EnsureControls();
 }
 

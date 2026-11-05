@@ -121,9 +121,8 @@ FString FLightBoxJournal::Difference(const FString& Before,const FString& After)
 	if(!FLightBoxStyle::Parse(After,B,Error)) return FString();
 	if(!FLightBoxStyle::Parse(Before,A,Error)) return TEXT("変更前は未記録");
 	TArray<FString> Changes;
-	if(A.bPointCloud!=B.bPointCloud)Changes.Add(B.bPointCloud?TEXT("粒子彫刻"):TEXT("立体・群れ"));
-	if(B.bPointCloud&&A.PointCount!=B.PointCount)Changes.Add(FString::Printf(TEXT("粒 %d→%d"),A.PointCount,B.PointCount));
-	if(B.bPointCloud&&A.AssembleSeconds!=B.AssembleSeconds)Changes.Add(TEXT("変化の時間"));
+	if(A.PointCount!=B.PointCount)Changes.Add(FString::Printf(TEXT("粒 %d→%d"),A.PointCount,B.PointCount));
+	if(A.AssembleSeconds!=B.AssembleSeconds)Changes.Add(TEXT("変化の時間"));
 	if(A.Count!=B.Count) Changes.Add(FString::Printf(TEXT("光 %d→%d"),A.Count,B.Count));
 	if(A.Behavior!=B.Behavior) Changes.Add(TEXT("動き"));
 	if(!A.Color.Equals(B.Color)||!A.Accent.Equals(B.Accent)) Changes.Add(TEXT("色"));

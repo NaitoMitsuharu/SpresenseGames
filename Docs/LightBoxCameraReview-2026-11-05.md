@@ -1,5 +1,8 @@
 # カメラ回転と従来アニメーションの確認
 
+> 現在は通常モデル・床・背景板の描画を削除し、すべて粒子に統一しています。最新仕様と実機確認は[粒子のみの描画](ParticlesOnly.md)を参照してください。以下の旧版の描画方式・制限の記述とは異なります。
+
+
 Xperia 1 VII（XQ-FS54／Android 16）、2340×1080の横画面、Android ASTC Developmentで確認しました。端末内TermuxのOpenClawからCopilot `gpt-6-luna`を使用しています。
 
 ## 追加した操作
