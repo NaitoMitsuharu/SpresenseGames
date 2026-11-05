@@ -48,6 +48,8 @@ public:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<USceneComponent> Root;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<USceneComponent> ShipPivot;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UCameraComponent> Camera;
+	UPROPERTY(VisibleAnywhere) TObjectPtr<USceneComponent> MazePreview;
+	UPROPERTY(VisibleAnywhere) TObjectPtr<USceneComponent> LightBoxPreview;
 
 private:
 	FFlightShipParts Parts;
@@ -63,8 +65,10 @@ public:
 	virtual void NotifyHitBoxClick(FName BoxName) override;
 
 private:
-	void DrawCard(FName Id, const FString& Name, const FString& Sub, float X, float Y, float CW, float CH, int32 Icon);
+	void DrawCard(FName Id, const FString& Name, float X, float Y, float CW, float CH, int32 Icon);
+	void SetPreview(FName Id);
 	void DrawMazeIcon(float CX, float CY, float Size);
 	void DrawFlightIcon(float CX, float CY, float Size);
 	void DrawLightBoxIcon(float CX, float CY, float Size);
+	FName SelectedId;
 };

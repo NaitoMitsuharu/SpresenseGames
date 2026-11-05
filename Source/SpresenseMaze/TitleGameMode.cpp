@@ -4,7 +4,9 @@
 #include "Camera/CameraComponent.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/PostProcessComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine/Canvas.h"
+#include "Engine/StaticMesh.h"
 #include "ExperienceUI.h"
 #include "FlightCourse.h"
 #include "FlightHUD.h"
@@ -46,6 +48,14 @@ ATitlePawn::ATitlePawn()
 	const FVector View(1500.f, -1500.f, 900.f);
 	Camera->SetRelativeLocationAndRotation(View, (FVector(0, 0, 30) - View).Rotation());
 	Camera->FieldOfView = 43.f;
+	MazePreview = CreateDefaultSubobject<USceneComponent>(TEXT("MazePreview"));
+	MazePreview->SetupAttachment(Root);
+	MazePreview->SetRelativeLocation(FVector(520.f, 520.f, 0.f));
+	MazePreview->SetVisibility(false, true);
+	LightBoxPreview = CreateDefaultSubobject<USceneComponent>(TEXT("LightBoxPreview"));
+	LightBoxPreview->SetupAttachment(Root);
+	LightBoxPreview->SetRelativeLocation(FVector(520.f, 520.f, 0.f));
+	LightBoxPreview->SetVisibility(false, true);
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 }
 
@@ -77,6 +87,49 @@ void ATitlePawn::BeginPlay()
 	Post->Settings.bOverride_VignetteIntensity = true; Post->Settings.VignetteIntensity = 0.32f;
 	Post->RegisterComponent(); AddInstanceComponent(Post);
 	FlightModels::BuildShip(this, ShipPivot, Parts);
+	UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+	UStaticMesh* Sphere = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere"));
+	UMaterialInterface* MazeMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_MazeTile.M_MazeTile"));
+	UMaterialInterface* BallMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_Ball.M_Ball"));
+	UMaterialInterface* LightMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/LightBox/M_LightObject.M_LightObject"));
+	UMaterialInterface* GlowMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/LightBox/M_LightGlow.M_LightGlow"));
+	auto AddPreviewMesh = [this](USceneComponent* Parent, const TCHAR* Name, UStaticMesh* Mesh,
+		const FVector& Location, const FVector& Scale, UMaterialInterface* Material)
+	{
+		if (!Parent || !Mesh) { return; }
+		UStaticMeshComponent* Component = NewObject<UStaticMeshComponent>(this, FName(Name));
+		Component->SetupAttachment(Parent);
+		Component->SetStaticMesh(Mesh);
+		Component->SetRelativeLocation(Location);
+		Component->SetRelativeScale3D(Scale);
+		Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		if (Material) { Component->SetMaterial(0, Material); }
+		Component->RegisterComponent();
+		AddInstanceComponent(Component);
+	};
+	AddPreviewMesh(MazePreview, TEXT("MazeBoardPreview"), Cube, FVector(0, 0, 0), FVector(3.8f, 3.8f, .12f), MazeMaterial);
+	const FVector WallScale(0.12f, 0.12f, 0.78f);
+	const FVector WallLocations[] = {
+		{-130,-70,43},{-60,-130,43},{10,-70,43},{80,-130,43},{150,-70,43},
+		{-130,70,43},{-60,130,43},{10,70,43},{80,130,43},{150,70,43},
+		{-70,0,43},{70,0,43},{0,-130,43},{0,130,43}
+	};
+	for (int32 I = 0; I < UE_ARRAY_COUNT(WallLocations); ++I)
+	{
+		AddPreviewMesh(MazePreview, *FString::Printf(TEXT("MazeWallPreview%d"), I), Cube, WallLocations[I], WallScale, MazeMaterial);
+	}
+	AddPreviewMesh(MazePreview, TEXT("MazeBallPreview"), Sphere, FVector(-125, -125, 48), FVector(.34f), BallMaterial);
+	const FVector FrameScale(.12f, .12f, 2.3f);
+	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxPostA"), Cube, FVector(-115,-115,115), FrameScale, GlowMaterial);
+	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxPostB"), Cube, FVector(115,-115,115), FrameScale, GlowMaterial);
+	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxPostC"), Cube, FVector(-115,115,115), FrameScale, GlowMaterial);
+	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxPostD"), Cube, FVector(115,115,115), FrameScale, GlowMaterial);
+	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxTop"), Cube, FVector(0,0,225), FVector(2.4f,.12f,.12f), GlowMaterial);
+	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxTopSide"), Cube, FVector(0,0,225), FVector(.12f,2.4f,.12f), GlowMaterial);
+	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxObject"), Sphere, FVector(0,0,105), FVector(.78f), LightMaterial);
+	AddPreviewMesh(LightBoxPreview, TEXT("LightBoxAccent"), Sphere, FVector(65,35,135), FVector(.22f), GlowMaterial);
+	MazePreview->SetVisibility(false, true);
+	LightBoxPreview->SetVisibility(false, true);
 	if (UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>())
 	{
 		// Connect early so the source is already known when a game starts.
@@ -91,6 +144,10 @@ void ATitlePawn::Tick(float DeltaSeconds)
 	ShipPivot->SetRelativeLocation(FVector(-260.f, -260.f, 45.f + FMath::Sin(T * 0.65f) * 16.f));
 	ShipPivot->SetRelativeRotation(FRotator(2.f + FMath::Sin(T * 0.4f) * 2.f, -12.f + FMath::Sin(T * 0.22f) * 6.f,
 		-6.f + FMath::Sin(T * 0.35f) * 4.f));
+	MazePreview->SetRelativeLocation(FVector(520.f, 520.f, FMath::Sin(T * 0.7f) * 14.f));
+	MazePreview->SetRelativeRotation(FRotator(0.f, T * 12.f, 0.f));
+	LightBoxPreview->SetRelativeLocation(FVector(520.f, 520.f, FMath::Sin(T * 0.8f) * 14.f));
+	LightBoxPreview->SetRelativeRotation(FRotator(0.f, T * 10.f, 0.f));
 	if (Parts.PlumeGlow)
 	{
 		Parts.PlumeGlow->SetVectorParameterValue(TEXT("Color"),
@@ -133,16 +190,11 @@ void ATitleHUD::DrawHUD()
 	Gradient(Canvas, 0, H * 0.72f, W, H * 0.28f, FLinearColor(0, 0, 0, 0), FLinearColor(0.005f, 0.013f, 0.02f, 0.95f));
 	RoundRect(Canvas, Left, H * 0.08f + 6 * S, 6 * S, 24 * S, 3 * S, Mint);
 	Text(TEXT("SPRESENSE"), Paper, Left + 22 * S, H * 0.08f, 26, false);
-	Text(TEXT("動きで、遊ぼう。"), Paper, Left, H * 0.19f, 62, false);
-	Text(TEXT("箱を傾けて、3つの世界へ。"), Muted, Left + 2 * S, H * 0.19f + 92 * S, 23, false);
 	const float CW = FMath::Min(W * 0.4f, 640.f * S);
-	const float CH = 104 * S, Gap = 14 * S, Y = H * 0.41f;
-	DrawCard(TEXT("Maze"), TEXT("迷路"), TEXT("転がして、仕掛けを越える"), Left, Y, CW, CH, 0);
-	DrawCard(TEXT("Flight"), TEXT("フライト"), TEXT("風を切り、空を駆ける"), Left, Y + CH + Gap, CW, CH, 1);
-	DrawCard(TEXT("LightBox"), TEXT("ひかりの箱"), TEXT("ゆらして、声で景色を変える"), Left, Y + (CH + Gap) * 2, CW, CH, 2);
-	const float HeroX = W * 0.74f;
-	TextCentered(TEXT("フライト"), Paper, HeroX, H * 0.73f, 27);
-	TextCentered(TEXT("風を切り、空を駆ける。"), Muted, HeroX, H * 0.73f + 44 * S, 18);
+	const float CH = 104 * S, Gap = 14 * S, Y = H * 0.31f;
+	DrawCard(TEXT("Maze"), TEXT("迷路"), Left, Y, CW, CH, 0);
+	DrawCard(TEXT("Flight"), TEXT("フライト"), Left, Y + CH + Gap, CW, CH, 1);
+	DrawCard(TEXT("LightBox"), TEXT("ひかりの箱"), Left, Y + (CH + Gap) * 2, CW, CH, 2);
 	DrawRect(Paper.CopyWithNewOpacity(0.1f), Left, H * 0.89f, W - Left - 64 * S, S);
 
 	if (UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>())
@@ -158,13 +210,15 @@ void ATitleHUD::DrawHUD()
 	}
 }
 
-void ATitleHUD::DrawCard(FName Id, const FString& Name, const FString& Sub, float X, float Y, float CW, float CH, int32 Icon)
+void ATitleHUD::DrawCard(FName Id, const FString& Name, float X, float Y, float CW, float CH, int32 Icon)
 {
 	using namespace ExperienceUI;
 	const bool Hover = Hovered(GetOwningPlayerController(), X, Y, CW, CH);
-	RoundRect(Canvas, X, Y, CW, CH, 22 * S, Paper.CopyWithNewOpacity(Hover ? 0.18f : 0.08f));
+	const bool Selected = SelectedId == Id;
+	const bool Active = Hover || Selected;
+	RoundRect(Canvas, X, Y, CW, CH, 22 * S, Paper.CopyWithNewOpacity(Active ? 0.22f : 0.08f));
 	RoundRect(Canvas, X + S, Y + S, CW - 2 * S, CH - 2 * S, 21 * S,
-		Hover ? FLinearColor(0.035f, 0.11f, 0.115f, 0.96f) : Ink.CopyWithNewOpacity(0.82f));
+		Active ? FLinearColor(0.035f, 0.11f, 0.115f, 0.96f) : Ink.CopyWithNewOpacity(0.82f));
 	const float IconSize = 36 * S, ICX = X + 42 * S, ICY = Y + CH * 0.5f;
 	if (Icon == 0)
 	{
@@ -175,12 +229,11 @@ void ATitleHUD::DrawCard(FName Id, const FString& Name, const FString& Sub, floa
 		DrawFlightIcon(ICX, ICY, IconSize);
 	}
 	else { DrawLightBoxIcon(ICX, ICY, IconSize); }
-	const float TextX = X + (Hover ? 88 : 84) * S;
-	Text(Name, Paper, TextX, Y + 16 * S, 31, false);
-	Text(Sub, Muted, TextX, Y + 62 * S, 18, false);
+	const float TextX = X + (Active ? 88 : 84) * S;
+	Text(Name, Paper, TextX, Y + 33 * S, 31, false);
 	const float AX = X + CW - 44 * S, AY = Y + CH * 0.5f;
-	RoundRect(Canvas, AX - 18 * S, AY - 18 * S, 36 * S, 36 * S, 18 * S, Hover ? Mint : Paper.CopyWithNewOpacity(0.07f));
-	const FLinearColor Arrow = Hover ? Ink : Paper;
+	RoundRect(Canvas, AX - 18 * S, AY - 18 * S, 36 * S, 36 * S, 18 * S, Active ? Mint : Paper.CopyWithNewOpacity(0.07f));
+	const FLinearColor Arrow = Active ? Ink : Paper;
 	DrawLine(AX - 5 * S, AY, AX + 6 * S, AY, Arrow, 1.6f * S);
 	DrawLine(AX + 1 * S, AY - 5 * S, AX + 6 * S, AY, Arrow, 1.6f * S);
 	DrawLine(AX + 1 * S, AY + 5 * S, AX + 6 * S, AY, Arrow, 1.6f * S);
@@ -210,6 +263,11 @@ void ATitleHUD::DrawFlightIcon(float CX, float CY, float Size)
 void ATitleHUD::NotifyHitBoxClick(FName BoxName)
 {
 	Super::NotifyHitBoxClick(BoxName);
+	if (SelectedId != BoxName)
+	{
+		SetPreview(BoxName);
+		return;
+	}
 	if (BoxName == TEXT("Maze"))
 	{
 		UGameplayStatics::OpenLevel(this, ATitleGameMode::MazeMapName);
@@ -221,6 +279,22 @@ void ATitleHUD::NotifyHitBoxClick(FName BoxName)
 	else if (BoxName == TEXT("LightBox"))
 	{
 		UGameplayStatics::OpenLevel(this, ATitleGameMode::LightBoxMapName);
+	}
+}
+
+void ATitleHUD::SetPreview(FName Id)
+{
+	SelectedId = Id;
+	if (APlayerController* PC = GetOwningPlayerController())
+	{
+		if (ATitlePawn* TitlePawn = Cast<ATitlePawn>(PC->GetPawn()))
+		{
+			const bool bMaze = Id == TEXT("Maze");
+			const bool bLightBox = Id == TEXT("LightBox");
+			TitlePawn->ShipPivot->SetVisibility(!bMaze && !bLightBox, true);
+			TitlePawn->MazePreview->SetVisibility(bMaze, true);
+			TitlePawn->LightBoxPreview->SetVisibility(bLightBox, true);
+		}
 	}
 }
 

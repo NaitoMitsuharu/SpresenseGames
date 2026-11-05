@@ -47,6 +47,10 @@ public:
         else if(Name==TEXT("send")) {Line({{4,12},{19,12}});Line({{13,6},{19,12},{13,18}});}
         else if(Name==TEXT("stop")) Line({{6,6},{18,6},{18,18},{6,18},{6,6}});
         else if(Name==TEXT("check")) Line({{5,12},{10,17},{20,6}});
+        else if(Name==TEXT("loading")) {
+            const double Start=FPlatformTime::Seconds()*220.;
+            Arc({12,12},8,Start,Start+285.);
+        }
         else if(Name==TEXT("voice")) {
             // Match Spright's exhibition button: filled white mic, no plate, listening ring only.
             static const FSlateRoundedBoxBrush Capsule(FLinearColor::White,3.f);
@@ -161,21 +165,31 @@ void SLightBoxControls::Construct(const FArguments& Args)
         +SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(0,0,0,32)
         [SNew(SBox).WidthOverride_Lambda([this](){return FOptionalSize(FMath::Min(860.,FMath::Max(260.,HostSize.X/Scale-180)));})
         [SNew(SVerticalBox)
-            +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(16,0,16,12)
-            [SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",16)).ColorAndOpacity(Paper.CopyWithNewOpacity(.85f)).Justification(ETextJustify::Center)
-                .WrapTextAt(740).Visibility_Lambda([this,D](){return !bMenu&&D()&&StatusAge<5.f?EVisibility::HitTestInvisible:EVisibility::Collapsed;})
-                .Text_Lambda([D](){return FText::FromString(D()?(D()->bListening&&!D()->Heard.IsEmpty()?D()->Heard:D()->Status):FString());})]
             +SVerticalBox::Slot().AutoHeight()
-            [SNew(SHorizontalBox)
-                +SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0,0,20,0)
-                [SNew(SBox).WidthOverride(72).HeightOverride(72)
+            [SNew(SVerticalBox)
+                +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(16,0,16,10)
+                [SNew(SHorizontalBox)
+                    +SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0,0,10,0)
+                    [SNew(SBox).WidthOverride(32).HeightOverride(32)
+                        .Visibility_Lambda([D](){return D()&&D()->bThinking?EVisibility::HitTestInvisible:EVisibility::Collapsed;})
+                    [SNew(SLightBoxIcon).Name(TEXT("loading")).Listening_Lambda([D](){return D()&&D()->bThinking;})]]
+                    +SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+                    [SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",20)).ColorAndOpacity(Paper.CopyWithNewOpacity(.95f)).Justification(ETextJustify::Center)
+                        .WrapTextAt(740).Visibility_Lambda([this,D](){return !bMenu&&D()&&(D()->bThinking||D()->bListening||StatusAge<5.f)?EVisibility::HitTestInvisible:EVisibility::Collapsed;})
+                        .Text_Lambda([D](){
+                            if(!D())return FText::GetEmpty();
+                            if(D()->bThinking&&!D()->Heard.IsEmpty())return FText::FromString(FString::Printf(TEXT("「%s」\n%s"),*D()->Heard,*D()->Status));
+                            return FText::FromString(D()->bListening&&!D()->Heard.IsEmpty()?D()->Heard:D()->Status);
+                        })]]
+                +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0,0,0,10)
+                [SNew(SBox).WidthOverride(88).HeightOverride(88)
                 [SNew(SButton).ButtonStyle(VoiceStyle()).ContentPadding(0)
                     .ToolTipText_Lambda([D](){return FText::FromString(D()&&D()->bListening?TEXT("聞き取りを取り消す"):TEXT("音声入力"));})
                     .IsEnabled_Lambda([this,D](){return !bMenu&&HUD.IsValid()&&!HUD->IsModalOpen()&&D()&&!D()->bThinking;})
                     .OnClicked_Lambda([this](){return Activate(TEXT("Voice"));})
                     [SNew(SLightBoxIcon).Name(TEXT("voice")).Listening_Lambda([D](){return D()&&D()->bListening;})]]]
-                +SHorizontalBox::Slot().FillWidth(1)
-            [SNew(SBorder).BorderImage(Glass()).BorderBackgroundColor(FLinearColor(.018f,.034f,.047f,.48f)).Padding(7.f)
+                +SVerticalBox::Slot().AutoHeight()
+                [SNew(SBorder).BorderImage(Glass()).BorderBackgroundColor(FLinearColor(.018f,.034f,.047f,.48f)).Padding(7.f)
             .IsEnabled_Lambda([this,D](){return !bMenu&&HUD.IsValid()&&!HUD->IsModalOpen()&&D()&&!D()->bListening;})
             [SNew(SHorizontalBox)
                 +SHorizontalBox::Slot().FillWidth(1).VAlign(VAlign_Center)[Input.ToSharedRef()]
@@ -227,7 +241,7 @@ void SLightBoxControls::Tick(const FGeometry& G,double Time,float Dt)
     Menu->SetVisibility(bMenu?EVisibility::SelfHitTestInvisible:EVisibility::HitTestInvisible);
     if(HUD.IsValid()){
         auto* D=HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>();
-        FString Voice=D->TakeVoiceDraft();if(!Voice.IsEmpty())Input->SetText(FText::FromString(Voice));
+        FString Voice=D->TakeVoiceDraft();if(!Voice.IsEmpty()){Input->SetText(FText::FromString(Voice));Submit();}
         StatusAge+=Dt;if(LastStatus!=D->Status){LastStatus=D->Status;StatusAge=0;}
         if(D->bListening)StatusAge=0;
     }
