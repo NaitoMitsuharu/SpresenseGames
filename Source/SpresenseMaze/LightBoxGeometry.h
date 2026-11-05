@@ -11,4 +11,5 @@ struct FLightBoxMesh
 	TArray<FVector2D> UVs;
 	static bool ValidOutline(const TArray<FVector2D>& Outline);
 	static FLightBoxMesh Build(const FLightBoxObject& Object, float Time=0);
+    static FLinearColor PatternColor(const FLightBoxObject& Object,const FVector& Local,const FLinearColor& Lit);
 };

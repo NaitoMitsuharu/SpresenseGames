@@ -14,6 +14,7 @@ namespace
 	TSharedRef<FJsonObject> Encode(const FLightBoxRecord& R)
 	{
 		auto O=MakeShared<FJsonObject>();
+		O->SetStringField(TEXT("group"),R.Group);
 		O->SetStringField(TEXT("id"),R.Id); O->SetStringField(TEXT("utc"),R.Utc); O->SetStringField(TEXT("words"),R.Words);
 		O->SetStringField(TEXT("before"),R.Before); O->SetStringField(TEXT("after"),R.After); O->SetStringField(TEXT("raw"),R.Raw);
 		O->SetStringField(TEXT("result"),R.Result); O->SetStringField(TEXT("difference"),R.Difference); O->SetStringField(TEXT("model"),R.Model);
@@ -60,10 +61,10 @@ int32 FLightBoxJournal::RecoverInterrupted()
     if(Changed)Save();
     return Changed;
 }
-void FLightBoxJournal::Begin(const FString& Id,const FString& Words,const FString& Before,bool Repair)
+void FLightBoxJournal::Begin(const FString& Id,const FString& Words,const FString& Before,bool Repair,const FString& Group)
 {
 	FLightBoxRecord& R=Records.AddDefaulted_GetRef(); R.Id=Id; R.Utc=FDateTime::UtcNow().ToIso8601(); R.Words=Words;
-	R.Before=Before; R.Result=TEXT("応答待ち"); R.bRepair=Repair;
+	R.Before=Before; R.Result=TEXT("応答待ち"); R.bRepair=Repair;R.Group=Group.IsEmpty()?Id:Group;
 	while(Records.Num()>300) Records.RemoveAt(0);
 	Save();
 }
@@ -90,6 +91,7 @@ bool FLightBoxJournal::Import(const FString& Json,bool History)
 		if(New)
 		{
 			R.Id=Id; String(O,TEXT("utc"),R.Utc); String(O,TEXT("words"),R.Words); R.Words=R.Words.Left(500);
+            R.Group=Id;String(O,TEXT("group"),R.Group);
 			String(O,TEXT("before"),R.Before); String(O,TEXT("after"),R.After); String(O,TEXT("raw"),R.Raw); String(O,TEXT("result"),R.Result);
 			String(O,TEXT("difference"),R.Difference); O->TryGetBoolField(TEXT("repair"),R.bRepair); R.bImported=true; O->TryGetBoolField(TEXT("imported"),R.bImported);
 		}

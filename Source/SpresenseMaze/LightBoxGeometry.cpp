@@ -46,6 +46,17 @@ bool FLightBoxMesh::ValidOutline(const TArray<FVector2D>& P)
 }
 
 
+FLinearColor FLightBoxMesh::PatternColor(const FLightBoxObject& O,const FVector& Local,const FLinearColor& Lit)
+{
+    if(O.Pattern==TEXT("none")&&!O.bBelly)return Lit;
+    const FVector P=Local/O.Size;FLinearColor Tint=O.Color;const float S=O.PatternScale;
+    const double A=FMath::Frac(P.X*S+.5)-.5,B=FMath::Frac((P.Y+P.Z*.71)*S+.5)-.5;
+    const bool Mark=O.Pattern==TEXT("spots")?(A*A+B*B<.035):O.Pattern==TEXT("stripes")?FMath::Sin((P.X+P.Z*.25)*S*2*PI)>.6:O.Pattern==TEXT("patches")?(FMath::Sin(P.X*S*PI)*FMath::Cos(P.Y*S*PI)>.25):false;
+    if(Mark)Tint=O.PatternColor;
+    if(O.bBelly&&P.Z<-.12)Tint=O.BellyColor;
+    return Lit*FLinearColor(Tint.R/FMath::Max(.025f,O.Color.R),Tint.G/FMath::Max(.025f,O.Color.G),Tint.B/FMath::Max(.025f,O.Color.B),1);
+}
+
 FLightBoxMesh FLightBoxMesh::Build(const FLightBoxObject& O,float Time)
 {
 	FLightBoxMesh Unit;
@@ -76,7 +87,19 @@ FLightBoxMesh FLightBoxMesh::Build(const FLightBoxObject& O,float Time)
 		},Color);
 	};
 	if(O.Shape==TEXT("group")) return Unit;
-	if(O.Shape==TEXT("butterfly")) {
+    if(O.Shape==TEXT("loft")&&O.Sections.Num()>=3) {
+        Surface(32,64,[&](double U,double V){
+            const double X=FMath::Lerp(O.Sections[0].X,O.Sections.Last().X,V);int32 I=0;
+            while(I+2<O.Sections.Num()&&O.Sections[I+1].X<X)++I;
+            const auto A=O.Sections[I],B=O.Sections[I+1];const double T=FMath::Clamp((X-A.X)/(B.X-A.X),0.,1.);
+            const auto Prev=O.Sections[FMath::Max(0,I-1)],Next=O.Sections[FMath::Min(O.Sections.Num()-1,I+2)];
+            auto Radius=[&](int32 Axis){const double MA=(B[Axis]-Prev[Axis])/(B.X-Prev.X),MB=(Next[Axis]-A[Axis])/(Next.X-A.X);return FMath::Clamp(FMath::CubicInterp(A[Axis],MA*(B.X-A.X),B[Axis],MB*(B.X-A.X),T),0.,.5);};
+            FVector P(X,Radius(1)*FMath::Cos(U*2*PI),Radius(2)*FMath::Sin(U*2*PI));
+            if(O.Curve.Num()>1){const FVector C=FLightBoxMotionSystem::Curve(O.Curve,V,false);P.Y+=C.Y/O.Size.Y;P.Z+=C.Z/O.Size.Z;}
+            return P;
+        });
+    }
+	else if(O.Shape==TEXT("butterfly")) {
 		Ball(FVector(-.03,0,0),FVector(.66,.065,.25),FLinearColor(.12,.10,.08));Ball(FVector(.32,0,.01),FVector(.14,.09,.20),FLinearColor(.15,.12,.09));
 		for(double Side:{-1.,1.}) {
 			const int32 First=Unit.Vertices.Num();

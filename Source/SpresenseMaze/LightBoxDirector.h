@@ -30,6 +30,9 @@ public:
 	FString TakeVoiceDraft();
 	void Cancel();
 	void Submit(const FString& Words);
+    void RefineScene();
+    FString ProgressLabel() const;
+    FString CurrentCreditsLabel() const;
 	void SelectPreset(int32 Index);
 	void SelectExample(int32 Index);
 	void ApplyScene(const FLightBoxStyle& Next);
@@ -54,6 +57,7 @@ public:
 	FString JournalStatus;
 	bool bListening = false;
 	bool bThinking = false;
+    bool bCapturingReview=false;
 	bool bHasSavedScene = false;
 	int32 Revision = 0;
 
@@ -61,6 +65,8 @@ private:
 	friend class FLightBoxHttpRoundTripTest;
 	friend class FLightBoxHttpRepairTest;
 	friend class FLightBoxSlowInferenceTest;
+    friend class FLightBoxUsageGroupTest;
+    friend class FLightBoxScreenshotJournalTest;
 	void StopVoice();
 	void Persist();
 	void RequestScene(const FString& Prompt, const FString& Previous = FString(), const FString& Diagnostic = FString(), int32 Attempt = 0);
@@ -82,4 +88,7 @@ private:
 	FHttpRequestPtr Pending;
 	uint64 Generation = 0;
 	double VoiceStarted = 0;
+    double OperationStarted=0,ReviewCaptureAt=0;
+    FString UsageGroup,ReviewImage;
+    FDelegateHandle ReviewScreenshotHandle;
 };

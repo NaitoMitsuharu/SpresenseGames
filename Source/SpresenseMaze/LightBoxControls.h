@@ -22,6 +22,9 @@ public:
     void OpenMenu();
     void FocusInput();
     bool IsInteracting() const;
+    bool IsSceneBusy() const;
+    TOptional<float> SceneProgress() const;
+    FString SceneProgressText() const;
 private:
     TWeakObjectPtr<ALightBoxHUD> HUD;
     TSharedPtr<SEditableTextBox> Input;

@@ -1,0 +1,6355 @@
+{
+  "date": "2026-11-06",
+  "device": "Xperia 1 VII XQ-FS54 / Android 16 / 2340x1080",
+  "cases": [
+    {
+      "case": "chura",
+      "mode": "text",
+      "records": [
+        {
+          "id": "3d809131-e483-4588-8692-b4a49e3a73ad",
+          "group": "3d809131-e483-4588-8692-b4a49e3a73ad",
+          "words": "美ら海水族館",
+          "result": "反映済み",
+          "model": "gpt-6-luna",
+          "seconds": 53.64667456300231,
+          "credits": 0.42543,
+          "repair": false,
+          "input": 3,
+          "output": 4708,
+          "cacheRead": 0,
+          "cacheWrite": 15200,
+          "total": 19911,
+          "scene": {
+            "title": "美ら海の大水槽",
+            "color": "#174F5A",
+            "accent": "#F3D28A",
+            "motion": 0.800000011920929,
+            "viscosity": 0.3499999940395355,
+            "swirl": 0.30000001192092896,
+            "attraction": 0.25,
+            "tilt": 0.4000000059604645,
+            "glow": 0.5,
+            "trail": 0.07999999821186066,
+            "shakeThreshold": 2,
+            "shake": "none",
+            "schema": 3,
+            "note": "ジンベエザメが泳ぐ美ら海水族館をイメージした水槽。特定施設の正確な再現ではありません。",
+            "pointCloud": {
+              "enabled": true,
+              "floor": false,
+              "count": 65536,
+              "duration": 5,
+              "arc": 65,
+              "twist": 1.25,
+              "stagger": 0.3499999940395355
+            },
+            "particles": {
+              "count": 160,
+              "size": 1.2000000476837158,
+              "behavior": "flock",
+              "formation": "volume",
+              "shape": "fish",
+              "colorMode": "alternate",
+              "center": [
+                0,
+                32,
+                126
+              ],
+              "wind": [
+                0,
+                0,
+                0
+              ],
+              "gravity": 0,
+              "turbulence": 0.25,
+              "spread": 38,
+              "formationStrength": 0.5,
+              "cohesion": 0.699999988079071,
+              "alignment": 0.800000011920929,
+              "separation": 0.6000000238418579,
+              "groups": 1,
+              "formationNext": "none",
+              "formationPeriod": 12,
+              "travel": 0,
+              "formationRotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "world": {
+              "background": "#071B27",
+              "floor": "#071B27",
+              "ambient": 0.8500000238418579,
+              "bloom": 0.3499999940395355,
+              "box": false,
+              "keyColor": "#FFE2B1",
+              "fillColor": "#72C9C6",
+              "keyIntensity": 1.2000000476837158,
+              "keyDirection": [
+                -30,
+                20,
+                0
+              ],
+              "lights": []
+            },
+            "camera": {
+              "orbit": 3,
+              "yaw": 0,
+              "pitch": 20,
+              "zoom": 1,
+              "autoFrame": true,
+              "fill": 0.7200000286102295,
+              "focus": [
+                0,
+                0,
+                90
+              ]
+            },
+            "objects": [
+              {
+                "id": "tank-corner-1",
+                "shape": "tube",
+                "color": "#527F83",
+                "position": [
+                  -140,
+                  -65,
+                  90
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -82
+                  ],
+                  [
+                    0,
+                    0,
+                    82
+                  ]
+                ]
+              },
+              {
+                "id": "tank-corner-2",
+                "shape": "tube",
+                "color": "#527F83",
+                "position": [
+                  -140,
+                  65,
+                  90
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -82
+                  ],
+                  [
+                    0,
+                    0,
+                    82
+                  ]
+                ]
+              },
+              {
+                "id": "tank-corner-3",
+                "shape": "tube",
+                "color": "#527F83",
+                "position": [
+                  140,
+                  -65,
+                  90
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -82
+                  ],
+                  [
+                    0,
+                    0,
+                    82
+                  ]
+                ]
+              },
+              {
+                "id": "tank-corner-4",
+                "shape": "tube",
+                "color": "#527F83",
+                "position": [
+                  140,
+                  65,
+                  90
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -82
+                  ],
+                  [
+                    0,
+                    0,
+                    82
+                  ]
+                ]
+              },
+              {
+                "id": "tank-top-front",
+                "shape": "tube",
+                "color": "#82B9B2",
+                "position": [
+                  0,
+                  -65,
+                  172
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    -140,
+                    0,
+                    0
+                  ],
+                  [
+                    140,
+                    0,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-top-back",
+                "shape": "tube",
+                "color": "#527F83",
+                "position": [
+                  0,
+                  65,
+                  172
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    -140,
+                    0,
+                    0
+                  ],
+                  [
+                    140,
+                    0,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-top-left",
+                "shape": "tube",
+                "color": "#527F83",
+                "position": [
+                  -140,
+                  0,
+                  172
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    -65,
+                    0
+                  ],
+                  [
+                    0,
+                    65,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-top-right",
+                "shape": "tube",
+                "color": "#527F83",
+                "position": [
+                  140,
+                  0,
+                  172
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    -65,
+                    0
+                  ],
+                  [
+                    0,
+                    65,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-bottom-front",
+                "shape": "tube",
+                "color": "#82B9B2",
+                "position": [
+                  0,
+                  -65,
+                  8
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    -140,
+                    0,
+                    0
+                  ],
+                  [
+                    140,
+                    0,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-bottom-back",
+                "shape": "tube",
+                "color": "#527F83",
+                "position": [
+                  0,
+                  65,
+                  8
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    -140,
+                    0,
+                    0
+                  ],
+                  [
+                    140,
+                    0,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-bottom-left",
+                "shape": "tube",
+                "color": "#527F83",
+                "position": [
+                  -140,
+                  0,
+                  8
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    -65,
+                    0
+                  ],
+                  [
+                    0,
+                    65,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-bottom-right",
+                "shape": "tube",
+                "color": "#527F83",
+                "position": [
+                  140,
+                  0,
+                  8
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    -65,
+                    0
+                  ],
+                  [
+                    0,
+                    65,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-water",
+                "shape": "water",
+                "color": "#176779",
+                "position": [
+                  0,
+                  0,
+                  12
+                ],
+                "size": [
+                  270,
+                  125,
+                  5
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": false,
+                "motions": [
+                  {
+                    "type": "ripple",
+                    "wave": "sine",
+                    "space": "parent",
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "amplitude": 1.2000000476837158,
+                    "period": 5,
+                    "phase": 0,
+                    "closed": true,
+                    "orient": true
+                  }
+                ]
+              },
+              {
+                "id": "whale-shark-body",
+                "shape": "loft",
+                "color": "#527F9A",
+                "position": [
+                  0,
+                  0,
+                  96
+                ],
+                "size": [
+                  220,
+                  100,
+                  62
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "swim",
+                "speed": 0.3499999940395355,
+                "amplitude": 8,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "sections": [
+                  [
+                    -0.5,
+                    0,
+                    0
+                  ],
+                  [
+                    -0.44,
+                    0.27,
+                    0.22
+                  ],
+                  [
+                    -0.34,
+                    0.43,
+                    0.34
+                  ],
+                  [
+                    -0.2,
+                    0.48,
+                    0.4
+                  ],
+                  [
+                    0,
+                    0.42,
+                    0.36
+                  ],
+                  [
+                    0.2,
+                    0.3,
+                    0.27
+                  ],
+                  [
+                    0.36,
+                    0.16,
+                    0.17
+                  ],
+                  [
+                    0.48,
+                    0.06,
+                    0.08
+                  ],
+                  [
+                    0.5,
+                    0,
+                    0
+                  ]
+                ],
+                "pattern": "spots",
+                "patternColor": "#D7E3D0",
+                "patternScale": 13,
+                "belly": true,
+                "bellyColor": "#B9D2D1",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "pectoral-near",
+                "shape": "polygon",
+                "color": "#426D86",
+                "position": [
+                  -18,
+                  -39,
+                  78
+                ],
+                "size": [
+                  66,
+                  62,
+                  5
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true,
+                "outline": [
+                  [
+                    -0.42,
+                    0.38
+                  ],
+                  [
+                    0.48,
+                    0.28
+                  ],
+                  [
+                    0.42,
+                    0.08
+                  ],
+                  [
+                    0.12,
+                    -0.5
+                  ],
+                  [
+                    -0.05,
+                    -0.45
+                  ],
+                  [
+                    -0.18,
+                    -0.08
+                  ]
+                ]
+              },
+              {
+                "id": "pectoral-far",
+                "shape": "polygon",
+                "color": "#426D86",
+                "position": [
+                  -18,
+                  39,
+                  78
+                ],
+                "size": [
+                  66,
+                  62,
+                  5
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true,
+                "outline": [
+                  [
+                    -0.42,
+                    0.38
+                  ],
+                  [
+                    0.48,
+                    0.28
+                  ],
+                  [
+                    0.42,
+                    0.08
+                  ],
+                  [
+                    0.12,
+                    -0.5
+                  ],
+                  [
+                    -0.05,
+                    -0.45
+                  ],
+                  [
+                    -0.18,
+                    -0.08
+                  ]
+                ]
+              },
+              {
+                "id": "dorsal-fin",
+                "shape": "polygon",
+                "color": "#426D86",
+                "position": [
+                  22,
+                  0,
+                  127
+                ],
+                "size": [
+                  34,
+                  5,
+                  28
+                ],
+                "rotation": [
+                  90,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true,
+                "outline": [
+                  [
+                    -0.5,
+                    -0.45
+                  ],
+                  [
+                    0.18,
+                    -0.5
+                  ],
+                  [
+                    0.5,
+                    0.5
+                  ],
+                  [
+                    -0.2,
+                    0.25
+                  ]
+                ]
+              },
+              {
+                "id": "tail-fin",
+                "shape": "polygon",
+                "color": "#426D86",
+                "position": [
+                  112,
+                  0,
+                  96
+                ],
+                "size": [
+                  46,
+                  5,
+                  48
+                ],
+                "rotation": [
+                  90,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true,
+                "outline": [
+                  [
+                    -0.5,
+                    -0.18
+                  ],
+                  [
+                    -0.05,
+                    -0.12
+                  ],
+                  [
+                    0.5,
+                    -0.5
+                  ],
+                  [
+                    0.28,
+                    0
+                  ],
+                  [
+                    0.5,
+                    0.5
+                  ],
+                  [
+                    -0.05,
+                    0.12
+                  ],
+                  [
+                    -0.5,
+                    0.18
+                  ]
+                ]
+              },
+              {
+                "id": "shark-eye",
+                "shape": "sphere",
+                "color": "#F2D38C",
+                "position": [
+                  -83,
+                  -45,
+                  104
+                ],
+                "size": [
+                  5,
+                  4,
+                  5
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "shark-mouth",
+                "shape": "tube",
+                "color": "#283F50",
+                "position": [
+                  -91,
+                  -44,
+                  83
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 1,
+                "focus": true,
+                "curve": [
+                  [
+                    -14,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    -1,
+                    -2
+                  ],
+                  [
+                    14,
+                    0,
+                    0
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "chura-refine",
+      "mode": "screenshot",
+      "records": [
+        {
+          "id": "7a01f7f1-3321-41b7-9c05-eea3e9c2000e",
+          "group": "7a01f7f1-3321-41b7-9c05-eea3e9c2000e",
+          "words": "添付画像は現在表示中の粒子の景色です。Current scene JSONと照合し、実際に見えるシルエット、頭身・比率、接続、顔、模様、構図を評価して改善してください。題材と主要な動作は維持し、特徴の不足・不自然な部位を優先して直してください。見えない部分を確認済みと主張せず、通常モデルや背景板は使わず、すべて粒子のままにしてください。施設は知識に基づく解釈であり実物再現を保証しません。変更理由をnoteに短く記載。完全なコンパクトJSONのみ返してください。",
+          "result": "反映済み",
+          "model": "gpt-6-luna",
+          "seconds": 63.8562983610027,
+          "credits": 0.4438175,
+          "repair": false,
+          "input": 3,
+          "output": 5218,
+          "cacheRead": 0,
+          "cacheWrite": 14631,
+          "total": 19852,
+          "scene": {
+            "title": "美ら海の大水槽",
+            "color": "#174F5A",
+            "accent": "#F3D28A",
+            "motion": 0.800000011920929,
+            "viscosity": 0.3499999940395355,
+            "swirl": 0.30000001192092896,
+            "attraction": 0.25,
+            "tilt": 0.4000000059604645,
+            "glow": 0.5,
+            "trail": 0.07999999821186066,
+            "shakeThreshold": 2,
+            "shake": "none",
+            "schema": 3,
+            "note": "見える姿を基に頭を幅広くし、胸びれを接続。目・口・えらと構図を調整。施設は知識に基づくイメージです。",
+            "pointCloud": {
+              "enabled": true,
+              "floor": false,
+              "count": 65536,
+              "duration": 5,
+              "arc": 65,
+              "twist": 1.25,
+              "stagger": 0.3499999940395355
+            },
+            "particles": {
+              "count": 160,
+              "size": 1.2000000476837158,
+              "behavior": "flock",
+              "formation": "volume",
+              "shape": "fish",
+              "colorMode": "alternate",
+              "center": [
+                0,
+                32,
+                126
+              ],
+              "wind": [
+                0,
+                0,
+                0
+              ],
+              "gravity": 0,
+              "turbulence": 0.25,
+              "spread": 38,
+              "formationStrength": 0.5,
+              "cohesion": 0.699999988079071,
+              "alignment": 0.800000011920929,
+              "separation": 0.6000000238418579,
+              "groups": 1,
+              "formationNext": "none",
+              "formationPeriod": 12,
+              "travel": 0,
+              "formationRotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "world": {
+              "background": "#071B27",
+              "floor": "#071B27",
+              "ambient": 0.8500000238418579,
+              "bloom": 0.3499999940395355,
+              "box": false,
+              "keyColor": "#FFE2B1",
+              "fillColor": "#72C9C6",
+              "keyIntensity": 1.2000000476837158,
+              "keyDirection": [
+                -30,
+                20,
+                0
+              ],
+              "lights": []
+            },
+            "camera": {
+              "orbit": 3,
+              "yaw": 0,
+              "pitch": 20,
+              "zoom": 1.350000023841858,
+              "autoFrame": true,
+              "fill": 0.8199999928474426,
+              "focus": [
+                0,
+                0,
+                96
+              ]
+            },
+            "objects": [
+              {
+                "id": "tank-corner-1",
+                "shape": "tube",
+                "color": "#24545A",
+                "position": [
+                  -140,
+                  -65,
+                  90
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -82
+                  ],
+                  [
+                    0,
+                    0,
+                    82
+                  ]
+                ]
+              },
+              {
+                "id": "tank-corner-2",
+                "shape": "tube",
+                "color": "#24545A",
+                "position": [
+                  -140,
+                  65,
+                  90
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -82
+                  ],
+                  [
+                    0,
+                    0,
+                    82
+                  ]
+                ]
+              },
+              {
+                "id": "tank-corner-3",
+                "shape": "tube",
+                "color": "#24545A",
+                "position": [
+                  140,
+                  -65,
+                  90
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -82
+                  ],
+                  [
+                    0,
+                    0,
+                    82
+                  ]
+                ]
+              },
+              {
+                "id": "tank-corner-4",
+                "shape": "tube",
+                "color": "#24545A",
+                "position": [
+                  140,
+                  65,
+                  90
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -82
+                  ],
+                  [
+                    0,
+                    0,
+                    82
+                  ]
+                ]
+              },
+              {
+                "id": "tank-top-front",
+                "shape": "tube",
+                "color": "#527F83",
+                "position": [
+                  0,
+                  -65,
+                  172
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    -140,
+                    0,
+                    0
+                  ],
+                  [
+                    140,
+                    0,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-top-back",
+                "shape": "tube",
+                "color": "#24545A",
+                "position": [
+                  0,
+                  65,
+                  172
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    -140,
+                    0,
+                    0
+                  ],
+                  [
+                    140,
+                    0,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-top-left",
+                "shape": "tube",
+                "color": "#24545A",
+                "position": [
+                  -140,
+                  0,
+                  172
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    -65,
+                    0
+                  ],
+                  [
+                    0,
+                    65,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-top-right",
+                "shape": "tube",
+                "color": "#24545A",
+                "position": [
+                  140,
+                  0,
+                  172
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    -65,
+                    0
+                  ],
+                  [
+                    0,
+                    65,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-bottom-front",
+                "shape": "tube",
+                "color": "#527F83",
+                "position": [
+                  0,
+                  -65,
+                  8
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    -140,
+                    0,
+                    0
+                  ],
+                  [
+                    140,
+                    0,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-bottom-back",
+                "shape": "tube",
+                "color": "#24545A",
+                "position": [
+                  0,
+                  65,
+                  8
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    -140,
+                    0,
+                    0
+                  ],
+                  [
+                    140,
+                    0,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-bottom-left",
+                "shape": "tube",
+                "color": "#24545A",
+                "position": [
+                  -140,
+                  0,
+                  8
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    -65,
+                    0
+                  ],
+                  [
+                    0,
+                    65,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-bottom-right",
+                "shape": "tube",
+                "color": "#24545A",
+                "position": [
+                  140,
+                  0,
+                  8
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.699999988079071,
+                "focus": false,
+                "curve": [
+                  [
+                    0,
+                    -65,
+                    0
+                  ],
+                  [
+                    0,
+                    65,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "tank-water",
+                "shape": "water",
+                "color": "#176779",
+                "position": [
+                  0,
+                  0,
+                  12
+                ],
+                "size": [
+                  270,
+                  125,
+                  5
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": false,
+                "motions": [
+                  {
+                    "type": "ripple",
+                    "wave": "sine",
+                    "space": "parent",
+                    "axis": [
+                      0,
+                      0,
+                      1
+                    ],
+                    "amplitude": 1.2000000476837158,
+                    "period": 5,
+                    "phase": 0,
+                    "closed": true,
+                    "orient": true
+                  }
+                ]
+              },
+              {
+                "id": "whale-shark-body",
+                "shape": "loft",
+                "color": "#527F9A",
+                "position": [
+                  0,
+                  0,
+                  96
+                ],
+                "size": [
+                  230,
+                  108,
+                  66
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "swim",
+                "speed": 0.3499999940395355,
+                "amplitude": 8,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "sections": [
+                  [
+                    -0.5,
+                    0,
+                    0
+                  ],
+                  [
+                    -0.45,
+                    0.28,
+                    0.2
+                  ],
+                  [
+                    -0.36,
+                    0.43,
+                    0.32
+                  ],
+                  [
+                    -0.24,
+                    0.49,
+                    0.38
+                  ],
+                  [
+                    -0.1,
+                    0.47,
+                    0.39
+                  ],
+                  [
+                    0.06,
+                    0.4,
+                    0.34
+                  ],
+                  [
+                    0.22,
+                    0.29,
+                    0.26
+                  ],
+                  [
+                    0.36,
+                    0.16,
+                    0.16
+                  ],
+                  [
+                    0.48,
+                    0.06,
+                    0.07
+                  ],
+                  [
+                    0.5,
+                    0,
+                    0
+                  ]
+                ],
+                "pattern": "spots",
+                "patternColor": "#D7E3D0",
+                "patternScale": 13,
+                "belly": true,
+                "bellyColor": "#B9D2D1",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "pectoral-near",
+                "shape": "polygon",
+                "color": "#426D86",
+                "position": [
+                  -20,
+                  -38,
+                  -12
+                ],
+                "size": [
+                  80,
+                  72,
+                  6
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true,
+                "outline": [
+                  [
+                    -0.42,
+                    0.38
+                  ],
+                  [
+                    0.48,
+                    0.28
+                  ],
+                  [
+                    0.42,
+                    0.08
+                  ],
+                  [
+                    0.12,
+                    -0.5
+                  ],
+                  [
+                    -0.05,
+                    -0.45
+                  ],
+                  [
+                    -0.18,
+                    -0.08
+                  ]
+                ]
+              },
+              {
+                "id": "pectoral-far",
+                "shape": "polygon",
+                "color": "#426D86",
+                "position": [
+                  -20,
+                  38,
+                  -12
+                ],
+                "size": [
+                  80,
+                  72,
+                  6
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true,
+                "outline": [
+                  [
+                    -0.42,
+                    0.38
+                  ],
+                  [
+                    0.48,
+                    0.28
+                  ],
+                  [
+                    0.42,
+                    0.08
+                  ],
+                  [
+                    0.12,
+                    -0.5
+                  ],
+                  [
+                    -0.05,
+                    -0.45
+                  ],
+                  [
+                    -0.18,
+                    -0.08
+                  ]
+                ]
+              },
+              {
+                "id": "dorsal-fin",
+                "shape": "polygon",
+                "color": "#426D86",
+                "position": [
+                  18,
+                  0,
+                  21
+                ],
+                "size": [
+                  38,
+                  5,
+                  30
+                ],
+                "rotation": [
+                  90,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true,
+                "outline": [
+                  [
+                    -0.5,
+                    -0.45
+                  ],
+                  [
+                    0.18,
+                    -0.5
+                  ],
+                  [
+                    0.5,
+                    0.5
+                  ],
+                  [
+                    -0.2,
+                    0.25
+                  ]
+                ]
+              },
+              {
+                "id": "tail-fin",
+                "shape": "polygon",
+                "color": "#426D86",
+                "position": [
+                  108,
+                  0,
+                  0
+                ],
+                "size": [
+                  50,
+                  5,
+                  54
+                ],
+                "rotation": [
+                  90,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true,
+                "motions": [
+                  {
+                    "type": "rotate",
+                    "wave": "sine",
+                    "space": "parent",
+                    "axis": [
+                      0,
+                      1,
+                      0
+                    ],
+                    "amplitude": 16,
+                    "period": 3.5,
+                    "phase": 0,
+                    "closed": true,
+                    "orient": true
+                  }
+                ],
+                "outline": [
+                  [
+                    -0.5,
+                    -0.18
+                  ],
+                  [
+                    -0.05,
+                    -0.12
+                  ],
+                  [
+                    0.5,
+                    -0.5
+                  ],
+                  [
+                    0.28,
+                    0
+                  ],
+                  [
+                    0.5,
+                    0.5
+                  ],
+                  [
+                    -0.05,
+                    0.12
+                  ],
+                  [
+                    -0.5,
+                    0.18
+                  ]
+                ]
+              },
+              {
+                "id": "shark-eye-near",
+                "shape": "sphere",
+                "color": "#172A32",
+                "position": [
+                  -86,
+                  -44,
+                  7
+                ],
+                "size": [
+                  6,
+                  4,
+                  6
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "shark-eye-far",
+                "shape": "sphere",
+                "color": "#172A32",
+                "position": [
+                  -86,
+                  44,
+                  7
+                ],
+                "size": [
+                  6,
+                  4,
+                  6
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "shark-mouth",
+                "shape": "tube",
+                "color": "#283F50",
+                "position": [
+                  -99,
+                  -12,
+                  -14
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 1,
+                "focus": true,
+                "curve": [
+                  [
+                    0,
+                    -12,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    -2
+                  ],
+                  [
+                    0,
+                    12,
+                    0
+                  ]
+                ]
+              },
+              {
+                "id": "gill-1",
+                "shape": "tube",
+                "color": "#A7C9C4",
+                "position": [
+                  -42,
+                  -48,
+                  0
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.800000011920929,
+                "focus": true,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -6
+                  ],
+                  [
+                    0,
+                    0,
+                    6
+                  ]
+                ]
+              },
+              {
+                "id": "gill-2",
+                "shape": "tube",
+                "color": "#A7C9C4",
+                "position": [
+                  -33,
+                  -50,
+                  0
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.800000011920929,
+                "focus": true,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -6
+                  ],
+                  [
+                    0,
+                    0,
+                    6
+                  ]
+                ]
+              },
+              {
+                "id": "gill-3",
+                "shape": "tube",
+                "color": "#A7C9C4",
+                "position": [
+                  -24,
+                  -51,
+                  0
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.800000011920929,
+                "focus": true,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -6
+                  ],
+                  [
+                    0,
+                    0,
+                    6
+                  ]
+                ]
+              },
+              {
+                "id": "gill-4",
+                "shape": "tube",
+                "color": "#A7C9C4",
+                "position": [
+                  -15,
+                  -50,
+                  0
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.800000011920929,
+                "focus": true,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -6
+                  ],
+                  [
+                    0,
+                    0,
+                    6
+                  ]
+                ]
+              },
+              {
+                "id": "gill-5",
+                "shape": "tube",
+                "color": "#A7C9C4",
+                "position": [
+                  -6,
+                  -47,
+                  0
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "whale-shark-body",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.800000011920929,
+                "focus": true,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    -6
+                  ],
+                  [
+                    0,
+                    0,
+                    6
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "ueno",
+      "mode": "voice",
+      "records": [
+        {
+          "id": "3b038cb2-bacd-4e7e-8485-3d6a014f6b72",
+          "group": "3b038cb2-bacd-4e7e-8485-3d6a014f6b72",
+          "words": "上野動物園",
+          "result": "検証失敗・組み直し・返答あり（未反映）",
+          "model": "gpt-6-luna",
+          "seconds": 36.385665142006474,
+          "credits": 0.30983,
+          "repair": false,
+          "input": 3,
+          "output": 2413,
+          "cacheRead": 0,
+          "cacheWrite": 15132,
+          "total": 17548,
+          "scene": {
+            "schema": 3,
+            "title": "上野動物園",
+            "color": "#E8E3D2",
+            "accent": "#171D22",
+            "motion": 0.8,
+            "viscosity": 0.35,
+            "swirl": 0.3,
+            "attraction": 0.25,
+            "tilt": 0.4,
+            "glow": 0.45,
+            "trail": 0.05,
+            "shakeThreshold": 2,
+            "shake": "none",
+            "note": "パンダと門を中心にした上野動物園のイメージです。実際の施設を正確に再現したものではありません。",
+            "pointCloud": {
+              "enabled": true,
+              "count": 65536,
+              "floor": false,
+              "duration": 3,
+              "arc": 22,
+              "twist": 0.15,
+              "stagger": 0.18
+            },
+            "particles": {
+              "count": 0,
+              "size": 1,
+              "behavior": "drift",
+              "formation": "volume",
+              "shape": "sphere",
+              "colorMode": "solid",
+              "center": [
+                0,
+                0,
+                80
+              ],
+              "wind": [
+                0,
+                0,
+                0
+              ],
+              "gravity": 0,
+              "turbulence": 0,
+              "spread": 20,
+              "formationStrength": 0,
+              "cohesion": 0,
+              "alignment": 0,
+              "separation": 0,
+              "groups": 1,
+              "formationNext": "none",
+              "formationPeriod": 12,
+              "travel": 0,
+              "formationRotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "world": {
+              "background": "#18323B",
+              "floor": "#18323B",
+              "ambient": 0.9,
+              "bloom": 0.35,
+              "box": false,
+              "keyColor": "#FFE5B5",
+              "fillColor": "#92B6A1",
+              "keyIntensity": 1.3,
+              "keyDirection": [
+                -30,
+                20,
+                0
+              ],
+              "lights": []
+            },
+            "camera": {
+              "autoFrame": true,
+              "yaw": 0,
+              "pitch": 20,
+              "orbit": 2,
+              "zoom": 1,
+              "fill": 0.76,
+              "focus": [
+                0,
+                10,
+                75
+              ]
+            },
+            "objects": [
+              {
+                "id": "panda-root",
+                "shape": "group",
+                "color": "#FFFFFF",
+                "position": [
+                  0,
+                  0,
+                  40
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "focus": true
+              },
+              {
+                "id": "panda-body",
+                "shape": "sphere",
+                "color": "#F1EEE5",
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "size": [
+                  48,
+                  35,
+                  58
+                ],
+                "parent": "panda-root",
+                "attached": true,
+                "pattern": "patches",
+                "patternColor": "#171D22",
+                "patternScale": 18,
+                "belly": true,
+                "bellyColor": "#F8F5EC"
+              },
+              {
+                "id": "panda-head",
+                "shape": "sphere",
+                "color": "#F6F2E9",
+                "position": [
+                  0,
+                  -1,
+                  35
+                ],
+                "size": [
+                  43,
+                  35,
+                  39
+                ],
+                "parent": "panda-root",
+                "attached": true
+              },
+              {
+                "id": "panda-ear-left",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  -16,
+                  -1,
+                  53
+                ],
+                "size": [
+                  14,
+                  12,
+                  15
+                ],
+                "parent": "panda-root",
+                "attached": true
+              },
+              {
+                "id": "panda-ear-right",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  16,
+                  -1,
+                  53
+                ],
+                "size": [
+                  14,
+                  12,
+                  15
+                ],
+                "parent": "panda-root",
+                "attached": true
+              },
+              {
+                "id": "panda-eye-patch-left",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  -9,
+                  -17,
+                  39
+                ],
+                "size": [
+                  12,
+                  6,
+                  15
+                ],
+                "parent": "panda-root",
+                "attached": true,
+                "rotation": [
+                  0,
+                  0,
+                  -18
+                ]
+              },
+              {
+                "id": "panda-eye-patch-right",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  9,
+                  -17,
+                  39
+                ],
+                "size": [
+                  12,
+                  6,
+                  15
+                ],
+                "parent": "panda-root",
+                "attached": true,
+                "rotation": [
+                  0,
+                  0,
+                  18
+                ]
+              },
+              {
+                "id": "panda-eye-left",
+                "shape": "sphere",
+                "color": "#F7F1DC",
+                "position": [
+                  -8,
+                  -21,
+                  40
+                ],
+                "size": [
+                  4,
+                  3,
+                  4
+                ],
+                "parent": "panda-root",
+                "attached": true
+              },
+              {
+                "id": "panda-eye-right",
+                "shape": "sphere",
+                "color": "#F7F1DC",
+                "position": [
+                  8,
+                  -21,
+                  40
+                ],
+                "size": [
+                  4,
+                  3,
+                  4
+                ],
+                "parent": "panda-root",
+                "attached": true
+              },
+              {
+                "id": "panda-muzzle",
+                "shape": "sphere",
+                "color": "#F5F0E7",
+                "position": [
+                  0,
+                  -18,
+                  28
+                ],
+                "size": [
+                  17,
+                  10,
+                  11
+                ],
+                "parent": "panda-root",
+                "attached": true
+              },
+              {
+                "id": "panda-nose",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  0,
+                  -25,
+                  30
+                ],
+                "size": [
+                  7,
+                  4,
+                  5
+                ],
+                "parent": "panda-root",
+                "attached": true
+              },
+              {
+                "id": "panda-mouth",
+                "shape": "tube",
+                "color": "#34312C",
+                "position": [
+                  0,
+                  -23,
+                  24
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "parent": "panda-root",
+                "attached": true,
+                "radius": 0.8,
+                "curve": [
+                  [
+                    -5,
+                    0,
+                    2
+                  ],
+                  [
+                    0,
+                    0,
+                    -1
+                  ],
+                  [
+                    5,
+                    0,
+                    2
+                  ]
+                ]
+              },
+              {
+                "id": "panda-leg-front-left",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  -17,
+                  -10,
+                  -24
+                ],
+                "size": [
+                  18,
+                  20,
+                  32
+                ],
+                "parent": "panda-root",
+                "attached": true
+              },
+              {
+                "id": "panda-leg-front-right",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  17,
+                  -10,
+                  -24
+                ],
+                "size": [
+                  18,
+                  20,
+                  32
+                ],
+                "parent": "panda-root",
+                "attached": true
+              },
+              {
+                "id": "panda-leg-back-left",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  -17,
+                  11,
+                  -24
+                ],
+                "size": [
+                  18,
+                  19,
+                  30
+                ],
+                "parent": "panda-root",
+                "attached": true
+              },
+              {
+                "id": "panda-leg-back-right",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  17,
+                  11,
+                  -24
+                ],
+                "size": [
+                  18,
+                  19,
+                  30
+                ],
+                "parent": "panda-root",
+                "attached": true
+              },
+              {
+                "id": "zoo-gate-pillar-left",
+                "shape": "cylinder",
+                "color": "#B39B72",
+                "position": [
+                  -68,
+                  48,
+                  47
+                ],
+                "size": [
+                  13,
+                  13,
+                  72
+                ],
+                "focus": true
+              },
+              {
+                "id": "zoo-gate-pillar-right",
+                "shape": "cylinder",
+                "color": "#B39B72",
+                "position": [
+                  68,
+                  48,
+                  47
+                ],
+                "size": [
+                  13,
+                  13,
+                  72
+                ],
+                "focus": true
+              },
+              {
+                "id": "zoo-gate-header",
+                "shape": "box",
+                "color": "#765A3A",
+                "position": [
+                  0,
+                  48,
+                  85
+                ],
+                "size": [
+                  150,
+                  14,
+                  17
+                ],
+                "focus": true
+              },
+              {
+                "id": "zoo-gate-roof",
+                "shape": "roof",
+                "color": "#344D43",
+                "position": [
+                  0,
+                  48,
+                  105
+                ],
+                "size": [
+                  160,
+                  30,
+                  24
+                ],
+                "focus": true
+              },
+              {
+                "id": "gate-plaque",
+                "shape": "box",
+                "color": "#D7C49A",
+                "position": [
+                  0,
+                  39,
+                  85
+                ],
+                "size": [
+                  82,
+                  3,
+                  10
+                ],
+                "focus": true
+              },
+              {
+                "id": "bamboo-stalk",
+                "shape": "tube",
+                "color": "#667C46",
+                "position": [
+                  -91,
+                  38,
+                  53
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "radius": 2.5,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    0,
+                    32
+                  ],
+                  [
+                    0,
+                    0,
+                    66
+                  ]
+                ],
+                "focus": true
+              },
+              {
+                "id": "bamboo-leaf-a",
+                "shape": "leaf",
+                "color": "#91A663",
+                "position": [
+                  -99,
+                  34,
+                  69
+                ],
+                "size": [
+                  22,
+                  7,
+                  3
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  28
+                ],
+                "parent": "bamboo-stalk",
+                "attached": true
+              },
+              {
+                "id": "bamboo-leaf-b",
+                "shape": "leaf",
+                "color": "#91A663",
+                "position": [
+                  -83,
+                  35,
+                  79
+                ],
+                "size": [
+                  23,
+                  7,
+                  3
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  -35
+                ],
+                "parent": "bamboo-stalk",
+                "attached": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "edc34260-5b87-4433-8189-53f1bfb6c9d3",
+          "group": "3b038cb2-bacd-4e7e-8485-3d6a014f6b72",
+          "words": "上野動物園",
+          "result": "反映済み",
+          "model": "gpt-6-luna",
+          "seconds": 28.747716552010388,
+          "credits": 0.3485424999999999,
+          "repair": true,
+          "input": 3,
+          "output": 2766,
+          "cacheRead": 0,
+          "cacheWrite": 16817,
+          "total": 19586,
+          "scene": {
+            "title": "上野動物園",
+            "color": "#E8E3D2",
+            "accent": "#171D22",
+            "motion": 0.800000011920929,
+            "viscosity": 0.3499999940395355,
+            "swirl": 0.30000001192092896,
+            "attraction": 0.25,
+            "tilt": 0.4000000059604645,
+            "glow": 0.44999998807907104,
+            "trail": 0.05000000074505806,
+            "shakeThreshold": 2,
+            "shake": "none",
+            "schema": 3,
+            "note": "パンダと門を中心にした上野動物園のイメージです。実際の施設を正確に再現したものではありません。",
+            "pointCloud": {
+              "enabled": true,
+              "floor": false,
+              "count": 65536,
+              "duration": 3,
+              "arc": 22,
+              "twist": 0.15000000596046448,
+              "stagger": 0.18000000715255737
+            },
+            "particles": {
+              "count": 0,
+              "size": 1,
+              "behavior": "drift",
+              "formation": "volume",
+              "shape": "sphere",
+              "colorMode": "solid",
+              "center": [
+                0,
+                0,
+                80
+              ],
+              "wind": [
+                0,
+                0,
+                0
+              ],
+              "gravity": 0,
+              "turbulence": 0,
+              "spread": 20,
+              "formationStrength": 0,
+              "cohesion": 0,
+              "alignment": 0,
+              "separation": 0,
+              "groups": 1,
+              "formationNext": "none",
+              "formationPeriod": 12,
+              "travel": 0,
+              "formationRotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "world": {
+              "background": "#18323B",
+              "floor": "#18323B",
+              "ambient": 0.8999999761581421,
+              "bloom": 0.3499999940395355,
+              "box": false,
+              "keyColor": "#FFE5B5",
+              "fillColor": "#92B6A1",
+              "keyIntensity": 1.2999999523162842,
+              "keyDirection": [
+                -30,
+                20,
+                0
+              ],
+              "lights": []
+            },
+            "camera": {
+              "orbit": 2,
+              "yaw": 0,
+              "pitch": 20,
+              "zoom": 1,
+              "autoFrame": true,
+              "fill": 0.7599999904632568,
+              "focus": [
+                0,
+                10,
+                75
+              ]
+            },
+            "objects": [
+              {
+                "id": "panda-root",
+                "shape": "group",
+                "color": "#FFFFFF",
+                "position": [
+                  0,
+                  0,
+                  40
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-body",
+                "shape": "sphere",
+                "color": "#F1EEE5",
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "size": [
+                  48,
+                  35,
+                  58
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "patches",
+                "patternColor": "#171D22",
+                "patternScale": 18,
+                "belly": true,
+                "bellyColor": "#F8F5EC",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-head",
+                "shape": "sphere",
+                "color": "#F6F2E9",
+                "position": [
+                  0,
+                  -1,
+                  35
+                ],
+                "size": [
+                  43,
+                  35,
+                  39
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-ear-left",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  -16,
+                  -1,
+                  53
+                ],
+                "size": [
+                  14,
+                  12,
+                  15
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-ear-right",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  16,
+                  -1,
+                  53
+                ],
+                "size": [
+                  14,
+                  12,
+                  15
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-eye-patch-left",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  -9,
+                  -17,
+                  39
+                ],
+                "size": [
+                  12,
+                  6,
+                  15
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  -18
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-eye-patch-right",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  9,
+                  -17,
+                  39
+                ],
+                "size": [
+                  12,
+                  6,
+                  15
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  18
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-eye-left",
+                "shape": "sphere",
+                "color": "#F7F1DC",
+                "position": [
+                  -8,
+                  -21,
+                  40
+                ],
+                "size": [
+                  4,
+                  3,
+                  4
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-eye-right",
+                "shape": "sphere",
+                "color": "#F7F1DC",
+                "position": [
+                  8,
+                  -21,
+                  40
+                ],
+                "size": [
+                  4,
+                  3,
+                  4
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-muzzle",
+                "shape": "sphere",
+                "color": "#F5F0E7",
+                "position": [
+                  0,
+                  -18,
+                  28
+                ],
+                "size": [
+                  17,
+                  10,
+                  11
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-nose",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  0,
+                  -25,
+                  30
+                ],
+                "size": [
+                  7,
+                  4,
+                  5
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-mouth",
+                "shape": "tube",
+                "color": "#34312C",
+                "position": [
+                  0,
+                  -23,
+                  24
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.800000011920929,
+                "focus": true,
+                "curve": [
+                  [
+                    -5,
+                    0,
+                    2
+                  ],
+                  [
+                    0,
+                    0,
+                    -1
+                  ],
+                  [
+                    5,
+                    0,
+                    2
+                  ]
+                ]
+              },
+              {
+                "id": "panda-leg-front-left",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  -17,
+                  -10,
+                  -24
+                ],
+                "size": [
+                  18,
+                  20,
+                  32
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-leg-front-right",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  17,
+                  -10,
+                  -24
+                ],
+                "size": [
+                  18,
+                  20,
+                  32
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-leg-back-left",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  -17,
+                  11,
+                  -24
+                ],
+                "size": [
+                  18,
+                  19,
+                  30
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-leg-back-right",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  17,
+                  11,
+                  -24
+                ],
+                "size": [
+                  18,
+                  19,
+                  30
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "zoo-gate-pillar-left",
+                "shape": "cylinder",
+                "color": "#B39B72",
+                "position": [
+                  -68,
+                  48,
+                  47
+                ],
+                "size": [
+                  13,
+                  13,
+                  72
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "zoo-gate-pillar-right",
+                "shape": "cylinder",
+                "color": "#B39B72",
+                "position": [
+                  68,
+                  48,
+                  47
+                ],
+                "size": [
+                  13,
+                  13,
+                  72
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "zoo-gate-header",
+                "shape": "box",
+                "color": "#765A3A",
+                "position": [
+                  0,
+                  48,
+                  85
+                ],
+                "size": [
+                  150,
+                  14,
+                  17
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "zoo-gate-roof",
+                "shape": "roof",
+                "color": "#344D43",
+                "position": [
+                  0,
+                  48,
+                  105
+                ],
+                "size": [
+                  160,
+                  30,
+                  24
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "gate-plaque",
+                "shape": "box",
+                "color": "#D7C49A",
+                "position": [
+                  0,
+                  39,
+                  85
+                ],
+                "size": [
+                  82,
+                  3,
+                  10
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "bamboo-stalk",
+                "shape": "tube",
+                "color": "#667C46",
+                "position": [
+                  -91,
+                  38,
+                  53
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 2.5,
+                "focus": true,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    0,
+                    32
+                  ],
+                  [
+                    0,
+                    0,
+                    66
+                  ]
+                ]
+              },
+              {
+                "id": "bamboo-leaf-a",
+                "shape": "leaf",
+                "color": "#91A663",
+                "position": [
+                  -8,
+                  -4,
+                  16
+                ],
+                "size": [
+                  22,
+                  7,
+                  3
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  28
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "bamboo-stalk",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "bamboo-leaf-b",
+                "shape": "leaf",
+                "color": "#91A663",
+                "position": [
+                  8,
+                  -3,
+                  26
+                ],
+                "size": [
+                  23,
+                  7,
+                  3
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  -35
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "bamboo-stalk",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "color",
+      "mode": "text",
+      "records": [
+        {
+          "id": "588d3a81-c1cb-4e09-b66a-b9d359323bd5",
+          "group": "588d3a81-c1cb-4e09-b66a-b9d359323bd5",
+          "words": "パンダの白い部分の色だけを薄いピンクにして、形や配置や動きは変えないで",
+          "result": "反映済み",
+          "model": "gpt-6-luna",
+          "seconds": 36.67371331898903,
+          "credits": 0.41595499999999996,
+          "repair": false,
+          "input": 3,
+          "output": 4876,
+          "cacheRead": 0,
+          "cacheWrite": 13770,
+          "total": 18649,
+          "scene": {
+            "title": "上野動物園",
+            "color": "#E8E3D2",
+            "accent": "#171D22",
+            "motion": 0.800000011920929,
+            "viscosity": 0.3499999940395355,
+            "swirl": 0.30000001192092896,
+            "attraction": 0.25,
+            "tilt": 0.4000000059604645,
+            "glow": 0.44999998807907104,
+            "trail": 0.05000000074505806,
+            "shakeThreshold": 2,
+            "shake": "none",
+            "schema": 3,
+            "note": "パンダと門を中心にした上野動物園のイメージです。実際の施設を正確に再現したものではありません。",
+            "pointCloud": {
+              "enabled": true,
+              "floor": false,
+              "count": 65536,
+              "duration": 3,
+              "arc": 22,
+              "twist": 0.15000000596046448,
+              "stagger": 0.18000000715255737
+            },
+            "particles": {
+              "count": 0,
+              "size": 1,
+              "behavior": "drift",
+              "formation": "volume",
+              "shape": "sphere",
+              "colorMode": "solid",
+              "center": [
+                0,
+                0,
+                80
+              ],
+              "wind": [
+                0,
+                0,
+                0
+              ],
+              "gravity": 0,
+              "turbulence": 0,
+              "spread": 20,
+              "formationStrength": 0,
+              "cohesion": 0,
+              "alignment": 0,
+              "separation": 0,
+              "groups": 1,
+              "formationNext": "none",
+              "formationPeriod": 12,
+              "travel": 0,
+              "formationRotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "world": {
+              "background": "#18323B",
+              "floor": "#18323B",
+              "ambient": 0.8999999761581421,
+              "bloom": 0.3499999940395355,
+              "box": false,
+              "keyColor": "#FFE5B5",
+              "fillColor": "#92B6A1",
+              "keyIntensity": 1.2999999523162842,
+              "keyDirection": [
+                -30,
+                20,
+                0
+              ],
+              "lights": []
+            },
+            "camera": {
+              "orbit": 2,
+              "yaw": 0,
+              "pitch": 20,
+              "zoom": 1,
+              "autoFrame": true,
+              "fill": 0.7599999904632568,
+              "focus": [
+                0,
+                10,
+                75
+              ]
+            },
+            "objects": [
+              {
+                "id": "panda-root",
+                "shape": "group",
+                "color": "#FFFFFF",
+                "position": [
+                  0,
+                  0,
+                  40
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-body",
+                "shape": "sphere",
+                "color": "#F6DCE5",
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "size": [
+                  48,
+                  35,
+                  58
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "patches",
+                "patternColor": "#171D22",
+                "patternScale": 18,
+                "belly": true,
+                "bellyColor": "#F6DCE5",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-head",
+                "shape": "sphere",
+                "color": "#F6DCE5",
+                "position": [
+                  0,
+                  -1,
+                  35
+                ],
+                "size": [
+                  43,
+                  35,
+                  39
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-ear-left",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  -16,
+                  -1,
+                  53
+                ],
+                "size": [
+                  14,
+                  12,
+                  15
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-ear-right",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  16,
+                  -1,
+                  53
+                ],
+                "size": [
+                  14,
+                  12,
+                  15
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-eye-patch-left",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  -9,
+                  -17,
+                  39
+                ],
+                "size": [
+                  12,
+                  6,
+                  15
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  -18
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-eye-patch-right",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  9,
+                  -17,
+                  39
+                ],
+                "size": [
+                  12,
+                  6,
+                  15
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  18
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-eye-left",
+                "shape": "sphere",
+                "color": "#F7F1DC",
+                "position": [
+                  -8,
+                  -21,
+                  40
+                ],
+                "size": [
+                  4,
+                  3,
+                  4
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-eye-right",
+                "shape": "sphere",
+                "color": "#F7F1DC",
+                "position": [
+                  8,
+                  -21,
+                  40
+                ],
+                "size": [
+                  4,
+                  3,
+                  4
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-muzzle",
+                "shape": "sphere",
+                "color": "#F6DCE5",
+                "position": [
+                  0,
+                  -18,
+                  28
+                ],
+                "size": [
+                  17,
+                  10,
+                  11
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-nose",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  0,
+                  -25,
+                  30
+                ],
+                "size": [
+                  7,
+                  4,
+                  5
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-mouth",
+                "shape": "tube",
+                "color": "#34312C",
+                "position": [
+                  0,
+                  -23,
+                  24
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 0.800000011920929,
+                "focus": true,
+                "curve": [
+                  [
+                    -5,
+                    0,
+                    2
+                  ],
+                  [
+                    0,
+                    0,
+                    -1
+                  ],
+                  [
+                    5,
+                    0,
+                    2
+                  ]
+                ]
+              },
+              {
+                "id": "panda-leg-front-left",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  -17,
+                  -10,
+                  -24
+                ],
+                "size": [
+                  18,
+                  20,
+                  32
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-leg-front-right",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  17,
+                  -10,
+                  -24
+                ],
+                "size": [
+                  18,
+                  20,
+                  32
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-leg-back-left",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  -17,
+                  11,
+                  -24
+                ],
+                "size": [
+                  18,
+                  19,
+                  30
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "panda-leg-back-right",
+                "shape": "sphere",
+                "color": "#171D22",
+                "position": [
+                  17,
+                  11,
+                  -24
+                ],
+                "size": [
+                  18,
+                  19,
+                  30
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "panda-root",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "zoo-gate-pillar-left",
+                "shape": "cylinder",
+                "color": "#B39B72",
+                "position": [
+                  -68,
+                  48,
+                  47
+                ],
+                "size": [
+                  13,
+                  13,
+                  72
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "zoo-gate-pillar-right",
+                "shape": "cylinder",
+                "color": "#B39B72",
+                "position": [
+                  68,
+                  48,
+                  47
+                ],
+                "size": [
+                  13,
+                  13,
+                  72
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "zoo-gate-header",
+                "shape": "box",
+                "color": "#765A3A",
+                "position": [
+                  0,
+                  48,
+                  85
+                ],
+                "size": [
+                  150,
+                  14,
+                  17
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "zoo-gate-roof",
+                "shape": "roof",
+                "color": "#344D43",
+                "position": [
+                  0,
+                  48,
+                  105
+                ],
+                "size": [
+                  160,
+                  30,
+                  24
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "gate-plaque",
+                "shape": "box",
+                "color": "#D7C49A",
+                "position": [
+                  0,
+                  39,
+                  85
+                ],
+                "size": [
+                  82,
+                  3,
+                  10
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "bamboo-stalk",
+                "shape": "tube",
+                "color": "#667C46",
+                "position": [
+                  -91,
+                  38,
+                  53
+                ],
+                "size": [
+                  1,
+                  1,
+                  1
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": false,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 2.5,
+                "focus": true,
+                "curve": [
+                  [
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    0,
+                    32
+                  ],
+                  [
+                    0,
+                    0,
+                    66
+                  ]
+                ]
+              },
+              {
+                "id": "bamboo-leaf-a",
+                "shape": "leaf",
+                "color": "#91A663",
+                "position": [
+                  -8,
+                  -4,
+                  16
+                ],
+                "size": [
+                  22,
+                  7,
+                  3
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  28
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "bamboo-stalk",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              },
+              {
+                "id": "bamboo-leaf-b",
+                "shape": "leaf",
+                "color": "#91A663",
+                "position": [
+                  8,
+                  -3,
+                  26
+                ],
+                "size": [
+                  23,
+                  7,
+                  3
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  -35
+                ],
+                "emission": 0,
+                "wobble": 0,
+                "copies": 1,
+                "layout": "ring",
+                "spacing": 80,
+                "animation": "none",
+                "speed": 1,
+                "amplitude": 20,
+                "reaction": "none",
+                "anchor": "center",
+                "parentAnchor": "center",
+                "pattern": "none",
+                "patternColor": "#FFFFFF",
+                "patternScale": 12,
+                "belly": false,
+                "bellyColor": "#FFFFFF",
+                "closed": false,
+                "parent": "bamboo-stalk",
+                "pivot": [
+                  0,
+                  0,
+                  0
+                ],
+                "attached": true,
+                "roughness": 0.47999998927116394,
+                "metallic": 0,
+                "radius": 3,
+                "focus": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "credits": 1.9435749999999998,
+  "colorOnly": {
+    "cameraSettingsPreserved": true,
+    "geometryMotionPreserved": true,
+    "changedParts": [
+      "panda-body",
+      "panda-head",
+      "panda-muzzle"
+    ]
+  },
+  "automation": {
+    "passed": 51,
+    "failed": 0,
+    "nodeTestsPassed": 4
+  },
+  "nativeReferenceMeasurements": [
+    {
+      "retainedPoints": 0,
+      "points": 65536,
+      "instances": 65536,
+      "fps": 50.210914611816406,
+      "frameMsP95": 37.723487854003906,
+      "frameMsMax": 63.15817642211914,
+      "seconds": 8.006227493286133,
+      "gpuVertexAnimation": true,
+      "otherPrimitives": [
+        "GameplayDebuggerRenderingComponent /Game/Maps/LightBox_World.LightBox_World:PersistentLevel.GameplayDebuggerCategoryReplicator_2147482379.RenderingComp"
+      ],
+      "particleOnly": true,
+      "solidSceneComponents": 0,
+      "animatedTarget": false,
+      "controlVertices": 3758,
+      "controlTravel": 0,
+      "requested": 65536
+    },
+    {
+      "retainedPoints": 0,
+      "points": 1000000,
+      "instances": 1000000,
+      "fps": 11.897956848144531,
+      "frameMsP95": 241.99755859375,
+      "frameMsMax": 367.4582824707031,
+      "seconds": 8.068612098693848,
+      "gpuVertexAnimation": true,
+      "otherPrimitives": [
+        "GameplayDebuggerRenderingComponent /Game/Maps/LightBox_World.LightBox_World:PersistentLevel.GameplayDebuggerCategoryReplicator_2147482379.RenderingComp"
+      ],
+      "particleOnly": true,
+      "solidSceneComponents": 0,
+      "animatedTarget": false,
+      "controlVertices": 3758,
+      "controlTravel": 0,
+      "requested": 1000000
+    }
+  ],
+  "preservation": {
+    "favoriteBytesUnchanged": true,
+    "benchmarkJournalUnchanged": true,
+    "mediaVolumeRestored": 0,
+    "fadeReviewJournalUnchanged": true
+  },
+  "limitations": [
+    "Generated facility scenes interpret learned knowledge; no external reference photos are fetched.",
+    "Surface/part proportions remain simplified; visual review improved attachment, not exact species anatomy.",
+    "Inference has unknown completion percentage; only elapsed time and assembly percentage are displayed.",
+    "Reference benchmarks are short development runs; million-point settings do not provide smooth exhibition playback."
+  ],
+  "fadeReview": {
+    "from": 65536,
+    "to": 144,
+    "checkedOnFinalApk": true
+  }
+}

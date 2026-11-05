@@ -4,7 +4,7 @@
 
 struct FLightBoxRecord
 {
-	FString Id, Utc, Words, Before, After, Raw, Result, Difference, Model, PricingDate;
+	FString Id, Group, Utc, Words, Before, After, Raw, Result, Difference, Model, PricingDate;
 	double Input=-1, Output=-1, CacheRead=-1, CacheWrite=-1, Total=-1, Credits=-1, Seconds=0;
 	bool bImported=false, bRepair=false;
 };
@@ -19,7 +19,7 @@ public:
 	void Load();
 	int32 RecoverInterrupted();
 	void Save() const;
-	void Begin(const FString& Id,const FString& Words,const FString& Before,bool Repair);
+	void Begin(const FString& Id,const FString& Words,const FString& Before,bool Repair,const FString& Group=FString());
 	void Finish(const FString& Id,const FString& After,const FString& Raw,const FString& Result,double Seconds);
 	bool Import(const FString& Json,bool History);
 	FLightBoxRecord* Find(const FString& Id);

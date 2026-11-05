@@ -33,6 +33,24 @@ const FSlateBrush* Glass()
     return &Brush;
 }
 
+// A short moving segment means waiting; only local assembly uses a determinate fill.
+class SLightBoxProgress final : public SLeafWidget
+{
+public:
+    SLATE_BEGIN_ARGS(SLightBoxProgress) {} SLATE_ATTRIBUTE(TOptional<float>,Percent) SLATE_END_ARGS()
+    void Construct(const FArguments& A){Percent=A._Percent;}
+    virtual FVector2D ComputeDesiredSize(float)const override{return FVector2D(120,3);}
+    virtual void Tick(const FGeometry& G,double T,float Dt)override{SLeafWidget::Tick(G,T,Dt);Invalidate(EInvalidateWidgetReason::Paint);}
+    virtual int32 OnPaint(const FPaintArgs&,const FGeometry& G,const FSlateRect&,FSlateWindowElementList& Out,int32 L,const FWidgetStyle& Style,bool)const override{
+        const FVector2D Size=G.GetLocalSize();const auto Value=Percent.Get();const double Width=Value.IsSet()?Size.X*FMath::Clamp(Value.GetValue(),0.f,1.f):Size.X*.20;
+        const double X=Value.IsSet()?0:(Size.X-Width)*(.5-.5*FMath::Cos(FPlatformTime::Seconds()*2.8));const auto Tint=Style.GetColorAndOpacityTint();
+        const auto* Brush=FCoreStyle::Get().GetBrush("WhiteBrush");
+        FSlateDrawElement::MakeBox(Out,L,G.ToPaintGeometry(),Brush,ESlateDrawEffect::None,Paper.CopyWithNewOpacity(.10f)*Tint);
+        FSlateDrawElement::MakeBox(Out,L+1,G.ToPaintGeometry(FVector2D(Width,Size.Y),FSlateLayoutTransform(FVector2D(X,0))),Brush,ESlateDrawEffect::None,Mint.CopyWithNewOpacity(.72f)*Tint);return L+1;
+    }
+private:TAttribute<TOptional<float>> Percent;
+};
+
 // Vector strokes avoid missing emoji/icon fonts on Android and stay sharp at every DPI.
 class SLightBoxIcon final : public SLeafWidget
 {
@@ -154,6 +172,7 @@ void SLightBoxControls::Construct(const FArguments& Args)
     TSharedRef<SHorizontalBox> View=SNew(SHorizontalBox);
     View->AddSlot().FillWidth(1).Padding(5.f)[Action(TEXT("Orbit"),TEXT("orbit"),TEXT("自動回転"))];
     View->AddSlot().FillWidth(1).Padding(5.f)[Action(TEXT("ViewReset"),TEXT("view"),TEXT("視点を戻す"))];
+    View->AddSlot().FillWidth(1).Padding(5.f)[Action(TEXT("Refine"),TEXT("star"),TEXT("造形を磨く"))];
     Menu=SNew(SBorder).BorderImage(Glass()).BorderBackgroundColor(FLinearColor(.015f,.033f,.045f,.66f)).Padding(18.f)
     [SNew(SVerticalBox)
         +SVerticalBox::Slot().AutoHeight().Padding(10,0,10,14)[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",19)).ColorAndOpacity(Paper.CopyWithNewOpacity(.8f)).Text_Lambda([D](){return FText::FromString(D()?D()->GetStyle().Title:FString());})]
@@ -188,12 +207,19 @@ void SLightBoxControls::Construct(const FArguments& Args)
                     [SNew(SLightBoxIcon).Name(TEXT("loading")).Listening_Lambda([D](){return D()&&D()->bThinking;})]]
                     +SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
                     [SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",20)).ColorAndOpacity(Paper.CopyWithNewOpacity(.95f)).Justification(ETextJustify::Center)
-                        .WrapTextAt(740).Visibility_Lambda([this,D](){return !bMenu&&D()&&(D()->bThinking||D()->bListening||StatusAge<5.f)?EVisibility::HitTestInvisible:EVisibility::Collapsed;})
+                        .WrapTextAt(740).Visibility_Lambda([this,D](){return !bMenu&&D()&&!IsSceneBusy()&&StatusAge<5.f&&D()->Status!=D()->GetStyle().Note?EVisibility::HitTestInvisible:EVisibility::Collapsed;})
                         .Text_Lambda([D](){
                             if(!D())return FText::GetEmpty();
                             if(D()->bThinking&&!D()->Heard.IsEmpty())return FText::FromString(FString::Printf(TEXT("「%s」\n%s"),*D()->Heard,*D()->Status));
                             return FText::FromString(D()->bListening&&!D()->Heard.IsEmpty()?D()->Heard:D()->Status);
                         })]]
+                +SVerticalBox::Slot().AutoHeight().Padding(38,0,38,12)
+                [SNew(SVerticalBox).Visibility_Lambda([this](){return !bMenu&&IsSceneBusy()?EVisibility::HitTestInvisible:EVisibility::Collapsed;})
+                    +SVerticalBox::Slot().AutoHeight().Padding(0,0,0,8)
+                    [SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",17)).WrapTextAt(740).Justification(ETextJustify::Center).ColorAndOpacity(Paper.CopyWithNewOpacity(.76f)).Text_Lambda([this](){return FText::FromString(SceneProgressText());})]
+                    +SVerticalBox::Slot().AutoHeight()
+                    [SNew(SBox).HeightOverride(3)[SNew(SLightBoxProgress).Percent_Lambda([this](){return SceneProgress();})]]
+                ]
                 +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0,0,0,10)
                 [SNew(SBox).WidthOverride(88).HeightOverride(88)
                 [SNew(SButton).ButtonStyle(VoiceStyle()).ContentPadding(0)
@@ -218,6 +244,20 @@ void SLightBoxControls::Construct(const FArguments& Args)
                     ]]]
             ]]]
         ]]
+        +SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Bottom).Padding(TAttribute<FMargin>::CreateLambda([this](){return FMargin(20,0,42+RightInset/Scale,HostSize.X/Scale<1550?210:40);}))
+        [SNew(SBox).WidthOverride_Lambda([this](){return FOptionalSize(HostSize.X/Scale<1550?360:FMath::Min(440.,FMath::Max(180.,(HostSize.X/Scale-860.)*.5-84.)));})
+            .Visibility(EVisibility::HitTestInvisible)
+        [SNew(SVerticalBox)
+            +SVerticalBox::Slot().AutoHeight().Padding(0,0,0,7)
+            [SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",14)).Justification(ETextJustify::Right).ColorAndOpacity(Paper.CopyWithNewOpacity(.46f))
+                .ShadowOffset(FVector2D(1,1)).ShadowColorAndOpacity(FLinearColor(0,0,0,.65f)).AutoWrapText(true).Text_Lambda([this,D](){
+                    if(!D())return FText::GetEmpty();int32 Count=0;if(auto* P=Cast<ALightBoxPawn>(HUD->GetOwningPlayerController()->GetPawn()))if(P->PointCloud)Count=P->PointCloud->PointTotal();
+                    return FText::FromString(FText::AsNumber(Count).ToString()+TEXT("粒 · ")+D()->CurrentCreditsLabel());
+                })]
+            +SVerticalBox::Slot().AutoHeight()
+            [SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",17)).Justification(ETextJustify::Right).AutoWrapText(true).ColorAndOpacity(Paper.CopyWithNewOpacity(.57f))
+                .ShadowOffset(FVector2D(1,1)).ShadowColorAndOpacity(FLinearColor(0,0,0,.65f)).Text_Lambda([D](){return FText::FromString(D()?(D()->GetStyle().Note.IsEmpty()?D()->GetStyle().Title:D()->GetStyle().Note):FString());})]
+        ]]
         +SOverlay::Slot()
         [SNew(SButton).ButtonStyle(&FCoreStyle::Get().GetWidgetStyle<FButtonStyle>("NoBorder")).ContentPadding(0)
             .Visibility_Lambda([this](){return bMenu?EVisibility::Visible:EVisibility::Collapsed;})
@@ -239,7 +279,7 @@ void SLightBoxControls::Construct(const FArguments& Args)
 TSharedRef<SWidget> SLightBoxControls::Action(FName Id,const TCHAR* Name,const TCHAR* Label)
 {
     return SNew(SButton).ButtonStyle(LightBoxUI::ButtonStyle()).ContentPadding(FMargin(10,12)).HAlign(HAlign_Center).ToolTipText(FText::FromString(Label))
-        .IsEnabled_Lambda([this,Id](){if(!HUD.IsValid()||!bMenu)return false;auto* D=HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>();return Id==TEXT("Undo")?D->CanUndo():Id==TEXT("Redo")?D->CanRedo():Id!=TEXT("Restore")||D->bHasSavedScene;})
+        .IsEnabled_Lambda([this,Id](){if(!HUD.IsValid()||!bMenu)return false;auto* D=HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>();if(Id==TEXT("Refine"))return !IsSceneBusy();return Id==TEXT("Undo")?D->CanUndo():Id==TEXT("Redo")?D->CanRedo():Id!=TEXT("Restore")||D->bHasSavedScene;})
         .OnClicked_Lambda([this,Id](){return Activate(Id);})
         [SNew(SVerticalBox)
             +SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)[SNew(SBox).WidthOverride(26).HeightOverride(26)[LightBoxUI::Icon(Name)]]
@@ -269,6 +309,24 @@ void SLightBoxControls::Tick(const FGeometry& G,double Time,float Dt)
     }
 }
 bool SLightBoxControls::IsInteracting()const{return bMenu||(Input.IsValid()&&(Input->HasKeyboardFocus()||Input->HasFocusedDescendants()));}
+bool SLightBoxControls::IsSceneBusy()const
+{
+    if(!HUD.IsValid())return false;auto* D=HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>();if(D->bThinking||D->bListening)return true;
+    if(auto* P=Cast<ALightBoxPawn>(HUD->GetOwningPlayerController()->GetPawn()))if(P->PointCloud)return P->PointCloud->IsPreparing()||P->PointCloud->Progress()<1;
+    return false;
+}
+TOptional<float> SLightBoxControls::SceneProgress()const
+{
+    if(!HUD.IsValid())return {};auto* D=HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>();if(D->bThinking||D->bListening)return {};
+    if(auto* P=Cast<ALightBoxPawn>(HUD->GetOwningPlayerController()->GetPawn()))if(P->PointCloud&&!P->PointCloud->IsPreparing())return P->PointCloud->Progress();
+    return {};
+}
+FString SLightBoxControls::SceneProgressText()const
+{
+    if(!HUD.IsValid())return FString();auto* D=HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>();
+    if(D->bThinking||D->bListening)return D->Heard.IsEmpty()?D->ProgressLabel():TEXT("「")+D->Heard.Left(70)+TEXT("」\n")+D->ProgressLabel();const auto Value=SceneProgress();
+    return Value.IsSet()?FString::Printf(TEXT("粒子を配置中 · %d%%"),FMath::Clamp(FMath::FloorToInt(Value.GetValue()*100),0,100)):TEXT("粒子の行き先を準備中");
+}
 void SLightBoxControls::OpenMenu(){bMenu=true;FSlateApplication::Get().SetKeyboardFocus(SharedThis(this),EFocusCause::SetDirectly);}
 void SLightBoxControls::CloseMenu(){bMenu=false;FSlateApplication::Get().SetAllUserFocusToGameViewport();}
 void SLightBoxControls::FocusInput(){bMenu=false;FSlateApplication::Get().SetKeyboardFocus(Input,EFocusCause::SetDirectly);}

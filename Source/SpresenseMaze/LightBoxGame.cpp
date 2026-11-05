@@ -77,16 +77,21 @@ void ALightBoxPawn::ConfigureParticles()
 void ALightBoxPawn::ApplyScene(const FLightBoxStyle& Style)
 {
 	const FString Content=Style.RenderContentJson();
+    const FString CameraContent=Style.CameraContentJson();const bool NewCamera=CameraContent!=AppliedCamera;AppliedCamera=CameraContent;
 	if(Content==AppliedContent){
+		if(!NewCamera)return;
 		// Changing only the camera must not restart flight, reset live motes or scatter a formed sculpture.
 		ViewAngles=FVector2D::ZeroVector;ViewDistance=1;ViewOrbitSpeed=Style.CameraOrbit;bViewDragging=false;LastPinchDistance=0;
 		CameraStart=Camera->GetRelativeTransform();CameraBlendAge=0;CameraBlendSeconds=.6f;return;
 	}
 	AppliedContent=Content;
-	Simulation.Reset(Style);PointCloud->Assemble(Style);ObjectBurst=0;Elapsed=0;
+    if(Simulation.Motes.IsEmpty()||Simulation.Motes.Num()!=Style.Count)Simulation.Reset(Style);
+    PointCloud->Assemble(Style);ObjectBurst=0;
     if(PostProcess)PostProcess->Settings.BloomIntensity=Style.Bloom*.55f;
     int32 Width=16,Height=9;if(auto* PC=Cast<APlayerController>(GetController()))PC->GetViewportSize(Width,Height);
-    LastAspect=float(Width)/FMath::Max(1,Height);CameraBounds=FLightBoxMotionSystem::Bounds(Style);
+    LastAspect=float(Width)/FMath::Max(1,Height);const FBox NextBounds=FLightBoxMotionSystem::Bounds(Style);
+    const bool KeepView=!NewCamera&&CameraBounds.IsValid&&NextBounds.IsValid&&CameraBounds.Min.Equals(NextBounds.Min,.01)&&CameraBounds.Max.Equals(NextBounds.Max,.01);
+    CameraBounds=NextBounds;if(KeepView)return;
     ViewAngles=FVector2D::ZeroVector;ViewDistance=1;ViewOrbitSpeed=Style.CameraOrbit;bViewDragging=false;LastPinchDistance=0;
     CameraStart=Camera->GetRelativeTransform();CameraTarget=FLightBoxMotionSystem::CameraForBounds(Style,CameraBounds,LastAspect);CameraBlendAge=0;CameraBlendSeconds=Style.AssembleSeconds;
 }

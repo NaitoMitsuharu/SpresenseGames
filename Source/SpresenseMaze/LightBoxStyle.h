@@ -42,6 +42,12 @@ struct FLightBoxObject
 	TArray<FVector> Path;
 	TArray<FVector2D> Outline; // Custom, simple convex/concave polygon; no holes.
 	TArray<FVector2D> Profile; // Lathe: [height -0.5..0.5, radius 0..0.5], increasing height.
+    TArray<FVector> Sections; // Loft: [x, half-width, half-height], ascending x.
+    FString Pattern=TEXT("none");
+    FLinearColor PatternColor=FLinearColor::White, BellyColor=FLinearColor::White;
+    float PatternScale=12;
+    bool bBelly=false;
+    bool bAttached=false; // Require contact with the parent surface, unlike orbiting children.
 	FString Parent;
 	FString Anchor=TEXT("center"), ParentAnchor=TEXT("center");
 	FString StartObject, EndObject;
@@ -121,6 +127,8 @@ struct FLightBoxStyle
 	FLinearColor ParticleColor(int32 Index, const FVector& Position, float Speed, float Time) const;
 	FString ToJson() const;
 	FString RenderContentJson() const; // Excludes camera and display-only title/note.
+    static FString ObjectMotionKey(const FLightBoxObject& Object);
+    FString CameraContentJson() const;
 	static bool Parse(const FString& Json, FLightBoxStyle& Out, FString& Error, FString* Diagnostic = nullptr);
 	static bool ParseCompletion(const FString& Json, FLightBoxStyle& Out, FString& Error, FString* Diagnostic = nullptr);
 	static FString Instruction(const FLightBoxStyle& Current);

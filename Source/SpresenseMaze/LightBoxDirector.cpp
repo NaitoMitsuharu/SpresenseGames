@@ -10,6 +10,9 @@
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
 #include "UnrealClient.h"
+#include "Engine/GameViewportClient.h"
+#include "ImageUtils.h"
+#include "Misc/Base64.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
@@ -72,6 +75,7 @@ void ULightBoxDirector::Initialize(FSubsystemCollectionBase& Collection)
 #endif
 	bJournalEnabled=true; Journal.bPersistent=true; Journal.Load();
 	Journal.RecoverInterrupted();
+    if(!Journal.Records.IsEmpty()){const auto& R=Journal.Records.Last();UsageGroup=R.Group.IsEmpty()?R.Id:R.Group;}
 	for(int32 I=FMath::Max(0,Journal.Records.Num()-20);I<Journal.Records.Num();++I)
 		if(Journal.Records[I].Credits<0)MeterQueue.AddUnique(Journal.Records[I].Id);
 	FLightBoxStyle Restored; FString JournalError;
@@ -140,6 +144,8 @@ void ULightBoxDirector::StopVoice()
 
 void ULightBoxDirector::Cancel()
 {
+    if(ReviewScreenshotHandle.IsValid()){UGameViewportClient::OnScreenshotCaptured().Remove(ReviewScreenshotHandle);ReviewScreenshotHandle.Reset();}
+    bCapturingReview=false;ReviewImage.Reset();
 	if(!ActiveRequestId.IsEmpty())
 	{
 		if(bJournalEnabled) Journal.Finish(ActiveRequestId,FString(),FString(),TEXT("取り消し（消費量は取得待ち）"),0);
@@ -159,6 +165,7 @@ void ULightBoxDirector::StartVoice()
 #if PLATFORM_ANDROID
 	VoiceDraft.Reset();
 	bListening = true; VoiceStarted = FPlatformTime::Seconds(); Heard.Reset();
+    OperationStarted=VoiceStarted;
 	Status = TEXT("どう変えたいか、話しかけてください");
 	VoiceCall("AndroidThunkJava_LightBoxStartVoice");
 #else
@@ -174,6 +181,7 @@ FString ULightBoxDirector::TakeVoiceDraft()
 void ULightBoxDirector::PollVoice()
 {
 	PollJournal();
+    if(bCapturingReview&&FPlatformTime::Seconds()-ReviewCaptureAt>8){Cancel();Status=TEXT("画面を取得できませんでした。もう一度お試しください");}
 #if PLATFORM_ANDROID
 	if (!bListening) { return; }
 	if (FPlatformTime::Seconds() - VoiceStarted > 15.0)
@@ -209,7 +217,7 @@ void ULightBoxDirector::Submit(const FString& Words)
 	if (Prompt.IsEmpty() || Prompt.Len() > 500) { Status = TEXT("お願いは1〜500文字で入力してください"); return; }
 	Cancel(); Heard = Prompt;
 	if (BearerToken.IsEmpty()) { Status = TEXT("接続設定で認証キーを入力してください"); return; }
-	bThinking = true; Status = TEXT("新しい景色をつくっています…");
+	bThinking = true;OperationStarted=FPlatformTime::Seconds(); Status = TEXT("AIが景色を設計中");
 	RequestScene(Prompt);
 }
 
@@ -218,11 +226,16 @@ void ULightBoxDirector::RequestScene(const FString& Prompt, const FString& Previ
 	bThinking = true;
 	const FString RequestId=FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphens).ToLower();
 	const double Started=FPlatformTime::Seconds(); ActiveRequestId=RequestId;
-	if(bJournalEnabled) Journal.Begin(RequestId,Prompt,Style.ToJson(),Attempt>0);
+    if(Attempt==0)UsageGroup=RequestId;
+	if(bJournalEnabled) Journal.Begin(RequestId,Prompt,Style.ToJson(),Attempt>0,UsageGroup);
 	if(bJournalEnabled && Attempt==0)
 	{
 		IFileManager::Get().MakeDirectory(*FLightBoxJournal::Directory(),true);
-		FScreenshotRequest::RequestScreenshot(FLightBoxJournal::ImagePath(RequestId,TEXT("before")),true,false);
+        if(!ReviewImage.IsEmpty()){
+            // Already inside the screenshot callback: a nested request would be reset by the viewport.
+            FString Encoded;ReviewImage.Split(TEXT(","),nullptr,&Encoded);TArray<uint8> Png;
+            if(FBase64::Decode(Encoded,Png))FFileHelper::SaveArrayToFile(Png,*FLightBoxJournal::ImagePath(RequestId,TEXT("before")));
+        }else FScreenshotRequest::RequestScreenshot(FLightBoxJournal::ImagePath(RequestId,TEXT("before")),true,false);
 	}
 	const TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
 	Body->SetStringField(TEXT("model"), TEXT("openclaw/default"));
@@ -234,7 +247,12 @@ void ULightBoxDirector::RequestScene(const FString& Prompt, const FString& Previ
 	{
 		const TSharedRef<FJsonObject> Message = MakeShared<FJsonObject>();
 		Message->SetStringField(TEXT("role"), I == 0 ? TEXT("system") : TEXT("user"));
-		Message->SetStringField(TEXT("content"), I == 0 ? FLightBoxStyle::Instruction(Style) : Prompt);
+        if(I==1&&!ReviewImage.IsEmpty()){
+            auto Words=MakeShared<FJsonObject>();Words->SetStringField(TEXT("type"),TEXT("text"));Words->SetStringField(TEXT("text"),Prompt);
+            auto Url=MakeShared<FJsonObject>();Url->SetStringField(TEXT("url"),ReviewImage);Url->SetStringField(TEXT("detail"),TEXT("high"));
+            auto Picture=MakeShared<FJsonObject>();Picture->SetStringField(TEXT("type"),TEXT("image_url"));Picture->SetObjectField(TEXT("image_url"),Url);
+            Message->SetArrayField(TEXT("content"),{MakeShared<FJsonValueObject>(Words),MakeShared<FJsonValueObject>(Picture)});
+        }else Message->SetStringField(TEXT("content"), I == 0 ? FLightBoxStyle::Instruction(Style) : Prompt);
 		Messages.Add(MakeShared<FJsonValueObject>(Message));
 	}
 	if (Attempt > 0)
@@ -272,11 +290,13 @@ void ULightBoxDirector::RequestScene(const FString& Prompt, const FString& Previ
 			{
 				if (Code == 401 || Code == 403) { Status = TEXT("認証キーや利用権限を確認してください"); }
 				else if (Code == 429) { Status = TEXT("ただいま混み合っています。少し待ってお試しください"); }
-				else { Status = FString::Printf(TEXT("演出サービスから返答がありません（%d）"), Code); }
+				else if(!ReviewImage.IsEmpty()&&(Code==400||Code==415||Code==422)){Status=TEXT("現在の接続先では画像付きの造形レビューを利用できません");}
+                else { Status = FString::Printf(TEXT("演出サービスから返答がありません（%d）"), Code); }
 				Log(FString::Printf(TEXT("通信エラー %d"),Code));
 				return;
 			}
 			FLightBoxStyle Next; FString Error, Why;
+            Status=TEXT("景色の構成を確認中");
 			if (!FLightBoxStyle::ParseCompletion(Response->GetContentAsString(), Next, Error, &Why) || !FLightBoxStyle::CompleteGenerated(Prompt,Style,Next,Why) || !FLightBoxStyle::ValidateIntent(Prompt,Next,Why))
 			{
 				if (Attempt == 0 && Response->GetContentAsString().Len() <= 131072)

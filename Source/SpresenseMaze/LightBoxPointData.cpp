@@ -12,28 +12,33 @@ float LightBoxPoints::Ease(uint32 I,float Phase,float Stagger)
 {
     const float Delay=Random(I,1)*Stagger;
     const float U=FMath::Clamp((Phase-Delay)/(1-Delay),0.f,1.f);
-    return U*U*(3-2*U);
+    return 1-FMath::Pow(1-U,3.f);
 }
 FVector3f LightBoxPoints::Position(const FLightBoxPoint& A,const FLightBoxPoint& B,uint32 I,float Phase,float Arc,float Twist,float Stagger,float Burst)
 {
     const float S=Ease(I,Phase,Stagger);
     const FVector3f R(Random(I,2)*2-1,Random(I,3)*2-1,Random(I,4)*2-1);
+    if(B.bFollow)return B.Position+R*Burst*85;
     const FVector3f T(-R.Y,R.X,R.Z*.45f);
-    const float Angle=S*Twist*2*PI;
-    return FMath::Lerp(A.Position,B.Position,S)+(R*FMath::Cos(Angle)+T*FMath::Sin(Angle))*(FMath::Sin(S*PI)*Arc)+R*Burst*85;
+    const float Angle=S*Twist*.35f;
+    const float Bend=FMath::Min(FVector3f::Distance(A.Position,B.Position)*.12f,Arc*.2f);
+    return FMath::Lerp(A.Position,B.Position,S)+(R*FMath::Cos(Angle)+T*FMath::Sin(Angle))*(FMath::Sin(S*PI)*(1-S)*Bend)+R*Burst*85;
 }
 FLightBoxPoint LightBoxPoints::Scatter(uint32 I,const FLightBoxPoint& Target,const FVector& Center)
 {
     FLightBoxPoint P=Target;const float Z=Random(I,5)*2-1,A=Random(I,6)*2*PI;
     const float R=FMath::Sqrt(FMath::Max(0.f,1-Z*Z));
-    P.Position=FVector3f(Center)+FVector3f(R*FMath::Cos(A)*230,R*FMath::Sin(A)*170,Z*170);
+    P.Position=Target.Position+FVector3f(R*FMath::Cos(A)*65,R*FMath::Sin(A)*65,Z*65);
+    P.Radius=0;P.bFollow=false;
     return P;
 }
-FLightBoxPointLayout LightBoxPoints::Build(const FLightBoxStyle& S)
+FLightBoxPointLayout LightBoxPoints::Build(const FLightBoxStyle& S,float Time)
 {
     FLightBoxPointLayout L;
     struct FTriangle {FIntVector IDs;FLinearColor A,B,C;double Weight,End,DensityArea;};
+    struct FPart {int32 First,Last;double Start,End;};TArray<FPart> Parts;
     TArray<FTriangle> Triangles;double Area=0,Weight=0;
+    // Sampling uses a fixed reference pose; changing the live wing angle must not reseed its grains.
     const auto Transforms=FLightBoxMotionSystem::Evaluate(S,0);
     const auto Objects=FLightBoxMotionSystem::ResolveBindings(S,Transforms);
     const FVector Light=FRotator(S.KeyDirection.X,S.KeyDirection.Y,0).Vector()*-1;
@@ -59,7 +64,9 @@ FLightBoxPointLayout LightBoxPoints::Build(const FLightBoxStyle& S)
         }
         // Large water/terrain must not consume all the samples and erase birds or small features.
         const double Scale=(O.bFocus?1.:.3)/FMath::Sqrt(FMath::Max(1.,ObjectArea));
+        const double Start=Weight;
         for(int32 J=First;J<Triangles.Num();++J){Weight+=Triangles[J].Weight*Scale;Triangles[J].End=Weight;Triangles[J].DensityArea=1/Scale;}
+        Parts.Add({First,Triangles.Num()-1,Start,Weight});
     }
     const int32 Budget=FMath::Clamp(S.PointCount,256,Maximum);
     L.FieldOffset=L.InitialVertices.Num();L.FieldCount=FMath::Clamp(S.Count,0,FMath::Min(1024,Budget));L.bAnimated|=L.FieldCount>0;
@@ -70,14 +77,24 @@ FLightBoxPointLayout LightBoxPoints::Build(const FLightBoxStyle& S)
     L.Points.Reserve(Surface+L.FieldCount+Background);
     const float Radius=FMath::Clamp(float(FMath::Sqrt(FMath::Max(Area,90000.)/FMath::Max(1,Surface)))*.38f,.1f,3.f);
     FLightBoxStyle Fallback=S;Fallback.FormationNext=TEXT("none");
+    TArray<int32> Quotas;int32 Assigned=0;
+    for(const auto& Part:Parts){const int32 N=Weight>0?FMath::FloorToInt(Surface*(Part.End-Part.Start)/Weight):0;Quotas.Add(N);Assigned+=N;}
+    for(int32 K=0;Assigned<Surface&&Weight>0;++K)if(Parts[K%Parts.Num()].End>Parts[K%Parts.Num()].Start){++Quotas[K%Parts.Num()];++Assigned;}
+    int32 PartIndex=0,LocalIndex=0;
     for(int32 I=0;I<Surface;++I){
         FLightBoxPoint P;P.Radius=Radius;
         if(Triangles.IsEmpty()){P.Position=FVector3f(FLightBoxSimulation::Target(I,Surface,Fallback,0));P.Color=S.ParticleColor(I,FVector(P.Position),0,0);}
         else {
-            const double Selected=Random(I,9)*Weight;int32 Low=0,High=Triangles.Num()-1;
+            while(PartIndex<Quotas.Num()&&LocalIndex>=Quotas[PartIndex]){++PartIndex;LocalIndex=0;}
+            const auto& Part=Parts[PartIndex];const uint32 Seed=LocalIndex^GetTypeHash(Objects[PartIndex].Id);
+            const double Selected=Part.Start+Random(Seed,9)*(Part.End-Part.Start);int32 Low=Part.First,High=Part.Last;
             while(Low<High){const int32 Mid=(Low+High)/2;if(Triangles[Mid].End<Selected)Low=Mid+1;else High=Mid;}
-            const auto& T=Triangles[Low];P.Radius=FMath::Clamp(float(FMath::Sqrt(T.DensityArea*Weight/FMath::Max(1,Surface)))*.38f*S.ParticleSize,.08f,6.f);const float U=FMath::Sqrt(Random(I,10)),V=Random(I,11),A=1-U,B=U*(1-V),C=U*V;
+            const auto& T=Triangles[Low];P.Owner=FName(*Objects[PartIndex].Id);P.Sample=LocalIndex++;
+            P.Radius=FMath::Clamp(float(FMath::Sqrt(T.DensityArea*Weight/FMath::Max(1,Surface)))*.38f*S.ParticleSize,.08f,6.f);const float U=FMath::Sqrt(Random(Seed,10)),V=Random(Seed,11),A=1-U,B=U*(1-V),C=U*V;
             P.Vertices=T.IDs;P.Weights=FVector2f(A,B);P.Position=Destination(P,L.InitialVertices,L.InitialVertices,0);P.Color=T.A*A+T.B*B+T.C*C;
+            const auto& LocalVertices=L.LocalVertices[PartIndex];const int32 Offset=L.Offsets[PartIndex];
+            const FVector Local=LocalVertices[T.IDs.X-Offset]*A+LocalVertices[T.IDs.Y-Offset]*B+LocalVertices[T.IDs.Z-Offset]*C;
+            P.Color=FLightBoxMesh::PatternColor(Objects[PartIndex],Local,P.Color);
             // Static surfaces need no extra GPU lookups even in an animated scene.
             const int32 Object=L.Offsets.IndexOfByPredicate([&](int32 Offset){return Offset>T.IDs.X;});
             const int32 Owner=Object==INDEX_NONE?L.Offsets.Num()-1:Object-1;
@@ -85,8 +102,12 @@ FLightBoxPointLayout LightBoxPoints::Build(const FLightBoxStyle& S)
         }
         L.Points.Add(P);
     }
-    for(int32 I=0;I<L.FieldCount;++I){FLightBoxPoint P;P.Vertices=FIntVector(L.FieldOffset+I);P.Position=FVector3f(Field.Motes[I].Position);P.Radius=FMath::Clamp(S.ParticleSize*1.7f,.3f,8.f);P.Color=S.ParticleColor(I,FVector(P.Position),0,0)*FMath::Max(.7f,S.Glow);L.Points.Add(P);}
-    for(int32 I=0;I<Background;++I){FLightBoxPoint P;const float Z=Random(I,20)*2-1,A=Random(I,21)*2*PI,R=FMath::Sqrt(1-Z*Z);P.Position=FVector3f(R*FMath::Cos(A)*850,R*FMath::Sin(A)*850,180+Z*650);P.Radius=1.4f+Random(I,22)*1.8f;P.Color=FMath::Lerp(S.Background,S.Accent*.18f,Random(I,23)*.3f);L.Points.Add(P);}
+    for(int32 I=0;I<L.FieldCount;++I){FLightBoxPoint P;P.Owner=TEXT("__field");P.Sample=I;P.Vertices=FIntVector(L.FieldOffset+I);P.Position=FVector3f(Field.Motes[I].Position);P.Radius=FMath::Clamp(S.ParticleSize*1.7f,.3f,8.f);P.Color=S.ParticleColor(I,FVector(P.Position),0,0)*FMath::Max(.7f,S.Glow);L.Points.Add(P);}
+    for(int32 I=0;I<Background;++I){FLightBoxPoint P;P.Owner=TEXT("__sky");P.Sample=I;const float Z=Random(I,20)*2-1,A=Random(I,21)*2*PI,R=FMath::Sqrt(1-Z*Z);P.Position=FVector3f(R*FMath::Cos(A)*850,R*FMath::Sin(A)*850,180+Z*650);P.Radius=1.4f+Random(I,22)*1.8f;P.Color=FMath::Lerp(S.Background,S.Accent*.18f,Random(I,23)*.3f);L.Points.Add(P);}
+    if(L.bAnimated&&Time!=0){
+        L.InitialVertices=Frame(L,S,Time,FVector2D::ZeroVector,0,{});
+        for(auto& P:L.Points)if(P.Vertices.X>=0)P.Position=Destination(P,L.InitialVertices,L.InitialVertices,1);
+    }
     return L;
 }
 

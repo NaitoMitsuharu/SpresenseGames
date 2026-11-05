@@ -25,39 +25,50 @@ ULightBoxPointCloud::ULightBoxPointCloud()
 void ULightBoxPointCloud::Assemble(const FLightBoxStyle& Style)
 {
     const uint32 Request=++Serial;bPreparing=true;bFramePending=false;
+    const float Phase=Progress(),Mix=FMath::Clamp(FrameAge*30,0.f,1.f),Time=AnimationAge,Scatter=Burst;
+    const auto Previous=Settings;
     TWeakObjectPtr<ULightBoxPointCloud> Weak(this);
-    Async(EAsyncExecution::ThreadPool,[Weak,Style,Request](){
-        auto Prepared=MakeShared<FLightBoxPointLayout,ESPMode::ThreadSafe>(LightBoxPoints::Build(Style));
-        AsyncTask(ENamedThreads::GameThread,[Weak,Style,Request,Prepared]()mutable{
-            if(Weak.IsValid()&&Weak->Serial==Request)Weak->Commit(Prepared,Style,Request);
+    Async(EAsyncExecution::ThreadPool,[Weak,Style,Request,Previous,Phase,Mix,Time,Scatter,OldFrom=Sources,OldTo=Goals,A=FrameFrom,B=FrameTo]()mutable{
+        for(int32 I=0;I<OldTo.Num();++I){auto Target=OldTo[I];Target.Position=LightBoxPoints::Destination(Target,A,B,Mix);
+            const float T=LightBoxPoints::Ease(I,Phase,Previous.AssembleStagger);
+            OldTo[I].Position=LightBoxPoints::Position(OldFrom[I],Target,I,Phase,Previous.AssembleArc,Previous.AssembleTwist,Previous.AssembleStagger,Scatter);
+            OldTo[I].Color=FMath::Lerp(OldFrom[I].Color,Target.Color,T);OldTo[I].Radius=FMath::Lerp(OldFrom[I].Radius,Target.Radius,T);OldTo[I].bFollow=false;
+        }
+        auto Prepared=MakeShared<FLightBoxPointLayout,ESPMode::ThreadSafe>(LightBoxPoints::Build(Style,Time));
+        const int32 Active=Prepared->Points.Num();
+        auto Transfer=MakeShared<FLightBoxPointTransfer,ESPMode::ThreadSafe>(LightBoxPoints::Transfer(OldTo,MoveTemp(Prepared->Points),Previous,Style));
+        AsyncTask(ENamedThreads::GameThread,[Weak,Style,Request,Prepared,Transfer,Active]()mutable{
+            if(Weak.IsValid()&&Weak->Serial==Request)Weak->Commit(Prepared,Transfer,Style,Request,Active);
         });
     });
 }
-void ULightBoxPointCloud::Commit(TSharedPtr<FLightBoxPointLayout,ESPMode::ThreadSafe> Prepared,const FLightBoxStyle& Style,uint32 Request)
+void ULightBoxPointCloud::Commit(TSharedPtr<FLightBoxPointLayout,ESPMode::ThreadSafe> Prepared,TSharedPtr<FLightBoxPointTransfer,ESPMode::ThreadSafe> Transfer,const FLightBoxStyle& Style,uint32 Request,int32 ActiveCount)
 {
-    if(Request!=Serial||Prepared->Points.IsEmpty())return;
-    auto Points=MoveTemp(Prepared->Points);const int32 ActiveCount=Points.Num();
+    if(Request!=Serial)return;
+    if(Transfer->To.IsEmpty()){bPreparing=false;return;}
+    // Preparation runs while the old scene keeps moving. Rebase at commit, not at its earlier snapshot.
+    const float OldPhase=Progress(),OldMix=FMath::Clamp(FrameAge*30,0.f,1.f);
+    for(int32 I=0;I<Transfer->SourceIndices.Num();++I){const int32 J=Transfer->SourceIndices[I];if(!Goals.IsValidIndex(J))continue;
+        auto Destination=Goals[J];Destination.Position=CurrentDestination(J);auto& Source=Transfer->From[I];
+        Source.Position=LightBoxPoints::Position(Sources[J],Destination,J,OldPhase,Settings.AssembleArc,Settings.AssembleTwist,Settings.AssembleStagger,Burst);
+        const float T=LightBoxPoints::Ease(J,OldPhase,Settings.AssembleStagger);Source.Color=FMath::Lerp(Sources[J].Color,Goals[J].Color,T);Source.Radius=FMath::Lerp(Sources[J].Radius,Goals[J].Radius,T);
+        if(I>=ActiveCount)Transfer->To[I].Position=Source.Position;
+    }
+    if(Layout.IsValid()&&FLightBoxSimulation::Signature(Settings)==FLightBoxSimulation::Signature(Style)){
+        for(int32 I=0;I<FMath::Min(Layout->FieldCount,Prepared->FieldCount);++I)Prepared->InitialVertices[Prepared->FieldOffset+I]=FMath::Lerp(FrameFrom[Layout->FieldOffset+I],FrameTo[Layout->FieldOffset+I],OldMix);
+    }
+    if(Prepared->bAnimated)Prepared->InitialVertices=LightBoxPoints::Frame(*Prepared,Style,AnimationAge,LastTilt,0,{});
     if(!PointMaterial){
         auto* Material=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/LightBox/M_PointSculpture.M_PointSculpture"));
         if(!Material){bPreparing=false;return;}
         PointMaterial=UMaterialInstanceDynamic::Create(Material,this);SetMaterial(0,PointMaterial);
         SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Plane.Plane")));
     }
-    const float OldPhase=Progress();const FLightBoxStyle Previous=Settings;
-    const FVector OldCenter=FMath::Lerp(CenterFrom,CenterTo,OldPhase);
-    FBox Box(ForceInit);for(const auto& P:Points)Box+=FVector(P.Position);
-    const FVector NextCenter=Box.GetCenter();
-    const int32 Total=FMath::Max(Points.Num(),Goals.Num());
-    TArray<FLightBoxPoint> From;From.SetNumUninitialized(Total);
-    for(int32 I=0;I<Total;++I){
-        if(I<Goals.Num()){
-            From[I]=Goals[I];auto Destination=Goals[I];Destination.Position=CurrentDestination(I);From[I].Position=LightBoxPoints::Position(Sources[I],Destination,I,OldPhase,Previous.AssembleArc,Previous.AssembleTwist,Previous.AssembleStagger,Burst);
-            const float T=LightBoxPoints::Ease(I,OldPhase,Previous.AssembleStagger);
-            From[I].Color=FMath::Lerp(Sources[I].Color,Goals[I].Color,T);From[I].Radius=FMath::Lerp(Sources[I].Radius,Goals[I].Radius,T);
-        }else From[I]=LightBoxPoints::Scatter(I,Points[I],NextCenter);
-    }
-    if(Points.Num()<Total){const int32 Active=Points.Num();Points.SetNum(Total);for(int32 I=Active;I<Total;++I){Points[I]=LightBoxPoints::Scatter(I,From[I],NextCenter);Points[I].Radius=0;Points[I].Vertices=FIntVector(-1,-1,-1);}}
-    Sources=MoveTemp(From);Goals=MoveTemp(Points);Layout=Prepared;Settings=Style;Settings.PointCount=ActiveCount;CenterFrom=OldCenter;CenterTo=NextCenter;Age=0;Burst=0;bTrimmed=false;
+    CenterFrom=FMath::Lerp(CenterFrom,CenterTo,Progress());
+    FBox Box(ForceInit);for(int32 I=0;I<ActiveCount;++I)Box+=FVector(Transfer->To[I].Position);CenterTo=Box.GetCenter();
+    Sources=MoveTemp(Transfer->From);Goals=MoveTemp(Transfer->To);Retained=Transfer->Retained;
+    Layout=Prepared;Settings=Style;Settings.PointCount=ActiveCount;Age=0;Burst=0;bTrimmed=false;
+    const int32 Total=Goals.Num();
     ResizePoints(Total);
     const int32 Width=FMath::RoundUpToPowerOfTwo(FMath::CeilToInt(FMath::Sqrt(float(Total))));
     DataTextures={Texture(Sources,Width,false),Texture(Goals,Width,false),Texture(Sources,Width,true),Texture(Goals,Width,true)};
@@ -90,7 +101,7 @@ UTexture2D* ULightBoxPointCloud::Texture(const TArray<FLightBoxPoint>& Points,in
     FMemory::Memzero(Data,Width*Width*(Color?sizeof(FColor):sizeof(FFloat16Color)));
     for(int32 I=0;I<Points.Num();++I){const auto& P=Points[I];
         if(Color)static_cast<FColor*>(Data)[I]=P.Color.ToFColor(false);
-        else static_cast<FFloat16Color*>(Data)[I]=FFloat16Color(FLinearColor(P.Position.X,P.Position.Y,P.Position.Z,P.Radius));
+        else static_cast<FFloat16Color*>(Data)[I]=FFloat16Color(FLinearColor(P.Position.X,P.Position.Y,P.Position.Z,P.bFollow?-P.Radius:P.Radius));
     }
     Mip.BulkData.Unlock();T->UpdateResource();return T;
 }
@@ -123,7 +134,7 @@ void ULightBoxPointCloud::RefreshFrame(const FVector2D& Tilt,const FLightBoxSimu
 {
     if(bFramePending||FrameClock<1.f/30)return;FrameClock=0;bFramePending=true;
     TArray<FVector4f> Motes;if(Field)for(const auto& P:Field->Motes)Motes.Add(FVector4f(P.Position.X,P.Position.Y,P.Position.Z,.65f+.35f*FMath::Sin(Age*2+P.Phase)));
-    const uint32 Request=Serial;auto Graph=Layout;auto Scene=Settings;const float Time=Age,Scatter=Burst;
+    const uint32 Request=Serial;auto Graph=Layout;auto Scene=Settings;const float Time=AnimationAge,Scatter=Burst;
     TWeakObjectPtr<ULightBoxPointCloud> Weak(this);
     Async(EAsyncExecution::ThreadPool,[Weak,Graph,Scene,Request,Time,Tilt,Scatter,Motes=MoveTemp(Motes)](){
         auto Vertices=LightBoxPoints::Frame(*Graph,Scene,Time,Tilt,Scatter,Motes);
@@ -138,7 +149,7 @@ void ULightBoxPointCloud::RefreshFrame(const FVector2D& Tilt,const FLightBoxSimu
 void ULightBoxPointCloud::Advance(float Dt,const FVector2D& Tilt,const FVector& Right,const FVector& Up,const FLightBoxSimulation* Field)
 {
     if(!PointMaterial)return;
-    Age+=Dt;OrientationAge+=Dt;FrameClock+=Dt;FrameAge+=Dt;Burst=FMath::Max(0.f,Burst-Dt*.65f);
+    LastTilt=Tilt;Age+=Dt;AnimationAge+=Dt;OrientationAge+=Dt;FrameClock+=Dt;FrameAge+=Dt;Burst=FMath::Max(0.f,Burst-Dt*.65f);
     if(!bPreparing&&Layout.IsValid()&&Layout->bAnimated)RefreshFrame(Tilt,Field);
     PointMaterial->SetScalarParameterValue(TEXT("FrameMix"),FMath::Clamp(FrameAge*30,0.f,1.f));
 #if !UE_BUILD_SHIPPING
@@ -147,7 +158,7 @@ void ULightBoxPointCloud::Advance(float Dt,const FVector2D& Tilt,const FVector& 
     FString Report;if(!bReviewWritten&&!bPreparing&&Age>=Settings.AssembleSeconds&&FParse::Value(FCommandLine::Get(),TEXT("PointCloudReport="),Report)){
         ReviewElapsed+=MeasuredDt;ReviewFrames.Add(MeasuredDt*1000);
         if(ReviewElapsed>=8){
-            bReviewWritten=true;ReviewFrames.Sort();auto J=MakeShared<FJsonObject>();J->SetNumberField(TEXT("points"),Settings.PointCount);J->SetNumberField(TEXT("instances"),GetInstanceCount());
+            bReviewWritten=true;ReviewFrames.Sort();auto J=MakeShared<FJsonObject>();J->SetNumberField(TEXT("retainedPoints"),Retained);J->SetNumberField(TEXT("points"),Settings.PointCount);J->SetNumberField(TEXT("instances"),GetInstanceCount());
             J->SetNumberField(TEXT("fps"),ReviewFrames.Num()/ReviewElapsed);J->SetNumberField(TEXT("frameMsP95"),ReviewFrames[FMath::Clamp(FMath::FloorToInt(ReviewFrames.Num()*.95),0,ReviewFrames.Num()-1)]);
             J->SetNumberField(TEXT("frameMsMax"),ReviewFrames.Last());J->SetNumberField(TEXT("seconds"),ReviewElapsed);J->SetBoolField(TEXT("gpuVertexAnimation"),true);
             TArray<TSharedPtr<FJsonValue>> OtherPrimitives;int32 Solids=0;for(TActorIterator<AActor> A(GetWorld());A;++A)if(!A->IsHidden()){TArray<UPrimitiveComponent*> Components;A->GetComponents(Components);for(auto* C:Components)if(C->IsRegistered()&&C->IsVisible()&&!C->bHiddenInGame&&!Cast<ULightBoxPointCloud>(C)){if(Cast<UMeshComponent>(C))++Solids;OtherPrimitives.Add(MakeShared<FJsonValueString>(C->GetFullName()));}}

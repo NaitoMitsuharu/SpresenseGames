@@ -69,6 +69,7 @@ private:
 	float ViewDistance=1,ViewOrbitSpeed=0,LastPinchDistance=0;
 	bool bViewDragging=false;
 	FString AppliedContent;
+    FString AppliedCamera;
 };
 
 UCLASS()

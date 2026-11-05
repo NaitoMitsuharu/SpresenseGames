@@ -22,12 +22,12 @@ public:
 	float Stillness = 0;
 	void Reset(int32 Count = 144);
 	void Reset(const FLightBoxStyle& Style);
+    static FString Signature(const FLightBoxStyle& Style);
 	static FVector Target(int32 Index, int32 Count, const FLightBoxStyle& Style, float Time);
 	void Impulse(const FLightBoxStyle& Style);
 	void Step(float Seconds, const FVector2D& Tilt, float Twist, const FLightBoxStyle& Style);
 private:
 	FString Configuration;
-	static FString Signature(const FLightBoxStyle& Style);
 	void UpdateFlock(const FLightBoxStyle& Style);
 	float Time = 0, TrailClock = 0, FlockClock = 1;
 };

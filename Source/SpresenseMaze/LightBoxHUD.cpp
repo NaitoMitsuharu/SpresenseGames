@@ -85,6 +85,7 @@ void ALightBoxHUD::NotifyHitBoxClick(FName Name)
 	else if (Name == TEXT("Words")) { OpenWords(); }
 	else if (Name == TEXT("Examples")) { OpenExamples(); }
 	else if (Name == TEXT("Journal")) { OpenJournal(); }
+    else if (Name == TEXT("Refine")) { D->RefineScene(); }
 	else if (Name == TEXT("Undo")) { D->Undo(); }
 	else if (Name == TEXT("Redo")) { D->Redo(); }
 	else if (Name == TEXT("Voice"))

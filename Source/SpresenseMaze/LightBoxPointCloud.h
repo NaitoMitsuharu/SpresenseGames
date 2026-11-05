@@ -22,14 +22,15 @@ public:
     void ResizePoints(int32 Count);
     bool IsPreparing() const { return bPreparing; }
     float Progress() const { return FMath::Clamp(Age/FMath::Max(1.f,Settings.AssembleSeconds),0.f,1.f); }
-    int32 PointTotal() const { return Goals.Num(); }
+    int32 PointTotal() const { return GetInstanceCount(); }
+    int32 RetainedPoints() const { return Retained; }
     bool IsUpdatingFrame() const { return bFramePending; }
 #if !UE_BUILD_SHIPPING
-    void SetPlaybackTime(float Time) { if(!FMath::IsNearlyEqual(Age,Time)){Age=Time;FrameClock=1;}bFixedReviewTime=true; }
+    void SetPlaybackTime(float Time) { if(!FMath::IsNearlyEqual(Age,Time)){Age=AnimationAge=Time;FrameClock=1;}bFixedReviewTime=true; }
 #endif
     virtual void OnComponentDestroyed(bool Hierarchy) override;
 private:
-    void Commit(TSharedPtr<FLightBoxPointLayout,ESPMode::ThreadSafe> Layout,const FLightBoxStyle& Style,uint32 Request);
+    void Commit(TSharedPtr<FLightBoxPointLayout,ESPMode::ThreadSafe> Layout,TSharedPtr<FLightBoxPointTransfer,ESPMode::ThreadSafe> Transfer,const FLightBoxStyle& Style,uint32 Request,int32 ActiveCount);
     UTexture2D* Texture(const TArray<FLightBoxPoint>& Points,int32 Width,bool Color);
     UTexture2D* BindingsTexture(bool Weights,int32 Width);
     UTexture2D* VertexTexture(const TArray<FVector4f>& Vertices,int32 Width);
@@ -45,6 +46,9 @@ private:
     FLightBoxStyle Settings;
     FVector CenterFrom=FVector(0,0,160),CenterTo=FVector(0,0,160);
     float Age=100,OrientationAge=0,Burst=0;
+    float AnimationAge=0;
+    int32 Retained=0;
+    FVector2D LastTilt=FVector2D::ZeroVector;
     uint32 Serial=0;
     bool bPreparing=false;
     bool bTrimmed=true;

@@ -12,7 +12,7 @@ openclaw --profile lightbox config set gateway.bind loopback
 openclaw --profile lightbox config set gateway.port 18789
 openclaw --profile lightbox config set gateway.auth.mode token
 openclaw --profile lightbox config set gateway.http.endpoints.chatCompletions.enabled true
-# The demo requires text generation only, without filesystem/browser/shell tools.
+# Scene JSON and optional screenshot review; filesystem/browser/shell tools are not required.
 openclaw --profile lightbox config set tools.deny '["*"]' --strict-json
 OPENCLAW_GATEWAY_TOKEN="$(node "$SCRIPT_DIR/lightbox-token.cjs")"
 export OPENCLAW_GATEWAY_TOKEN
