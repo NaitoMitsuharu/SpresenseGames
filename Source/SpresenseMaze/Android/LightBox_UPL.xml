@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+    <androidManifestUpdates>
+        <addPermission android:name="android.permission.RECORD_AUDIO" />
+        <addPermission android:name="android.permission.INTERNET" />
+        <addAttribute tag="application" name="android:networkSecurityConfig" value="@xml/lightbox_network_security_config" />
+        <addElements tag="manifest">
+            <queries>
+                <intent><action android:name="android.speech.RecognitionService" /></intent>
+            </queries>
+        </addElements>
+    </androidManifestUpdates>
+    <resourceCopies>
+        <copyFile src="$S(PluginDir)/LightBoxVoice.java" dst="$S(BuildDir)/src/com/lati/lightbox/LightBoxVoice.java" />
+        <copyFile src="$S(PluginDir)/LightBoxCredentials.java" dst="$S(BuildDir)/src/com/lati/lightbox/LightBoxCredentials.java" />
+        <copyFile src="$S(PluginDir)/lightbox_network_security_config.xml" dst="$S(BuildDir)/res/xml/lightbox_network_security_config.xml" />
+    </resourceCopies>
+    <gameActivityClassAdditions>
+        <insert><![CDATA[
+    private android.graphics.drawable.Drawable lightBoxKeyboardBackground;
+    public String AndroidThunkJava_LightBoxLoadCredential(String endpoint) {
+        return new com.lati.lightbox.LightBoxCredentials(this).load(endpoint);
+    }
+    public boolean AndroidThunkJava_LightBoxSaveCredential(String endpoint, String token) {
+        return new com.lati.lightbox.LightBoxCredentials(this).save(endpoint, token);
+    }
+    private float lightBoxKeyboardTextSize;
+    private android.content.res.ColorStateList lightBoxKeyboardTextColors;
+    private android.content.res.ColorStateList lightBoxKeyboardHintColors;
+    public void AndroidThunkJava_LightBoxGlassKeyboard(final boolean enabled) {
+        runOnUiThread(new Runnable() { public void run() {
+            if (newVirtualKeyboardInput == null) { return; }
+            if (enabled) {
+                if (lightBoxKeyboardBackground == null) {
+                    lightBoxKeyboardBackground = newVirtualKeyboardInput.getBackground();
+                    lightBoxKeyboardTextSize = newVirtualKeyboardInput.getTextSize();
+                    lightBoxKeyboardTextColors = newVirtualKeyboardInput.getTextColors();
+                    lightBoxKeyboardHintColors = newVirtualKeyboardInput.getHintTextColors();
+                }
+                android.graphics.drawable.GradientDrawable glass = new android.graphics.drawable.GradientDrawable();
+                glass.setColor(0xCC142630);
+                glass.setCornerRadius(18.0f);
+                glass.setStroke(1, 0x6687CFC3);
+                newVirtualKeyboardInput.setBackground(glass);
+                newVirtualKeyboardInput.setTextColor(0xFFF0FAFF);
+                newVirtualKeyboardInput.setHintTextColor(0x99F0FAFF);
+                newVirtualKeyboardInput.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 18);
+            } else if (lightBoxKeyboardBackground != null) {
+                newVirtualKeyboardInput.setBackground(lightBoxKeyboardBackground);
+                newVirtualKeyboardInput.setTextColor(lightBoxKeyboardTextColors);
+                newVirtualKeyboardInput.setHintTextColor(lightBoxKeyboardHintColors);
+                newVirtualKeyboardInput.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, lightBoxKeyboardTextSize);
+            }
+        }});
+    }
+    private com.lati.lightbox.LightBoxVoice lightBoxVoice;
+    public void AndroidThunkJava_LightBoxStartVoice() {
+        if (lightBoxVoice == null) { lightBoxVoice = new com.lati.lightbox.LightBoxVoice(this); }
+        lightBoxVoice.start();
+    }
+    public void AndroidThunkJava_LightBoxStopVoice() {
+        if (lightBoxVoice != null) { lightBoxVoice.stop(); }
+    }
+    public String AndroidThunkJava_LightBoxPollVoice() {
+        return lightBoxVoice == null ? "" : lightBoxVoice.poll();
+    }
+        ]]></insert>
+    </gameActivityClassAdditions>
+    <gameActivityOnPauseAdditions>
+        <insert>if (lightBoxVoice != null) { lightBoxVoice.pause(); }</insert>
+    </gameActivityOnPauseAdditions>
+    <gameActivityOnDestroyAdditions>
+        <insert>if (lightBoxVoice != null) { lightBoxVoice.stop(); }</insert>
+    </gameActivityOnDestroyAdditions>
+</root>

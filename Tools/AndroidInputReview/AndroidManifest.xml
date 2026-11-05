@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.lati.lightbox.inputreview">
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
+    <queries><intent><action android:name="android.intent.action.TTS_SERVICE" /></intent><package android:name="com.lati.spresensemaze" /></queries>
+    <application android:label="LightBox input review" android:testOnly="true">
+        <activity android:name=".AudioPromptActivity" android:exported="true" android:theme="@android:style/Theme.NoTitleBar" />
+    </application>
+</manifest>

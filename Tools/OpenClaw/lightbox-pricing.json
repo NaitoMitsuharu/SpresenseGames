@@ -1,0 +1,12 @@
+{
+  "asOf": "2026-11-05",
+  "source": "https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing",
+  "usdPerCredit": 0.01,
+  "models": {
+    "gpt-6-luna": {
+      "threshold": 272000,
+      "default": { "input": 0.10, "cacheRead": 0.01, "cacheWrite": 0.125, "output": 0.50 },
+      "long": { "input": 0.20, "cacheRead": 0.02, "cacheWrite": 0.25, "output": 0.75 }
+    }
+  }
+}

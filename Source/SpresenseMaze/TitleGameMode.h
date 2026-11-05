@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
@@ -9,7 +9,7 @@
 
 class UCameraComponent;
 
-/** Game-select screen shown at launch: two large cards, maze and flight. */
+/** Experience-select screen shown at launch. */
 UCLASS()
 class SPRESENSEMAZE_API ATitleGameMode : public AGameModeBase
 {
@@ -21,6 +21,7 @@ public:
 	static const FName TitleMapName;
 	static const FName MazeMapName;
 	static const FName FlightMapName;
+	static const FName LightBoxMapName;
 };
 
 /** Flight game: ship pawn, flight HUD; the course is spawned by the pawn. */
@@ -65,4 +66,5 @@ private:
 	void DrawCard(FName Id, const FString& Name, const FString& Sub, float X, float Y, float CW, float CH, int32 Icon);
 	void DrawMazeIcon(float CX, float CY, float Size);
 	void DrawFlightIcon(float CX, float CY, float Size);
+	void DrawLightBoxIcon(float CX, float CY, float Size);
 };

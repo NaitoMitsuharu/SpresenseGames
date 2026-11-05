@@ -1,0 +1,993 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": 1,
+      "category": "飛行と移動",
+      "words": "海の上をかもめが羽ばたきながら旋回する景色にして",
+      "checks": [
+        "flying",
+        "water"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 2,
+      "category": "飛行と移動",
+      "words": "青い鳥が木から木へ飛び移る小さな庭を作って",
+      "checks": [
+        "flying",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 3,
+      "category": "飛行と移動",
+      "words": "二羽の鳥が違う速さで飛び、すれ違うようにして",
+      "checks": [
+        "flying"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 4,
+      "category": "飛行と移動",
+      "words": "蝶が花の周りを羽ばたきながら飛び回るようにして",
+      "checks": [
+        "flying",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 5,
+      "category": "飛行と移動",
+      "words": "魚が岩をよけるように曲線を描いて泳ぐ水槽を作って",
+      "checks": [
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 6,
+      "category": "飛行と移動",
+      "words": "空飛ぶクジラがゆっくり上下しながら前に進む夜空を作って",
+      "checks": [
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 7,
+      "category": "飛行と移動",
+      "words": "紙飛行機がなめらかな八の字を描いて飛ぶようにして",
+      "checks": [
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 8,
+      "category": "飛行と移動",
+      "words": "小さなロボットが腕と脚を動かして歩くようにして",
+      "checks": [
+        "articulated",
+        "moving"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 9,
+      "category": "飛行と移動",
+      "words": "振り子が左右に揺れ、その先に小さな光が付いている装置を作って",
+      "checks": [
+        "hinge",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 10,
+      "category": "飛行と移動",
+      "words": "小さな球が坂を上がって下りるループするコースを作って",
+      "checks": [
+        "path",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 11,
+      "category": "流れと食べ物",
+      "words": "人がラーメンをすすって、麺が丼から口へ吸い込まれるようにして",
+      "checks": [
+        "flow",
+        "mouth"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 12,
+      "category": "流れと食べ物",
+      "words": "コップからストローを通ってジュースが口へ吸い上げられるようにして",
+      "checks": [
+        "flow",
+        "mouth"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 13,
+      "category": "流れと食べ物",
+      "words": "ティーポットからカップへ紅茶が注がれる景色を作って",
+      "checks": [
+        "flow",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 14,
+      "category": "流れと食べ物",
+      "words": "滝から水が流れ落ちて下の池に広がる箱庭を作って",
+      "checks": [
+        "flow",
+        "water"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 15,
+      "category": "流れと食べ物",
+      "words": "二つの容器をつなぐ管を光が流れる装置を作って",
+      "checks": [
+        "flow",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 16,
+      "category": "流れと食べ物",
+      "words": "チョコレートが上の皿から下の皿へ流れる噴水を作って",
+      "checks": [
+        "flow",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 17,
+      "category": "流れと食べ物",
+      "words": "細いリボンが空中をくねりながら走っていくようにして",
+      "checks": [
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 18,
+      "category": "流れと食べ物",
+      "words": "渦巻きから光の糸が中心へ吸い込まれるようにして",
+      "checks": [
+        "flow",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 19,
+      "category": "流れと食べ物",
+      "words": "土から伸びたつるが風に揺れる庭を作って",
+      "checks": [
+        "deform",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 20,
+      "category": "流れと食べ物",
+      "words": "煙が煙突から立ちのぼり、風に流れる小さな工場を作って",
+      "checks": [
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 21,
+      "category": "群れと形",
+      "words": "スイミーのように、小さな魚の群れで大きな魚の形を作って",
+      "checks": [
+        "flock_shape"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 22,
+      "category": "群れと形",
+      "words": "たくさんの光が集まってハートの形を保つようにして",
+      "checks": [
+        "formation"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 23,
+      "category": "群れと形",
+      "words": "鳥の群れが大きな鳥のシルエットを作りながら移動するようにして",
+      "checks": [
+        "flock_shape"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 24,
+      "category": "群れと形",
+      "words": "光の粒が球から星へゆっくり形を変えるようにして",
+      "checks": [
+        "morph"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 25,
+      "category": "群れと形",
+      "words": "光の粒が蝶の形になって、それから花の形になるようにして",
+      "checks": [
+        "morph"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 26,
+      "category": "群れと形",
+      "words": "小魚が二つの群れに分かれて、違う方向へ泳ぐようにして",
+      "checks": [
+        "flock"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 27,
+      "category": "群れと形",
+      "words": "粒でらせんの柱を作り、ゆっくり回転させて",
+      "checks": [
+        "formation"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 28,
+      "category": "群れと形",
+      "words": "光で五角形の輪郭を作り、形を崩さずに動かして",
+      "checks": [
+        "custom_formation"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 29,
+      "category": "群れと形",
+      "words": "青い魚の群れの中に赤い一匹を入れ、一緒に泳ぐようにして",
+      "checks": [
+        "flock"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 30,
+      "category": "群れと形",
+      "words": "球状の群れが振ったら散り、また球に戻るようにして",
+      "checks": [
+        "formation",
+        "shake"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 31,
+      "category": "関節と機械",
+      "words": "花びらが根元の関節で開いたり閉じたりする花を作って",
+      "checks": [
+        "hinge",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 32,
+      "category": "関節と機械",
+      "words": "二つの歯車が逆向きに回る機械を作って",
+      "checks": [
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 33,
+      "category": "関節と機械",
+      "words": "風車の羽根が軸を中心に回転する風景を作って",
+      "checks": [
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 34,
+      "category": "関節と機械",
+      "words": "メリーゴーラウンドが回り、乗っている動物が上下するようにして",
+      "checks": [
+        "articulated",
+        "moving"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 35,
+      "category": "関節と機械",
+      "words": "花の茎は止めたまま、花びらだけがゆっくり開くようにして",
+      "checks": [
+        "hinge",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 36,
+      "category": "関節と機械",
+      "words": "観覧車が回り、ゴンドラがぶら下がっているようにして",
+      "checks": [
+        "articulated",
+        "moving"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 37,
+      "category": "関節と機械",
+      "words": "太陽の周りを惑星が回り、その惑星の周りを月が回るようにして",
+      "checks": [
+        "articulated",
+        "moving"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 38,
+      "category": "関節と機械",
+      "words": "扉が端の蝶番を中心に開閉する小さな家を作って",
+      "checks": [
+        "hinge",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 39,
+      "category": "関節と機械",
+      "words": "箱のふたが端を支点に開き、中から光が出るようにして",
+      "checks": [
+        "hinge",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 40,
+      "category": "関節と機械",
+      "words": "ベルトコンベアの上を小さな箱が順番に流れていくようにして",
+      "checks": [
+        "path",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 41,
+      "category": "自然と天気",
+      "words": "夜の森で蛍が空間全体にふわふわ飛んでいるようにして",
+      "checks": [
+        "particles",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 42,
+      "category": "自然と天気",
+      "words": "森の上から雪がゆっくり降り続けるようにして",
+      "checks": [
+        "snow",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 43,
+      "category": "自然と天気",
+      "words": "雨が池に降り、水面が波立っている箱庭を作って",
+      "checks": [
+        "rain",
+        "water"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 44,
+      "category": "自然と天気",
+      "words": "焚き火の炎と火の粉が上がるキャンプ場を作って",
+      "checks": [
+        "fire",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 45,
+      "category": "自然と天気",
+      "words": "噴水が上に吹き上がり、周りに水が落ちる庭を作って",
+      "checks": [
+        "fountain",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 46,
+      "category": "自然と天気",
+      "words": "夜の町の向こうで花火が繰り返し開くようにして",
+      "checks": [
+        "fireworks",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 47,
+      "category": "自然と天気",
+      "words": "海藻が水中でゆっくり揺れる海底を作って",
+      "checks": [
+        "deform",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 48,
+      "category": "自然と天気",
+      "words": "桜の木から花びらが風に舞う景色を作って",
+      "checks": [
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 49,
+      "category": "自然と天気",
+      "words": "落ち葉が渦を巻きながら舞う秋の庭を作って",
+      "checks": [
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 50,
+      "category": "自然と天気",
+      "words": "草原の木々が同じ方向の風で揺れるようにして",
+      "checks": [
+        "deform",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 51,
+      "category": "造形と場面",
+      "words": "お皿に目玉焼きと小さなハーブを盛り付けて",
+      "checks": [
+        "objects",
+        "grounded"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 52,
+      "category": "造形と場面",
+      "words": "ゾウ、キリン、ライオンがいて柵で囲まれた動物園を作って",
+      "checks": [
+        "animals",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 53,
+      "category": "造形と場面",
+      "words": "屋根と窓と扉のある小さな家を庭に置いて",
+      "checks": [
+        "objects",
+        "grounded"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 54,
+      "category": "造形と場面",
+      "words": "中が空いた青いボウルに果物を盛って",
+      "checks": [
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 55,
+      "category": "造形と場面",
+      "words": "丸い屋根のキノコと木があるメルヘンの森を作って",
+      "checks": [
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 56,
+      "category": "造形と場面",
+      "words": "ガラスの中に小さな惑星が浮かぶ宇宙のオブジェを作って",
+      "checks": [
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 57,
+      "category": "造形と場面",
+      "words": "橋が川をまたぎ、両岸に木が立つ箱庭を作って",
+      "checks": [
+        "objects",
+        "water"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 58,
+      "category": "造形と場面",
+      "words": "耳と目としっぽのあるウサギを、球や曲線を組み合わせて作って",
+      "checks": [
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 59,
+      "category": "造形と場面",
+      "words": "歯と目のあるドラゴンが岩の上で翼を動かすようにして",
+      "checks": [
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 60,
+      "category": "造形と場面",
+      "words": "海辺の灯台と岩、回転する灯りを作って",
+      "checks": [
+        "moving",
+        "lights"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 61,
+      "category": "照明と構図",
+      "words": "金属の輪と陶器の球を並べ、材質の違いが分かる照明にして",
+      "checks": [
+        "materials",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 62,
+      "category": "照明と構図",
+      "words": "白い鳥を雪景色の中に置いて、背景と鳥が見分けられるようにして",
+      "checks": [
+        "contrast",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 63,
+      "category": "照明と構図",
+      "words": "黒い魚が暗い海でも見える、青い縁取りの照明にして",
+      "checks": [
+        "contrast",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 64,
+      "category": "照明と構図",
+      "words": "小さな花を主役にして、大きく見える構図にして",
+      "checks": [
+        "objects",
+        "framing"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 65,
+      "category": "照明と構図",
+      "words": "背の高いキリンが頭まで画面に収まるようにして",
+      "checks": [
+        "animals",
+        "framing"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 66,
+      "category": "照明と構図",
+      "words": "横に広がる橋と川を、全体が見える構図にして",
+      "checks": [
+        "objects",
+        "framing"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 67,
+      "category": "照明と構図",
+      "words": "暖かい夕日の主照明と、冷たい青の補助光で彫刻を照らして",
+      "checks": [
+        "lights",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 68,
+      "category": "照明と構図",
+      "words": "小さな家の窓だけが暖かく光る夜の景色を作って",
+      "checks": [
+        "lights",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 69,
+      "category": "照明と構図",
+      "words": "発光を控えめにし、形と影がはっきり分かる庭を作って",
+      "checks": [
+        "objects",
+        "contrast"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 70,
+      "category": "照明と構図",
+      "words": "同じ景色の中に、つやのある金属とざらついた石を置いて",
+      "checks": [
+        "materials",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 71,
+      "category": "複合的な演出",
+      "words": "機械仕掛けの花が開閉し、その周囲を光る球がレールで走るようにして",
+      "checks": [
+        "hinge",
+        "path",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 72,
+      "category": "複合的な演出",
+      "words": "海の上を鳥が飛び、水中では魚の群れが泳ぐ景色を作って",
+      "checks": [
+        "flying",
+        "flock",
+        "water"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 73,
+      "category": "複合的な演出",
+      "words": "夜の森で蛍がハートになり、木の葉は風で揺れるようにして",
+      "checks": [
+        "formation",
+        "deform",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 74,
+      "category": "複合的な演出",
+      "words": "宇宙で惑星が公転し、その周りを光の帯が流れるようにして",
+      "checks": [
+        "moving",
+        "flow",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 75,
+      "category": "複合的な演出",
+      "words": "お茶を注ぎながら、カップから湯気が上がる景色を作って",
+      "checks": [
+        "flow",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 76,
+      "category": "複合的な演出",
+      "words": "音楽が聞こえるような雰囲気で、花と光がリズミカルに伸縮する景色にして",
+      "checks": [
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 77,
+      "category": "複合的な演出",
+      "words": "光の魚の群れが星へ変わり、また魚の形に戻るようにして",
+      "checks": [
+        "morph"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 78,
+      "category": "複合的な演出",
+      "words": "風車の横で花が開閉し、雪が降る小さな村を作って",
+      "checks": [
+        "hinge",
+        "snow",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 79,
+      "category": "複合的な演出",
+      "words": "三つの振り子が少しずつ違う周期で揺れ続けるようにして",
+      "checks": [
+        "hinge",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 80,
+      "category": "複合的な演出",
+      "words": "水の上を光が曲線に沿って走り、木々が風に揺れる景色を作って",
+      "checks": [
+        "path",
+        "deform",
+        "water"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 81,
+      "category": "境界と無茶振り",
+      "words": "1024個の光が重ならずに大きな銀河を作るようにして",
+      "checks": [
+        "count1024",
+        "formation"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 82,
+      "category": "境界と無茶振り",
+      "words": "粒を一つも使わずに、動く機械だけで景色を作って",
+      "checks": [
+        "count0",
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 83,
+      "category": "境界と無茶振り",
+      "words": "一つの物体を32個、輪に並べて回転させて",
+      "checks": [
+        "copies32",
+        "moving"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 84,
+      "category": "境界と無茶振り",
+      "words": "すべての光を消して、輪郭だけ分かる静かな夜景にして",
+      "checks": [
+        "contrast",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 85,
+      "category": "境界と無茶振り",
+      "words": "日本語で「ようこそ」と読める文字を空中に表示して",
+      "checks": [
+        "honest_limit"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 86,
+      "category": "境界と無茶振り",
+      "words": "この箱の中で本物の目玉焼きを作って",
+      "checks": [
+        "honest_limit",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 87,
+      "category": "境界と無茶振り",
+      "words": "音が鳴るピアノを作り、鍵盤が押される様子も見せて",
+      "checks": [
+        "honest_limit",
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 88,
+      "category": "境界と無茶振り",
+      "words": "水と油が混ざらずに渦を巻く物理実験を再現して",
+      "checks": [
+        "honest_limit",
+        "moving"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 89,
+      "category": "境界と無茶振り",
+      "words": "写真のような人間の顔が笑いながら話すようにして",
+      "checks": [
+        "honest_limit",
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 90,
+      "category": "境界と無茶振り",
+      "words": "迷路の壁が形を変えながら、球が自動で出口へ進むようにして",
+      "checks": [
+        "honest_limit",
+        "moving",
+        "objects"
+      ],
+      "baseCase": null
+    },
+    {
+      "id": 91,
+      "category": "追加変更と保持",
+      "words": "鳥の数と飛び方は変えず、背景だけを夕焼けにして",
+      "checks": [
+        "preserve_objects"
+      ],
+      "baseCase": 1
+    },
+    {
+      "id": 92,
+      "category": "追加変更と保持",
+      "words": "形と動きはそのままで、白身だけを少しクリーム色にして",
+      "checks": [
+        "preserve_motion"
+      ],
+      "baseCase": 51
+    },
+    {
+      "id": 93,
+      "category": "追加変更と保持",
+      "words": "群れの魚の形と色はそのまま、粒の数だけを半分にして",
+      "checks": [
+        "half_count"
+      ],
+      "baseCase": 21
+    },
+    {
+      "id": 94,
+      "category": "追加変更と保持",
+      "words": "扉はそのままで、家の横に木を二本追加して",
+      "checks": [
+        "append"
+      ],
+      "baseCase": 38
+    },
+    {
+      "id": 95,
+      "category": "追加変更と保持",
+      "words": "花の形は変えず、開閉する速さだけを二倍にして",
+      "checks": [
+        "double_speed"
+      ],
+      "baseCase": 31
+    },
+    {
+      "id": 96,
+      "category": "追加変更と保持",
+      "words": "雪と木はそのまま、振ったときだけ粒が散るようにして",
+      "checks": [
+        "preserve_objects",
+        "shake"
+      ],
+      "baseCase": 42
+    },
+    {
+      "id": 97,
+      "category": "追加変更と保持",
+      "words": "惑星と月の配置はそのまま、カメラだけ少し上から見るようにして",
+      "checks": [
+        "preserve_objects",
+        "camera_change"
+      ],
+      "baseCase": 37
+    },
+    {
+      "id": 98,
+      "category": "追加変更と保持",
+      "words": "人と麺の形を変えず、照明だけを明るくして",
+      "checks": [
+        "preserve_objects"
+      ],
+      "baseCase": 11
+    },
+    {
+      "id": 99,
+      "category": "追加変更と保持",
+      "words": "物体と照明はそのまま、箱の枠だけ消して",
+      "checks": [
+        "preserve_objects",
+        "hide_box"
+      ],
+      "baseCase": 53
+    },
+    {
+      "id": 100,
+      "category": "追加変更と保持",
+      "words": "光の粒を減らさず、動きだけをゆっくりにして",
+      "checks": [
+        "preserve_count",
+        "slower"
+      ],
+      "baseCase": 41
+    }
+  ]
+}

@@ -6,6 +6,7 @@ Saved/
 Build/Android/gradle/
 Package/
 .vs/
+__pycache__/
 
 # Local IDE/user files
 *.suo

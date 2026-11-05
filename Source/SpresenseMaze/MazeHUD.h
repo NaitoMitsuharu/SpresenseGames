@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Fonts/SlateFontInfo.h"
@@ -61,4 +61,6 @@ private:
 	void DrawTouchController();
 
 	TWeakObjectPtr<AMazeGenerator> CachedMaze;
+	bool bReviewSetup = false;
+	bool bReviewShot = false;
 };

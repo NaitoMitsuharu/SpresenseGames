@@ -1,0 +1,185 @@
+{
+  "date": "2026-11-05",
+  "device": "Xperia XQ-FS54 / Android 16 / 2340x1080",
+  "voiceMethod": "Japanese synthetic speech played through the device speaker and recognized by the actual microphone",
+  "provider": "GitHub Copilot / gpt-6-luna",
+  "automation": {
+    "passed": 37,
+    "failed": 0,
+    "androidKeystoreChecks": 13,
+    "observerAndTokenTests": 4
+  },
+  "attemptCount": 15,
+  "appliedCount": 13,
+  "creditsKnown": 2.1167275,
+  "creditsUnknownCount": 2,
+  "finalCases": [
+    {
+      "case": "voice01",
+      "mode": "voice",
+      "requested": "金色の光で輪を作って、ゆっくり回して",
+      "words": "金色の光で輪を作ってゆっくり回して",
+      "result": "反映済み",
+      "credits": 0.22653,
+      "seconds": 16.378488431000733,
+      "sentBeforeConfirmation": false
+    },
+    {
+      "case": "text01",
+      "mode": "text",
+      "requested": "青い海の中を、256匹の魚が3つの群れで泳ぐ景色にして",
+      "words": "青い海の中を、256匹の魚が3つの群れで泳ぐ景色にして",
+      "result": "反映済み",
+      "credits": 0.13569250000000002,
+      "seconds": 6.794934997000382,
+      "sentBeforeConfirmation": false
+    },
+    {
+      "case": "text02",
+      "mode": "text",
+      "requested": "魚の数と動きを変えずに、魚だけを金色にして",
+      "words": "魚の数と動きを変えずに、魚だけを金色にして",
+      "result": "反映済み",
+      "credits": 0.13490499999999997,
+      "seconds": 6.844218434998766,
+      "sentBeforeConfirmation": false
+    },
+    {
+      "case": "voice02",
+      "mode": "voice",
+      "requested": "花のある小さな森にして",
+      "words": "花のある小さな森にして",
+      "result": "反映済み",
+      "credits": 0.17109249999999998,
+      "seconds": 14.041224785993109,
+      "sentBeforeConfirmation": false
+    },
+    {
+      "case": "voice03",
+      "mode": "voice",
+      "requested": "目玉焼きを作って",
+      "words": "目玉焼きを作って",
+      "result": "反映済み",
+      "credits": 0.1789925,
+      "seconds": 13.258014213992283,
+      "sentBeforeConfirmation": false
+    },
+    {
+      "case": "text03",
+      "mode": "text",
+      "requested": "夕焼けの空を、小鳥が羽ばたきながら飛ぶ景色にして",
+      "words": "夕焼けの空を、小鳥が羽ばたきながら飛ぶ景色にして",
+      "result": "反映済み",
+      "credits": 0.181255,
+      "seconds": 14.624399213003926,
+      "sentBeforeConfirmation": false
+    }
+  ],
+  "attempts": [
+    {
+      "words": "水中のようにして",
+      "result": "反映済み",
+      "credits": 0.139205,
+      "seconds": 12.228432025993243,
+      "repair": false
+    },
+    {
+      "words": "金色の光で輪を作ってゆっくり回して",
+      "result": "反映済み",
+      "credits": 0.17598,
+      "seconds": 19.110318430000916,
+      "repair": false
+    },
+    {
+      "words": "青い海の中を、256匹の魚が3つの群れで泳ぐ景色にして",
+      "result": "取り消し（消費量は取得待ち）",
+      "credits": -1,
+      "seconds": 0,
+      "repair": false
+    },
+    {
+      "words": "魚の数と動きを変えずに、魚だけを金色にして",
+      "result": "反映済み",
+      "credits": 0.1555925,
+      "seconds": 9.785323172996868,
+      "repair": false
+    },
+    {
+      "words": "花のある小さな森にして",
+      "result": "反映済み",
+      "credits": 0.16940499999999997,
+      "seconds": 15.860862857996835,
+      "repair": false
+    },
+    {
+      "words": "金色の光で輪を作ってゆっくり回して",
+      "result": "反映済み",
+      "credits": 0.22653,
+      "seconds": 16.378488431000733,
+      "repair": false
+    },
+    {
+      "words": "青い海の中を、256匹の魚が3つの群れで泳ぐ景色にして",
+      "result": "反映済み",
+      "credits": 0.15773,
+      "seconds": 8.98924478799745,
+      "repair": false
+    },
+    {
+      "words": "魚の数と動きを変えずに、魚だけを金色にして",
+      "result": "反映済み",
+      "credits": 0.1332925,
+      "seconds": 5.921281717004604,
+      "repair": false
+    },
+    {
+      "words": "花のある小さな森にして",
+      "result": "反映済み",
+      "credits": 0.17109249999999998,
+      "seconds": 14.041224785993109,
+      "repair": false
+    },
+    {
+      "words": "目玉焼きを作って",
+      "result": "反映済み",
+      "credits": 0.1789925,
+      "seconds": 13.258014213992283,
+      "repair": false
+    },
+    {
+      "words": "夕焼けの空を、小鳥が羽ばたきながら飛ぶ景色にして",
+      "result": "反映済み",
+      "credits": 0.181255,
+      "seconds": 14.624399213003926,
+      "repair": false
+    },
+    {
+      "words": "青い海の中を、256匹の魚が3つの群れで泳ぐ景色にして",
+      "result": "反映済み",
+      "credits": 0.157055,
+      "seconds": 9.754809735997696,
+      "repair": false
+    },
+    {
+      "words": "魚の数と動きを変えずに、魚だけを金色にして",
+      "result": "中断（アプリの再起動・未反映）",
+      "credits": -1,
+      "seconds": 0,
+      "repair": false
+    },
+    {
+      "words": "青い海の中を、256匹の魚が3つの群れで泳ぐ景色にして",
+      "result": "反映済み",
+      "credits": 0.13569250000000002,
+      "seconds": 6.794934997000382,
+      "repair": false
+    },
+    {
+      "words": "魚の数と動きを変えずに、魚だけを金色にして",
+      "result": "反映済み",
+      "credits": 0.13490499999999997,
+      "seconds": 6.844218434998766,
+      "repair": false
+    }
+  ]
+}

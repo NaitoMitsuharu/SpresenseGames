@@ -1,10 +1,12 @@
 ﻿#include "MazeHUD.h"
 
 #include "CanvasItem.h"
+#include "AttitudeInputSubsystem.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
 #include "EngineUtils.h"
+#include "ExperienceUI.h"
 #include "Fonts/FontMeasure.h"
 #include "Framework/Application/SlateApplication.h"
 #include "MazeBallPawn.h"
@@ -14,12 +16,13 @@
 #include "TitleGameMode.h"
 #include "SprBoxSubsystem.h"
 #include "Styling/CoreStyle.h"
+#include "Misc/Paths.h"
+#include "UnrealClient.h"
 
 namespace
 {
-	const FLinearColor Accent(1.f, 0.58f, 0.1f);
-	const FLinearColor PanelBG(0.015f, 0.025f, 0.04f, 0.72f);
-	const FLinearColor PanelBorder(0.62f, 0.75f, 0.88f, 0.18f);
+	const FLinearColor Accent(0.35f, 0.94f, 0.75f);
+	float UiScale(const UCanvas* Canvas) { return Canvas ? FMath::Clamp(Canvas->SizeY / 1080.f, 0.6f, 1.6f) : 1.f; }
 
 	float LeftHudMargin(const UCanvas* Canvas)
 	{
@@ -31,7 +34,7 @@ namespace
 
 FSlateFontInfo AMazeHUD::UIFont(int32 Size) const
 {
-	return FCoreStyle::GetDefaultFontStyle("Bold", Size);
+	return FSlateFontInfo(GEngine ? GEngine->GetLargeFont() : nullptr, static_cast<float>(Size));
 }
 
 FVector2D AMazeHUD::JSize(const FString& Text, int32 Size) const
@@ -67,7 +70,7 @@ void AMazeHUD::JText(const FString& Text, const FLinearColor& Color, float X, fl
 	FCanvasTextItem Item(FVector2D(X, Y), FText::FromString(Text), ExactSizeFont, Color);
 	// Small baked drop shadow: keeps white text readable over the bright stage
 	// palettes without drawing every string twice.
-	Item.EnableShadow(FLinearColor(0.f, 0.f, 0.f, 0.55f * Color.A), FVector2D(2.f, 2.f));
+	Item.EnableShadow(FLinearColor(0.f, 0.f, 0.f, 0.25f * Color.A), FVector2D(1.f, 1.f));
 	Canvas->DrawItem(Item);
 }
 
@@ -220,27 +223,14 @@ AMazeGenerator* AMazeHUD::FindMaze()
 
 void AMazeHUD::DrawGlassPanel(float X, float Y, float W, float H)
 {
-	DrawRect(PanelBG, X, Y, W, H);
-	// 1px border
-	DrawRect(PanelBorder, X, Y, W, 1.f);
-	DrawRect(PanelBorder, X, Y + H - 1.f, W, 1.f);
-	DrawRect(PanelBorder, X, Y, 1.f, H);
-	DrawRect(PanelBorder, X + W - 1.f, Y, 1.f, H);
-	// accent bar (left edge)
-	DrawRect(Accent.CopyWithNewOpacity(0.82f), X, Y, 2.f, H);
+	ExperienceUI::Glass(Canvas, X, Y, W, H, FMath::Min(22.f * UiScale(Canvas), H * 0.3f), 0.88f);
 }
 
 void AMazeHUD::DrawStatusDot(float X, float Y, bool bOn)
 {
-	const FLinearColor On(0.25f, 0.95f, 0.45f);
-	const FLinearColor Off(0.95f, 0.3f, 0.25f);
-	const FLinearColor C = bOn ? On : Off;
-	// soft glow: layered translucent squares
-	FLinearColor Glow = C; Glow.A = 0.25f;
-	DrawRect(Glow, X - 3.f, Y - 3.f, 16.f, 16.f);
-	Glow.A = 0.45f;
-	DrawRect(Glow, X - 1.f, Y - 1.f, 12.f, 12.f);
-	DrawRect(C, X, Y, 10.f, 10.f);
+	const FLinearColor C = bOn ? ExperienceUI::Mint : ExperienceUI::Coral;
+	ExperienceUI::RoundRect(Canvas, X - 3, Y - 3, 16, 16, 8, C.CopyWithNewOpacity(0.12f));
+	ExperienceUI::RoundRect(Canvas, X, Y, 10, 10, 5, C);
 }
 
 void AMazeHUD::DrawHUD()
@@ -252,6 +242,38 @@ void AMazeHUD::DrawHUD()
 	{
 		return;
 	}
+	const float Scale = UiScale(Canvas);
+#if !UE_BUILD_SHIPPING
+	FString Review;
+	if (FParse::Value(FCommandLine::Get(), TEXT("MazeUIReview="), Review))
+	{
+		if (!bReviewSetup && GetWorld()->GetTimeSeconds() > 1.f)
+		{
+			bReviewSetup = true;
+			if (Review == TEXT("playing")) { Maze->StartGame(); }
+			else if (Review == TEXT("tutorial")) { Maze->StartTutorial(); }
+			else if (Review == TEXT("clear")) { Maze->Flow = EMazeFlow::ClearChoice; }
+			else if (Review == TEXT("ranking"))
+			{
+				Maze->Flow = EMazeFlow::AllClearRanking;
+				// Layout fixture only: never write synthetic records to the player's save.
+				Maze->SaveGameData = NewObject<UMazeSaveGame>(Maze);
+				Maze->SaveGameData->StageBestTimes.SetNum(Maze->GetStageCount());
+				Maze->RunStageTimes.SetNum(Maze->GetStageCount());
+				for (int32 I = 0; I < Maze->GetStageCount(); ++I)
+				{
+					Maze->RunStageTimes[I] = 32.f + I * 14;
+					Maze->SaveGameData->StageBestTimes[I].Times = { 32.f + I * 14, 39.f + I * 14, 44.f + I * 14, 51.f + I * 14, 63.f + I * 14 };
+				}
+			}
+		}
+		if (!bReviewShot && GetWorld()->GetTimeSeconds() > 3.f)
+		{
+			bReviewShot = true;
+			FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / TEXT("AutoShots") / (TEXT("ui_maze_") + Review + TEXT(".png")), true, false);
+		}
+	}
+#endif
 
 	switch (Maze->Flow)
 	{
@@ -267,11 +289,11 @@ void AMazeHUD::DrawHUD()
 	case EMazeFlow::Playing:
 	default:
 		DrawMinimap(Maze);
-		DrawButton(TEXT("Home"), TEXT("ホーム"), LeftHudMargin(Canvas) + 270.f + 12.f, 20.f, 120.f, 60.f, false);
+		DrawButton(TEXT("Home"), TEXT("ホーム"), LeftHudMargin(Canvas) + 320.f * Scale, 36.f * Scale, 124.f * Scale, 54.f * Scale, false);
 		if (AMazeBallPawn* Ball = Cast<AMazeBallPawn>(GetOwningPawn()); Ball && !Ball->IsTouchControllerActive())
 		{
 			DrawAttitudeIndicator();
-			DrawButton(TEXT("LevelReset"), TEXT("姿勢リセット"), LeftHudMargin(Canvas), 244.f, 190.f, 38.f, false);
+			DrawButton(TEXT("LevelReset"), TEXT("姿勢リセット"), LeftHudMargin(Canvas), 230.f * Scale, 218.f * Scale, 48.f * Scale, false);
 		}
 		DrawJumpFeedback();
 		DrawGoalArrow(Maze);
@@ -382,16 +404,16 @@ void AMazeHUD::DrawTouchController()
 	const FVector2D Move = Ball->GetTouchMoveInput();
 	const FVector2D Knob = StickCenter + FVector2D(Move.Y, -Move.X) * StickRadius * 0.62f;
 	const float KnobRadius = StickRadius * 0.27f;
-	DrawRect(FLinearColor(0.08f, 0.65f, 0.9f, 0.18f),
-		Knob.X - KnobRadius, Knob.Y - KnobRadius, KnobRadius * 2.f, KnobRadius * 2.f);
+	ExperienceUI::RoundRect(Canvas, Knob.X - KnobRadius, Knob.Y - KnobRadius, KnobRadius * 2, KnobRadius * 2, KnobRadius,
+		ExperienceUI::Paper.CopyWithNewOpacity(0.2f));
 	Ring(Knob, KnobRadius, FLinearColor(0.28f, 0.88f, 1.f, 0.9f), 4.f);
 
 	const bool bJumpDown = Ball->IsTouchJumpPressed();
 	const FLinearColor JumpColor = bJumpDown
-		? FLinearColor(1.f, 0.68f, 0.18f, 0.95f)
-		: FLinearColor(1.f, 0.58f, 0.1f, 0.58f);
-	DrawRect(JumpColor.CopyWithNewOpacity(bJumpDown ? 0.24f : 0.10f),
-		JumpCenter.X - JumpRadius, JumpCenter.Y - JumpRadius, JumpRadius * 2.f, JumpRadius * 2.f);
+		? ExperienceUI::Mint
+		: ExperienceUI::Paper.CopyWithNewOpacity(0.65f);
+	ExperienceUI::RoundRect(Canvas, JumpCenter.X - JumpRadius, JumpCenter.Y - JumpRadius, JumpRadius * 2, JumpRadius * 2, JumpRadius,
+		ExperienceUI::Ink.CopyWithNewOpacity(0.5f));
 	Ring(JumpCenter, JumpRadius, JumpColor, bJumpDown ? 7.f : 5.f);
 	// Two upward chevrons communicate jump without another label.
 	const float Icon = JumpRadius * 0.24f;
@@ -450,20 +472,14 @@ void AMazeHUD::NotifyHitBoxClick(FName BoxName)
 
 void AMazeHUD::DrawButton(FName Id, const FString& Label, float X, float Y, float W, float H, bool bPrimary)
 {
-	if (bPrimary)
-	{
-		DrawRect(FLinearColor(Accent.R, Accent.G, Accent.B, 0.9f), X, Y, W, H);
-		DrawRect(FLinearColor(1.f, 1.f, 1.f, 0.25f), X, Y, W, 2.f);
-	}
-	else
-	{
-		DrawGlassPanel(X, Y, W, H);
-	}
-
-	const int32 Size = H > 50.f ? 28 : 20;
+	const bool Hover = ExperienceUI::Hovered(GetOwningPlayerController(), X, Y, W, H);
+	ExperienceUI::RoundRect(Canvas, X, Y, W, H, H * 0.5f,
+		bPrimary ? (Hover ? Accent : ExperienceUI::Paper) : ExperienceUI::Ink.CopyWithNewOpacity(Hover ? 0.98f : 0.82f));
+	const float Scale = UiScale(Canvas);
+	const int32 Size = FMath::RoundToInt((H / Scale > 62.f ? 26.f : 20.f) * Scale);
 	const FVector2D TS = JSize(Label, Size);
 	JText(Label,
-		bPrimary ? FLinearColor(0.08f, 0.06f, 0.02f) : FLinearColor::White,
+		bPrimary ? ExperienceUI::Ink : ExperienceUI::Paper,
 		X + (W - TS.X) * 0.5f, Y + (H - TS.Y) * 0.5f, Size);
 
 	AddHitBox(FVector2D(X, Y), FVector2D(W, H), Id, true);
@@ -471,183 +487,100 @@ void AMazeHUD::DrawButton(FName Id, const FString& Label, float X, float Y, floa
 
 void AMazeHUD::DrawHomeScreen(AMazeGenerator* Maze)
 {
-	const float CX = Canvas->SizeX * 0.5f;
-
-	// Dim + vignette-ish bars
-	DrawRect(FLinearColor(0.02f, 0.03f, 0.07f, 0.65f), 0.f, 0.f, Canvas->SizeX, Canvas->SizeY);
-
-	// Title (kept in Latin - it is the product name, not a sentence to read)
-	const FString Title = TEXT("SPRESENSE MAZE");
-	const float T = GetWorld()->GetTimeSeconds();
-	const FVector2D TS = JSize(Title, 68);
-	const float TitleY = Canvas->SizeY * 0.17f;
-	JText(Title, FLinearColor::White, CX - TS.X * 0.5f, TitleY, 68);
-	const float LineW = TS.X * (0.8f + 0.05f * FMath::Sin(T * 2.f));
-	DrawRect(Accent, CX - LineW * 0.5f, TitleY + TS.Y + 8.f, LineW, 4.f);
-
-	// Back to the game-select screen
-	DrawButton(TEXT("Top"), TEXT("トップ"), LeftHudMargin(Canvas), 20.f, 140.f, 60.f, false);
-
-	// Buttons
-	const float BW = 340.f, BH = 64.f, Gap = 14.f;
-	const float BY = Canvas->SizeY * 0.45f;
-	DrawButton(TEXT("Start"), TEXT("開始"), CX - BW * 0.5f, BY, BW, BH, true);
-	DrawButton(TEXT("Tutorial"), TEXT("チュートリアル"), CX - BW * 0.5f, BY + (BH + Gap), BW, BH, false);
-	DrawButton(TEXT("Calibrate"), TEXT("キャリブレーション"), CX - BW * 0.5f, BY + (BH + Gap) * 2.f, BW, BH, false);
-
-	// Connection status. bBoard only means the USB handshake completed - it
-	// says nothing about whether the IMU-Adv stream is actually delivering
-	// samples (seen firsthand: board connected, zero samples ever arrived).
-	// Imu.bValid (Sequence > 0) is the only honest "will actually use SPR-BOX"
-	// signal, so that - not bBoard - decides what this screen promises.
-	bool bService = false, bBoard = false;
-	bool bImuValid = false;
-	if (USprBoxSubsystem* SprBox = GetGameInstance()->GetSubsystem<USprBoxSubsystem>())
-	{
-		SprBox->GetConnectionStatus(bService, bBoard);
-		bImuValid = SprBox->GetImuData().bValid;
-	}
-	const bool bSprBoxReady = bService && bBoard && bImuValid;
-#if PLATFORM_ANDROID || PLATFORM_IOS
-	const bool bHasFallbackSensor = true;
-#else
-	const bool bHasFallbackSensor = false;
-#endif
-	const FString InputName = bSprBoxReady ? TEXT("SPRBOX") : (bHasFallbackSensor ? TEXT("ANDROID") : TEXT("TOUCH"));
-	const FVector2D InputSize = JSize(InputName, 18);
-	const float SY = BY + (BH + Gap) * 3.f + 12.f;
-	const float StatusX = CX - (InputSize.X + 28.f) * 0.5f;
-	if (bSprBoxReady)
-	{
-		DrawStatusDot(StatusX, SY + 2.f, true);
-	}
-	else
-	{
-		DrawRect(FLinearColor(0.22f, 0.82f, 1.f, 0.9f), StatusX, SY + 2.f, 10.f, 10.f);
-	}
-	JText(InputName, FLinearColor(1.f, 1.f, 1.f, 0.8f), StatusX + 20.f, SY - 3.f, 18);
-	if (bService && bBoard && !bImuValid)
-	{
-		const FString Waiting = TEXT("ボード接続済み・データ待ち");
-		const FVector2D WS = JSize(Waiting, 14);
-		JText(Waiting, FLinearColor(1.f, 0.75f, 0.3f, 0.85f), CX - WS.X * 0.5f, SY + 22.f, 14);
-	}
+    using namespace ExperienceUI;
+    const float Scale = UiScale(Canvas), Width = Canvas->SizeX, Height = Canvas->SizeY;
+    const float Left = LeftHudMargin(Canvas), Top = Height * 0.19f;
+    Gradient(Canvas, 0, 0, Width, Height, FLinearColor(0.008f, 0.018f, 0.028f, 0.98f), FLinearColor(0.008f, 0.018f, 0.028f, 0.18f), true);
+    Gradient(Canvas, 0, Height * 0.7f, Width, Height * 0.3f, FLinearColor(0,0,0,0), Ink.CopyWithNewOpacity(0.9f));
+    JText(TEXT("01  /  MAZE"), Mint, Left, Top, FMath::RoundToInt(17 * Scale));
+    JText(TEXT("迷路"), Paper, Left - 2 * Scale, Top + 38 * Scale, FMath::RoundToInt(80 * Scale));
+    JText(TEXT("転がして、仕掛けを越える。"), Paper.CopyWithNewOpacity(0.8f), Left, Top + 150 * Scale, FMath::RoundToInt(25 * Scale));
+    JText(TEXT("傾きとジャンプで進む、6つのステージ。"), Muted, Left, Top + 195 * Scale, FMath::RoundToInt(18 * Scale));
+    DrawButton(TEXT("Top"), TEXT("トップ"), Width - 190 * Scale, 60 * Scale, 124 * Scale, 54 * Scale, false);
+    const float ButtonY = Height * 0.55f;
+    DrawButton(TEXT("Start"), TEXT("はじめる"), Left, ButtonY, 390 * Scale, 78 * Scale, true);
+    DrawButton(TEXT("Tutorial"), TEXT("操作ガイド"), Left, ButtonY + 96 * Scale, 188 * Scale, 58 * Scale, false);
+    DrawButton(TEXT("Calibrate"), TEXT("姿勢を調整"), Left + 202 * Scale, ButtonY + 96 * Scale, 188 * Scale, 58 * Scale, false);
+    const EAttitudeSource Input = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>()->GetState().Source;
+    const FString InputName = Input == EAttitudeSource::SprBox ? TEXT("箱を傾けて操作") : Input == EAttitudeSource::DeviceMotion ? TEXT("端末を傾けて操作") :
+        Input == EAttitudeSource::Keyboard ? TEXT("キーボードで操作") : TEXT("画面のスティックで操作");
+    const float StatusY = ButtonY + 184 * Scale;
+    RoundRect(Canvas, Left + 2 * Scale, StatusY + 8 * Scale, 7 * Scale, 7 * Scale, 3.5f * Scale, Mint);
+    JText(InputName, Muted, Left + 22 * Scale, StatusY, FMath::RoundToInt(17 * Scale));
+    JText(TEXT("小さな傾きで、少しずつ。"), Paper.CopyWithNewOpacity(0.6f), Width * 0.66f, Height * 0.86f, FMath::RoundToInt(18 * Scale));
 }
 
 void AMazeHUD::DrawClearChoice(AMazeGenerator* Maze)
 {
-	const float CX = Canvas->SizeX * 0.5f;
-
-	DrawRect(FLinearColor(0.02f, 0.03f, 0.07f, 0.55f), 0.f, 0.f, Canvas->SizeX, Canvas->SizeY);
-
-	const FString Title = FString::Printf(TEXT("STAGE %02d CLEAR"), Maze->CurrentStage + 1);
-	const FVector2D TS = JSize(Title, 54);
-	const float TitleY = Canvas->SizeY * 0.28f;
-	JText(Title, FLinearColor::White, CX - TS.X * 0.5f, TitleY, 54);
-	DrawRect(Accent, CX - TS.X * 0.55f, TitleY + TS.Y + 10.f, TS.X * 1.1f, 4.f);
-
-	const float BW = 340.f, BH = 64.f;
-	DrawButton(TEXT("Next"), TEXT("次へ"), CX - BW * 0.5f, Canvas->SizeY * 0.52f, BW, BH, true);
-	DrawButton(TEXT("Home"), TEXT("ホーム"), CX - BW * 0.5f, Canvas->SizeY * 0.52f + BH + 18.f, BW, BH, false);
+    using namespace ExperienceUI;
+    const float Scale = UiScale(Canvas), CX = Canvas->SizeX * 0.5f, CY = Canvas->SizeY * 0.5f;
+    DrawRect(Ink.CopyWithNewOpacity(0.72f), 0, 0, Canvas->SizeX, Canvas->SizeY);
+    Glass(Canvas, CX - 300 * Scale, CY - 238 * Scale, 600 * Scale, 476 * Scale, 32 * Scale, 0.96f);
+    const FString Number = FString::Printf(TEXT("STAGE %02d / %02d"), Maze->CurrentStage + 1, Maze->GetStageCount());
+    const FVector2D NS = JSize(Number, FMath::RoundToInt(17 * Scale));
+    JText(Number, Mint, CX - NS.X * 0.5f, CY - 191 * Scale, FMath::RoundToInt(17 * Scale));
+    const FString Title = TEXT("クリア！");
+    const FVector2D TS = JSize(Title, FMath::RoundToInt(56 * Scale));
+    JText(Title, Paper, CX - TS.X * 0.5f, CY - 135 * Scale, FMath::RoundToInt(56 * Scale));
+    const FString Stage = Maze->GetStageName();
+    const FVector2D SS = JSize(Stage, FMath::RoundToInt(21 * Scale));
+    JText(Stage, Muted, CX - SS.X * 0.5f, CY - 43 * Scale, FMath::RoundToInt(21 * Scale));
+    DrawButton(TEXT("Next"), TEXT("次のステージへ"), CX - 204 * Scale, CY + 27 * Scale, 408 * Scale, 72 * Scale, true);
+    DrawButton(TEXT("Home"), TEXT("ホームへ"), CX - 204 * Scale, CY + 117 * Scale, 408 * Scale, 58 * Scale, false);
 }
 
 void AMazeHUD::DrawAllClearRanking(AMazeGenerator* Maze)
 {
-	const float CX = Canvas->SizeX * 0.5f;
-
-	DrawRect(FLinearColor(0.02f, 0.03f, 0.07f, 0.7f), 0.f, 0.f, Canvas->SizeX, Canvas->SizeY);
-
-	const FString Title = TEXT("ALL CLEAR");
-	const FVector2D TS = JSize(Title, 46);
-	const float TitleY = Canvas->SizeY * 0.05f;
-	JText(Title, FLinearColor::White, CX - TS.X * 0.5f, TitleY, 46);
-	DrawRect(Accent, CX - TS.X * 0.55f, TitleY + TS.Y + 8.f, TS.X * 1.1f, 4.f);
-
-	const FString Subtitle = TEXT("ステージ別タイムランキング");
-	const FVector2D SubSize = JSize(Subtitle, 18);
-	JText(Subtitle, FLinearColor(1.f, 1.f, 1.f, 0.75f), CX - SubSize.X * 0.5f, TitleY + TS.Y + 24.f, 18);
-
-	auto FormatTime = [](float Seconds) -> FString
-	{
-		if (Seconds < 0.f)
-		{
-			return TEXT("--分--秒--");
-		}
-		int32 Minutes = FMath::FloorToInt(Seconds / 60.f);
-		const float Remainder = Seconds - static_cast<float>(Minutes) * 60.f;
-		int32 WholeSec = FMath::FloorToInt(Remainder);
-		int32 Centi = FMath::RoundToInt((Remainder - static_cast<float>(WholeSec)) * 100.f);
-		if (Centi >= 100)
-		{
-			Centi = 0;
-			++WholeSec;
-		}
-		if (WholeSec >= 60)
-		{
-			WholeSec = 0;
-			++Minutes;
-		}
-		return FString::Printf(TEXT("%d分%02d秒%02d"), Minutes, WholeSec, Centi);
-	};
-
-	const int32 StageCount = Maze->GetStageCount();
-	const float ListTop = TitleY + TS.Y + 56.f;
-	const float BottomMargin = Canvas->SizeY * 0.16f;
-	const float RowH = FMath::Clamp((Canvas->SizeY - BottomMargin - ListTop) / FMath::Max(StageCount, 1), 96.f, 150.f);
-	const float PanelW = FMath::Min(Canvas->SizeX * 0.86f, 1100.f);
-	const float PanelX = CX - PanelW * 0.5f;
-
-	for (int32 i = 0; i < StageCount; ++i)
-	{
-		const float RowY = ListTop + i * RowH;
-		const float PanelH = RowH - 8.f;
-		DrawGlassPanel(PanelX, RowY, PanelW, PanelH);
-
-		const FString StageLabel = FString::Printf(TEXT("Stage%02d"), i + 1);
-		JText(StageLabel, FLinearColor::White, PanelX + 16.f, RowY + 8.f, 19);
-		const FVector2D StageLabelSize = JSize(StageLabel, 19);
-
-		const float RunTime = Maze->RunStageTimes.IsValidIndex(i) ? Maze->RunStageTimes[i] : -1.f;
-		const FString RunTimeStr = FString::Printf(TEXT("今回 %s"), *FormatTime(RunTime));
-		const FVector2D RunTS = JSize(RunTimeStr, 16);
-		JText(RunTimeStr, FLinearColor(0.6f, 0.85f, 1.f, 1.f), PanelX + PanelW - RunTS.X - 16.f, RowY + 10.f, 16);
-
-		bool bIsNewBest = false;
-		if (Maze->SaveGameData && Maze->SaveGameData->StageBestTimes.IsValidIndex(i))
-		{
-			const TArray<float>& Times = Maze->SaveGameData->StageBestTimes[i].Times;
-
-			// 3 columns x 2 rows (fits the top 5 ranked times with one spare cell)
-			const float GridTop = RowY + 38.f;
-			const float ColW = (PanelW - 32.f) / 3.f;
-			const float GridRowH = (PanelH - 46.f) * 0.5f;
-			for (int32 Rank = 0; Rank < Times.Num(); ++Rank)
-			{
-				const int32 Col = Rank % 3;
-				const int32 GridRow = Rank / 3;
-				const float CellX = PanelX + 16.f + Col * ColW;
-				const float CellY = GridTop + GridRow * GridRowH;
-
-				const bool bIsThisRun = RunTime >= 0.f && FMath::IsNearlyEqual(Times[Rank], RunTime, 0.001f);
-				const FLinearColor Color = bIsThisRun
-					? FLinearColor(1.f, 0.9f, 0.15f)
-					: FLinearColor(1.f, 1.f, 1.f, 0.85f);
-				JText(FString::Printf(TEXT("%d位 %s"), Rank + 1, *FormatTime(Times[Rank])),
-					Color, CellX, CellY, 16);
-			}
-			if (Times.Num() > 0 && RunTime >= 0.f && FMath::IsNearlyEqual(Times[0], RunTime, 0.001f))
-			{
-				bIsNewBest = true;
-			}
-		}
-		if (bIsNewBest)
-		{
-			JText(TEXT("NEW!"), Accent, PanelX + 16.f + StageLabelSize.X + 14.f, RowY + 9.f, 18);
-		}
-	}
-
-	const float BW = 340.f, BH = 64.f;
-	DrawButton(TEXT("Home"), TEXT("ホーム"), CX - BW * 0.5f, Canvas->SizeY - BottomMargin + 10.f, BW, BH, true);
+    using namespace ExperienceUI;
+    const float Scale = UiScale(Canvas), Width = Canvas->SizeX, Height = Canvas->SizeY;
+    DrawRect(Ink.CopyWithNewOpacity(0.91f), 0, 0, Width, Height);
+    const FString Heading = TEXT("すべてのステージをクリア");
+    const int32 HeadingFont = FMath::RoundToInt(42 * Scale);
+    const FVector2D HS = JSize(Heading, HeadingFont);
+    JText(Heading, Paper, (Width - HS.X) * 0.5f, Height * 0.07f, HeadingFont);
+    const FString Subtitle = TEXT("ステージ別の記録");
+    const FVector2D SS = JSize(Subtitle, FMath::RoundToInt(18 * Scale));
+    JText(Subtitle, Mint, (Width - SS.X) * 0.5f, Height * 0.07f + 68 * Scale, FMath::RoundToInt(18 * Scale));
+    const int32 Count = Maze->GetStageCount(), Columns = Count > 6 ? 3 : 2, Rows = FMath::DivideAndRoundUp(Count, Columns);
+    const float TotalW = FMath::Min(Width * 0.84f, 1600 * Scale), Gap = 22 * Scale;
+    const float CardW = (TotalW - Gap * (Columns - 1)) / Columns;
+    const float ListTop = Height * 0.23f, RowH = (Height * 0.85f - ListTop) / FMath::Max(1, Rows);
+    auto TimeLabel = [](float Seconds)
+    {
+        if (Seconds < 0) { return FString(TEXT("--:--.--")); }
+        const int32 Centi = FMath::RoundToInt(Seconds * 100);
+        return FString::Printf(TEXT("%02d:%02d.%02d"), Centi / 6000, (Centi / 100) % 60, Centi % 100);
+    };
+    for (int32 I = 0; I < Count; ++I)
+    {
+        const float X = (Width - TotalW) * 0.5f + (I % Columns) * (CardW + Gap), Y = ListTop + (I / Columns) * RowH;
+        Glass(Canvas, X, Y, CardW, RowH - 14 * Scale, 24 * Scale, 0.94f);
+        const int32 Font = FMath::RoundToInt(18 * Scale);
+        const FString Stage = FString::Printf(TEXT("STAGE %02d"), I + 1);
+        JText(Stage, Muted, X + 22 * Scale, Y + 16 * Scale, Font);
+        const float Run = Maze->RunStageTimes.IsValidIndex(I) ? Maze->RunStageTimes[I] : -1.f;
+        const FString Current = TEXT("今回  ") + TimeLabel(Run);
+        const FVector2D CS = JSize(Current, Font);
+        JText(Current, Paper, X + CardW - CS.X - 22 * Scale, Y + 16 * Scale, Font);
+        if (Maze->SaveGameData && Maze->SaveGameData->StageBestTimes.IsValidIndex(I))
+        {
+            const TArray<float>& Times = Maze->SaveGameData->StageBestTimes[I].Times;
+            if (Times.Num() > 0 && Run >= 0 && FMath::IsNearlyEqual(Times[0], Run, 0.001f))
+            {
+                RoundRect(Canvas, X + 132 * Scale, Y + 17 * Scale, 54 * Scale, 22 * Scale, 11 * Scale, Mint);
+                JText(TEXT("BEST"), Ink, X + 141 * Scale, Y + 20 * Scale, FMath::RoundToInt(12 * Scale));
+            }
+            const float CellW = (CardW - 44 * Scale) / 3;
+            for (int32 Rank = 0; Rank < Times.Num(); ++Rank)
+            {
+                const bool CurrentRun = Run >= 0 && FMath::IsNearlyEqual(Times[Rank], Run, 0.001f);
+                const FString Record = FString::Printf(TEXT("%d  %s"), Rank + 1, *TimeLabel(Times[Rank]));
+                JText(Record, CurrentRun ? Mint : Paper.CopyWithNewOpacity(0.72f), X + 22 * Scale + (Rank % 3) * CellW,
+                    Y + 64 * Scale + (Rank / 3) * 42 * Scale, FMath::RoundToInt(16 * Scale));
+            }
+        }
+    }
+    DrawButton(TEXT("Home"), TEXT("ホームへ"), Width * 0.5f - 170 * Scale, Height - 104 * Scale, 340 * Scale, 66 * Scale, true);
 }
 
 void AMazeHUD::DrawCalibrationOverlay()
@@ -701,92 +634,18 @@ void AMazeHUD::DrawCalibrationOverlay()
 
 void AMazeHUD::DrawAttitudeIndicator()
 {
-	AMazeBallPawn* Ball = Cast<AMazeBallPawn>(GetOwningPawn());
-	if (!Ball)
-	{
-		return;
-	}
-
-	// Panel below the stage/status panel
-	const float PX = LeftHudMargin(Canvas), PY = 96.f, PW = 250.f, PH = 138.f;
-	DrawGlassPanel(PX, PY, PW, PH);
-
-	// Oblong box (Spresense lying flat), rotated by the live roll/pitch.
-	// Mapping (matches how the device is held):
-	//   P down -> the NEAR long edge dips (rotation around the long axis)
-	//   R down -> the RIGHT short edge rises (rotation around the short axis)
-	const FVector Extents(60.f, 35.f, 14.f);
-	const FRotator DeviceRot(Ball->CurrentRollDeg, 0.f, Ball->CurrentPitchDeg);
-	const FRotationMatrix DeviceM(DeviceRot);
-	const FRotationMatrix ViewM(FRotator(-25.f, 35.f, 0.f)); // fixed isometric view
-
-	const float CX = PX + PW * 0.5f;
-	const float CY = PY + PH * 0.5f;
-
-	FVector2D P[8];
-	for (int32 i = 0; i < 8; ++i)
-	{
-		const FVector Corner(
-			(i & 1) ? Extents.X : -Extents.X,
-			(i & 2) ? Extents.Y : -Extents.Y,
-			(i & 4) ? Extents.Z : -Extents.Z);
-		const FVector V = ViewM.InverseTransformVector(DeviceM.TransformVector(Corner));
-		P[i] = FVector2D(CX + V.Y, CY - V.Z);
-	}
-
-	const FLinearColor EdgeColor = Ball->bOrientationWarning
-		? FLinearColor(1.f, 0.25f, 0.2f)
-		: FLinearColor(1.f, 1.f, 1.f, 0.55f);
-	const FLinearColor TopColor = Ball->bOrientationWarning
-		? FLinearColor(1.f, 0.35f, 0.3f)
-		: Accent;
-
-	static const int32 Edges[12][2] = {
-		{0,1},{2,3},{0,2},{1,3},          // bottom (z-)
-		{4,5},{6,7},{4,6},{5,7},          // top (z+)
-		{0,4},{1,5},{2,6},{3,7} };        // verticals
-	for (int32 e = 0; e < 12; ++e)
-	{
-		const bool bTop = e >= 4 && e < 8;
-		DrawLine(P[Edges[e][0]].X, P[Edges[e][0]].Y, P[Edges[e][1]].X, P[Edges[e][1]].Y,
-			bTop ? TopColor : EdgeColor, bTop ? 3.f : 1.5f);
-	}
-
-	// Keep the numeric attitude visible next to the model for calibration and
-	// input-source debugging. Values are degrees and are intentionally compact.
-	const FString AttitudeText = FString::Printf(TEXT("R %+.3f  P %+.3f  Y %+.3f"),
-		Ball->CurrentRollDeg, Ball->CurrentPitchDeg, Ball->CurrentYawDeg);
-	JText(AttitudeText, FLinearColor::White, PX + 14.f, PY + PH - 24.f, 13);
-
-	// Acceleration direction arrow (device-frame ax/ay, drawn on the box plane)
-	if (USprBoxSubsystem* SprBox = GetGameInstance()->GetSubsystem<USprBoxSubsystem>())
-	{
-		const FSprBoxImuData Imu = SprBox->GetImuData();
-		if (Imu.bValid)
-		{
-			const float Scale = 6.f; // px per m/s^2
-			FVector AccLocal(Imu.Ax * Scale, Imu.Ay * Scale, 0.f);
-			AccLocal = AccLocal.GetClampedToMaxSize(70.f);
-			if (AccLocal.Size() > 6.f)
-			{
-				const FVector V = ViewM.InverseTransformVector(DeviceM.TransformVector(AccLocal));
-				const FVector2D From(CX, CY);
-				const FVector2D To(CX + V.Y, CY - V.Z);
-				const FLinearColor AccColor(0.2f, 0.95f, 1.f);
-				DrawLine(From.X, From.Y, To.X, To.Y, AccColor, 3.f);
-				// arrow head
-				FVector2D Dir = To - From;
-				if (Dir.Normalize())
-				{
-					const FVector2D Perp(-Dir.Y, Dir.X);
-					const FVector2D T1 = To - Dir * 10.f + Perp * 6.f;
-					const FVector2D T2 = To - Dir * 10.f - Perp * 6.f;
-					DrawLine(To.X, To.Y, T1.X, T1.Y, AccColor, 3.f);
-					DrawLine(To.X, To.Y, T2.X, T2.Y, AccColor, 3.f);
-				}
-			}
-		}
-	}
+    const AMazeBallPawn* Ball = Cast<AMazeBallPawn>(GetOwningPawn());
+    if (!Ball) { return; }
+    using namespace ExperienceUI;
+    const float Scale = UiScale(Canvas), X = LeftHudMargin(Canvas), Y = 132 * Scale;
+    Glass(Canvas, X, Y, 218 * Scale, 82 * Scale, 22 * Scale, 0.7f);
+    JText(TEXT("傾き"), Muted, X + 20 * Scale, Y + 26 * Scale, FMath::RoundToInt(18 * Scale));
+    const float CX = X + 154 * Scale, CY = Y + 41 * Scale;
+    RoundRect(Canvas, CX - 30 * Scale, CY - 2 * Scale, 60 * Scale, 4 * Scale, 2 * Scale, Paper.CopyWithNewOpacity(0.18f));
+    RoundRect(Canvas, CX - 2 * Scale, CY - 24 * Scale, 4 * Scale, 48 * Scale, 2 * Scale, Paper.CopyWithNewOpacity(0.18f));
+    const float DX = FMath::Clamp(Ball->CurrentRollDeg / 30.f, -1.f, 1.f) * 27 * Scale;
+    const float DY = FMath::Clamp(Ball->CurrentPitchDeg / 30.f, -1.f, 1.f) * 21 * Scale;
+    RoundRect(Canvas, CX + DX - 5 * Scale, CY + DY - 5 * Scale, 10 * Scale, 10 * Scale, 5 * Scale, Ball->bOrientationWarning ? Coral : Mint);
 }
 
 void AMazeHUD::DrawOrientationWarning()
@@ -831,16 +690,18 @@ void AMazeHUD::DrawMinimap(AMazeGenerator* Maze)
 	}
 
 	// Camera looks down world +X: screen-right = +Y (rows), screen-up = +X (cols)
-	const float Cell = MinimapSize / FMath::Max(NumRows, NumCols);
+	const float Scale = UiScale(Canvas);
+	const float Cell = MinimapSize * 0.8f * Scale / FMath::Max(NumRows, NumCols);
 	const float MapW = Cell * NumRows;
 	const float MapH = Cell * NumCols;
-	const float Pad = 10.f;
-	const float PX = Canvas->SizeX - MapW - MinimapMargin - Pad * 2.f;
-	const float PY = MinimapMargin;
+	const float Pad = 18.f * Scale;
+	const float PX = Canvas->SizeX - MapW - MinimapMargin * Scale - Pad * 2.f;
+	const float PY = 30.f * Scale;
 	const float X0 = PX + Pad;
-	const float Y0 = PY + Pad;
+	const float Y0 = PY + Pad + 30 * Scale;
 
-	DrawGlassPanel(PX, PY, MapW + Pad * 2.f, MapH + Pad * 2.f);
+	DrawGlassPanel(PX, PY, MapW + Pad * 2.f, MapH + Pad * 2.f + 30 * Scale);
+	JText(TEXT("マップ"), ExperienceUI::Muted, PX + Pad, PY + 12 * Scale, FMath::RoundToInt(15 * Scale));
 
 	const float T = GetWorld()->GetTimeSeconds();
 	const float Pulse = 0.5f + 0.5f * FMath::Sin(T * 5.f);
@@ -889,10 +750,9 @@ void AMazeHUD::DrawMinimap(AMazeGenerator* Maze)
 			const float Px = X0 + Row * Cell;
 			const float Py = Y0 + (NumCols - Col) * Cell;
 			const float R = FMath::Max(Cell * 0.32f, 3.f);
-			FLinearColor Glow(0.2f, 0.6f, 1.f, 0.35f);
-			DrawRect(Glow, Px - R - 2.f, Py - R - 2.f, (R + 2.f) * 2.f, (R + 2.f) * 2.f);
-			DrawRect(FLinearColor::White, Px - R, Py - R, R * 2.f, R * 2.f);
-			DrawRect(FLinearColor(0.15f, 0.55f, 1.f), Px - R + 1.f, Py - R + 1.f, R * 2.f - 2.f, R * 2.f - 2.f);
+			ExperienceUI::RoundRect(Canvas, Px - R - 3, Py - R - 3, (R + 3) * 2, (R + 3) * 2, R + 3, ExperienceUI::Mint.CopyWithNewOpacity(0.2f));
+			ExperienceUI::RoundRect(Canvas, Px - R, Py - R, R * 2, R * 2, R, ExperienceUI::Paper);
+			ExperienceUI::RoundRect(Canvas, Px - R * 0.5f, Py - R * 0.5f, R, R, R * 0.5f, ExperienceUI::Mint);
 		}
 	}
 }
@@ -1000,31 +860,16 @@ void AMazeHUD::DrawTutorialHint(AMazeGenerator* Maze)
 
 void AMazeHUD::DrawMessages(AMazeGenerator* Maze)
 {
-	// ---- Top-left: stage chip + connection status in one glass panel ----
-	{
-		const float PX = LeftHudMargin(Canvas), PY = 20.f, PW = 270.f, PH = 60.f;
-		DrawGlassPanel(PX, PY, PW, PH);
 
-		const FString StageNo = Maze->bTutorialMode
-			? FString::Printf(TEXT("GUIDE %d/%d"), Maze->CurrentStage + 1, Maze->GetStageCount())
-			: FString::Printf(TEXT("STAGE %02d"), Maze->CurrentStage + 1);
-		JText(StageNo, Accent, PX + 14.f, PY + 6.f, 18);
-		const AMazeBallPawn* Ball = Cast<AMazeBallPawn>(GetOwningPawn());
-		const FString InputSource = Ball && Ball->IsUsingSprBoxInput()
-			? TEXT("IMU: SPR-BOX")
-			: (Ball && Ball->IsUsingDeviceMotion() ? TEXT("IMU: Android") : TEXT("入力: タッチ"));
-		JText(InputSource, FLinearColor::White, PX + 14.f, PY + 30.f, 16);
-
-		bool bService = false, bBoard = false;
-		if (USprBoxSubsystem* SprBox = GetGameInstance()->GetSubsystem<USprBoxSubsystem>())
-		{
-			SprBox->GetConnectionStatus(bService, bBoard);
-		}
-		if (!Ball || !Ball->IsTouchControllerActive())
-		{
-			DrawStatusDot(PX + PW - 24.f, PY + 12.f, bService && bBoard);
-		}
-	}
+    {
+        using namespace ExperienceUI;
+        const float Scale = UiScale(Canvas), X = LeftHudMargin(Canvas), Y = 30 * Scale;
+        Glass(Canvas, X, Y, 300 * Scale, 82 * Scale, 24 * Scale, 0.84f);
+        const FString Stage = Maze->bTutorialMode ? FString::Printf(TEXT("GUIDE %02d / %02d"), Maze->CurrentStage + 1, Maze->GetStageCount()) :
+            FString::Printf(TEXT("STAGE %02d / %02d"), Maze->CurrentStage + 1, Maze->GetStageCount());
+        JText(Stage, Mint, X + 20 * Scale, Y + 12 * Scale, FMath::RoundToInt(15 * Scale));
+        JText(Maze->GetStageName(), Paper, X + 20 * Scale, Y + 38 * Scale, FMath::RoundToInt(22 * Scale));
+    }
 
 	// ---- Stage-clear celebration ----
 	if (Maze->TransitionMessage.IsEmpty())

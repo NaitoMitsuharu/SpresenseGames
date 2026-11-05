@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Run inside Termux (or its Linux environment), after Copilot login/model selection.
+# Uses a separate profile; does not change the normal OpenClaw profile.
+set -euo pipefail
+umask 077
+command -v node >/dev/null
+command -v openclaw >/dev/null
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+openclaw --profile lightbox config set gateway.mode local
+openclaw --profile lightbox config set gateway.bind loopback
+openclaw --profile lightbox config set gateway.port 18789
+openclaw --profile lightbox config set gateway.auth.mode token
+openclaw --profile lightbox config set gateway.http.endpoints.chatCompletions.enabled true
+# The demo requires text generation only, without filesystem/browser/shell tools.
+openclaw --profile lightbox config set tools.deny '["*"]' --strict-json
+OPENCLAW_GATEWAY_TOKEN="$(node "$SCRIPT_DIR/lightbox-token.cjs")"
+export OPENCLAW_GATEWAY_TOKEN
+openclaw --profile lightbox config validate
+printf '\nひかりの箱 → 設定\n接続先: http://127.0.0.1:18789\n認証キー: %s\n\n' "$OPENCLAW_GATEWAY_TOKEN"
+printf 'この画面を閉じずに、ひかりの箱へ戻ってください。\n'
+
+if command -v termux-wake-lock >/dev/null; then
+    termux-wake-lock
+fi
+METER_PID=""
+cleanup() {
+    if [[ -n "$METER_PID" ]]; then kill "$METER_PID" >/dev/null 2>&1 || true; fi
+    if command -v termux-wake-unlock >/dev/null; then termux-wake-unlock >/dev/null 2>&1 || true; fi
+}
+trap cleanup EXIT
+if [[ -f "$SCRIPT_DIR/lightbox-observer.cjs" && -f "$SCRIPT_DIR/lightbox-pricing.json" ]]; then
+    if ! node -e 'fetch("http://127.0.0.1:18791/v1/history",{headers:{Authorization:"Bearer "+process.env.OPENCLAW_GATEWAY_TOKEN},signal:AbortSignal.timeout(1500)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))'; then
+        node "$SCRIPT_DIR/lightbox-observer.cjs" &
+        METER_PID=$!
+    fi
+fi
+openclaw --profile lightbox gateway run --bind loopback --port 18789 --auth token

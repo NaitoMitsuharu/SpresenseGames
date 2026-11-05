@@ -1,9 +1,10 @@
-#include "GameHudBase.h"
+﻿#include "GameHudBase.h"
 
 #include "CanvasItem.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
+#include "ExperienceUI.h"
 #include "Fonts/FontMeasure.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Styling/CoreStyle.h"
@@ -37,7 +38,7 @@ FVector2D AGameHudBase::TextSize(const FString& InText, float Size) const
 		return FVector2D(InText.Len() * Px * 0.55f, Px);
 	}
 	const TSharedRef<FSlateFontMeasure> Measure = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
-	return FVector2D(Measure->Measure(InText, FCoreStyle::GetDefaultFontStyle("Bold", Px)));
+	return FVector2D(Measure->Measure(InText, FSlateFontInfo(GEngine ? GEngine->GetLargeFont() : nullptr, static_cast<float>(Px))));
 }
 
 void AGameHudBase::Text(const FString& InText, const FLinearColor& Color, float X, float Y, float Size, bool bShadow)
@@ -95,8 +96,8 @@ void AGameHudBase::Dot(float X, float Y, float R, const FLinearColor& Color)
 {
 	FLinearColor Glow = Color;
 	Glow.A = Color.A * 0.3f;
-	DrawRect(Glow, X - R * 1.6f, Y - R * 1.6f, R * 3.2f, R * 3.2f);
-	DrawRect(Color, X - R, Y - R, R * 2.f, R * 2.f);
+	ExperienceUI::RoundRect(Canvas, X - R * 1.6f, Y - R * 1.6f, R * 3.2f, R * 3.2f, R * 1.6f, Glow);
+	ExperienceUI::RoundRect(Canvas, X - R, Y - R, R * 2.f, R * 2.f, R, Color);
 }
 
 void AGameHudBase::Ring(float CX, float CY, float R, const FLinearColor& Color, float Thickness, int32 Segments)
