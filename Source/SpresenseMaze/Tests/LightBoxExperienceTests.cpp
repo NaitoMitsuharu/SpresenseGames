@@ -7,6 +7,23 @@
 #include "Misc/Base64.h"
 #include "Misc/FileHelper.h"
 #include "HAL/FileManager.h"
+#include "Dom/JsonObject.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxDefaultDensityTest,"SpresenseMaze.LightBox.DefaultDensityAndSparseScenes",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FLightBoxDefaultDensityTest::RunTest(const FString&)
+{
+    FLightBoxStyle S;TestEqual(TEXT("New scenes default to twice the previous density"),S.PointCount,131072);
+    S.Count=0;S.Background=FLinearColor::Black;S.Objects.Add(FLightBoxObject());
+    TestEqual(TEXT("A default sculpture uses the new full budget"),LightBoxPoints::Sample(S).Num(),131072);
+    FLightBoxStyle Parsed;FString Error;TSharedPtr<FJsonObject> Json;
+    FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(S.ToJson()),Json);Json->RemoveField(TEXT("pointCloud"));FString Missing;FJsonSerializer::Serialize(Json.ToSharedRef(),TJsonWriterFactory<>::Create(&Missing));
+    TestTrue(TEXT("Descriptions without an explicit budget still open"),FLightBoxStyle::Parse(Missing,Parsed,Error));TestEqual(TEXT("Omitted budget uses the new default"),Parsed.PointCount,131072);
+    S.PointCount=32768;TestTrue(TEXT("Explicit smaller saved scenes still open"),FLightBoxStyle::Parse(S.ToJson(),Parsed,Error));TestEqual(TEXT("A saved smaller budget is preserved"),Parsed.PointCount,32768);
+    S=FLightBoxStyle();S.Count=24;TestEqual(TEXT("A few independent lights are not multiplied to the sculpture budget"),LightBoxPoints::Sample(S).Num(),24);
+    return true;
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxDifferenceTest,"SpresenseMaze.LightBox.DifferenceKeepsUnchangedParts",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
 bool FLightBoxDifferenceTest::RunTest(const FString&)

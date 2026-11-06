@@ -55,7 +55,7 @@ def main():
     (root / 'pdca-summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
     table = ''.join(f'<tr><td><a href="{html.escape(n)}/index.html">{html.escape(n)}</a></td><td>{d["completed"]}</td><td>{d["accepted"]}</td><td>{d["calls"]}（再送{d["repairs"]}）</td><td>{d["creditsKnown"]:.4f} cr</td><td>{d["reviewed"]}</td></tr>' for n, d in summary['rounds'].items())
     payload = json.dumps({'rounds': rounds, 'cases': cases}, ensure_ascii=False).replace('</', '<\\/')
-    document = '''<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ひかりの箱・100指示と改善実験</title>
+    document = '''<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ひかりのアトリエ・100指示と改善実験</title>
 <style>body{background:#0a1520;color:#dbe9ee;font:16px/1.8 system-ui;margin:0}main{max-width:1500px;margin:auto;padding:32px}h1{font-size:34px}h2{margin-top:40px}a{color:#8edbce}table{border-collapse:collapse;width:100%}td,th{padding:10px;text-align:left;border-bottom:1px solid #3a505d}.note,article{background:#16303e;border-radius:12px;padding:20px;margin:16px 0}button,input,select{font:inherit;color:#deeeef;background:#203e4e;border:1px solid #496573;padding:7px;border-radius:7px}#compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:15px}img{width:100%}.bad{color:#ffbe85}.muted{color:#b0c5d0}</style><main>
 <h1>100の指示を実行し、景色を改善する</h1>
 <p>実際のAndroid内OpenClaw＋GitHub Copilot（gpt-6-luna）に100種類の日本語指示を送り、UEの本番と同じ読み取り・描画処理で実行。問題を直し、50件、40件の比較実験を行いました。最後に40件を仕上げ確認（36件は同じ返答の再生、4件は再生成）しています。</p>

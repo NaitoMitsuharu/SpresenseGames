@@ -5,6 +5,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameHudBase.h"
 #include "LightBoxSimulation.h"
+#include "LightBoxSensors.h"
 #include "LightBoxGame.generated.h"
 
 class UCameraComponent;
@@ -36,6 +37,8 @@ public:
 	void ToggleCameraOrbit();
 	void ResetCameraView();
 	bool IsCameraOrbiting() const { return !FMath::IsNearlyZero(ViewOrbitSpeed); }
+	/** What the phone sensors are doing right now (for the HUD). */
+	const FLightBoxSensorReading& GetSensorReading() const { return Felt; }
 	FLightBoxSimulation Simulation;
 
 	UPROPERTY() TObjectPtr<USceneComponent> SceneRoot;
@@ -49,6 +52,15 @@ private:
 	void ApplyScene(const FLightBoxStyle& Style);
 	void UpdateCameraInput(APlayerController* PC,bool Blocked);
 	void UpdateCameraView(const FLightBoxStyle& Style,float Dt);
+	void ApplySensorLook(float Dt);
+	FLightBoxSensorReader Sensors;
+	/** This frame's sensors after the scene's per-sensor sensitivity. */
+	FLightBoxSensorReading Felt;
+	float BaseBloom = 0.7f;
+	/** Palm-hold warming: a single touch resting still on the scene. */
+	double HoldStarted = -1;
+	FVector2D HoldOrigin = FVector2D::ZeroVector;
+	bool bHoldMoved = false, bHoldWarm = false;
 	uint64 AppliedRevision = MAX_uint64;
 	float ObjectBurst = 0;
 	float ShakeCooldown = 0;
@@ -90,6 +102,8 @@ public:
 	bool IsModalOpen() const { return Dialog.IsValid(); }
 private:
 	void EnsureControls();
+	void DrawSensorChips();
+	float ClapShown = 0;
 	void AttachDialog(TSharedPtr<SWidget> Focus = nullptr);
 	TSharedPtr<SWidget> Dialog;
 	TSharedPtr<SLightBoxControls> Controls;

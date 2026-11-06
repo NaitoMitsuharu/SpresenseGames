@@ -52,7 +52,8 @@ ATitlePawn::ATitlePawn()
 	Camera->FieldOfView = 43.f;
 	MazePreview = CreateDefaultSubobject<USceneComponent>(TEXT("MazePreview"));
 	MazePreview->SetupAttachment(Root);
-	MazePreview->SetRelativeLocation(FVector(520.f, 520.f, 0.f));
+	MazePreview->SetRelativeLocation(FVector(-260.f, -260.f, 0.f));
+	MazePreview->SetRelativeScale3D(FVector(1.6f));
 	MazePreview->SetVisibility(false, true);
 	LightBoxPreview = CreateDefaultSubobject<USceneComponent>(TEXT("LightBoxPreview"));
 	LightBoxPreview->SetupAttachment(Root);
@@ -140,7 +141,7 @@ void ATitlePawn::Tick(float DeltaSeconds)
 	ShipPivot->SetRelativeLocation(FVector(-260.f, -260.f, 45.f + FMath::Sin(T * 0.65f) * 16.f));
 	ShipPivot->SetRelativeRotation(FRotator(2.f + FMath::Sin(T * 0.4f) * 2.f, -12.f + FMath::Sin(T * 0.22f) * 6.f,
 		-6.f + FMath::Sin(T * 0.35f) * 4.f));
-	MazePreview->SetRelativeLocation(FVector(520.f, 520.f, FMath::Sin(T * 0.7f) * 14.f));
+	MazePreview->SetRelativeLocation(FVector(-260.f, -260.f, FMath::Sin(T * 0.7f) * 14.f));
 	MazePreview->SetRelativeRotation(FRotator(0.f, T * 12.f, 0.f));
 	LightBoxPreview->SetRelativeLocation(FVector(-260.f, -260.f, FMath::Sin(T * 0.8f) * 14.f));
 	LightBoxPreview->SetRelativeRotation(FRotator(0.f, T * 10.f, 0.f));
@@ -191,7 +192,7 @@ void ATitleHUD::DrawHUD()
 	const float CH = 104 * S, Gap = 14 * S, Y = H * 0.31f;
 	DrawCard(TEXT("Maze"), TEXT("迷路"), Left, Y, CW, CH, 0);
 	DrawCard(TEXT("Flight"), TEXT("フライト"), Left, Y + CH + Gap, CW, CH, 1);
-	DrawCard(TEXT("LightBox"), TEXT("ひかりの箱"), Left, Y + (CH + Gap) * 2, CW, CH, 2);
+	DrawCard(TEXT("LightBox"), TEXT("ひかりのアトリエ"), Left, Y + (CH + Gap) * 2, CW, CH, 2);
 	DrawRect(Paper.CopyWithNewOpacity(0.1f), Left, H * 0.89f, W - Left - 64 * S, S);
 
 	if (UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>())

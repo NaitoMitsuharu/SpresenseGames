@@ -79,7 +79,16 @@ public:
 	static constexpr float DodgeRecharge = 1.6f;
 	float DodgeTime = 0.f, DodgeCooldown = 0.f;
 	int32 DodgeDirection = 1;
-	float DodgePulse() const { return DodgeTime > 0 ? FMath::Sin(PI * DodgeTime / DodgeDuration) : 0.f; }
+	float DodgePulse() const { return DodgeTime > 0 ? FMath::Sin(PI * DodgeTime / DodgeLength) : 0.f; }
+	/** Length of the dodge in progress: a sidestep, or a full barrel roll in Spresense mode. */
+	float DodgeLength = DodgeDuration;
+	static constexpr float RollDuration = 0.62f;
+	/** Spresense mode replaces the sidestep with a barrel roll: invulnerable, guns silent, costs stamina. */
+	bool bBarrelRoll = false;
+	bool IsRolling() const { return bBarrelRoll && DodgeTime > 0; }
+	FlightHandling::FRollStamina RollStamina;
+	/** Brief HUD flash when a roll was asked for without enough stamina. */
+	float RollDenied = 0.f;
 	float SteeringAmount() const { return CommandX; }
 	bool RequestDodge(int32 Direction);
 	bool CanDodge(int32 Direction) const;
@@ -90,7 +99,14 @@ public:
 	float ShipPitch = 0.f;
 	float ShipYaw = 0.f;
 
-	/** Unit nose direction in path space (X along course, Y right, Z up). */
+	/** Line of fire relative to the path frame (deg). Equals ShipYaw/ShipPitch unless aim is split. */
+	float AimYaw = 0.f;
+	float AimPitch = 0.f;
+	/** Spresense steers and a screen slide aims (only while the SPR-BOX stream is the input). */
+	bool bSplitAim = false;
+	UPROPERTY(EditAnywhere, Category = "Flight") FVector2D SplitAimLimitDeg = FVector2D(18.f, 12.f);
+
+	/** Unit line-of-fire direction in path space (X along course, Y right, Z up). */
 	FVector NoseDir() const;
 	/** Path-space point the guns converge on at Distance ahead. */
 	FVector AimPoint(float Distance) const;
@@ -174,6 +190,8 @@ private:
 	UPROPERTY() TObjectPtr<USoundWaveProcedural> WindWave;
 	TArray<uint8> WindBuffer;
 	FlightHandling::FFlickGesture Flick;
+	FlightHandling::FTouchAim TouchAim;
+	void UpdateTouchAim(float Dt);
 	float DodgeTravel = 640.f;
 	int32 LastSteerSide = 1;
 };

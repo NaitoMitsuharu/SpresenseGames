@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.lati.lightbox.test">
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
     <application android:label="LightBox credential checks" android:testOnly="true" />
-    <instrumentation android:name="com.lati.lightbox.CredentialsInstrumentation" android:targetPackage="com.lati.spresensemaze" />
+    <instrumentation android:name="com.lati.lightbox.CredentialsInstrumentation" android:targetPackage="com.lati.spresensegames" />
 </manifest>

@@ -86,7 +86,7 @@ bool FLightBoxParticleMigrationTest::RunTest(const FString&)
     auto S=FLightBoxStyle::Example(8);TSharedPtr<FJsonObject> J;FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(S.ToJson()),J);
     J->GetObjectField(TEXT("pointCloud"))->SetBoolField(TEXT("enabled"),false);J->GetObjectField(TEXT("pointCloud"))->SetNumberField(TEXT("count"),256);J->GetObjectField(TEXT("pointCloud"))->SetBoolField(TEXT("floor"),true);
     FString Old;FJsonSerializer::Serialize(J.ToSharedRef(),TJsonWriterFactory<>::Create(&Old));FLightBoxStyle Read;FString Error;
-    TestTrue(TEXT("Previously saved scenes still open"),FLightBoxStyle::Parse(Old,Read,Error));TestTrue(TEXT("Old solid renderer is migrated to particles"),Read.bPointCloud);TestFalse(TEXT("Old floor cannot reactivate solid drawing"),Read.bPointFloor);TestEqual(TEXT("Unused legacy point budget is raised so the migrated scene remains recognizable"),Read.PointCount,65536);TestEqual(TEXT("Shape descriptions are retained"),Read.Objects.Num(),S.Objects.Num());return true;
+    TestTrue(TEXT("Previously saved scenes still open"),FLightBoxStyle::Parse(Old,Read,Error));TestTrue(TEXT("Old solid renderer is migrated to particles"),Read.bPointCloud);TestFalse(TEXT("Old floor cannot reactivate solid drawing"),Read.bPointFloor);TestEqual(TEXT("Unused legacy point budget is raised so the migrated scene remains recognizable"),Read.PointCount,FLightBoxStyle::DefaultPointCount);TestEqual(TEXT("Shape descriptions are retained"),Read.Objects.Num(),S.Objects.Num());return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxParticleComponentsTest,"SpresenseMaze.LightBox.ParticleOnlyComponents",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
@@ -655,5 +655,65 @@ bool FLightBoxDeformingFramingTest::RunTest(const FString&)
     for(float T:{0.f,1.f,2.f,3.14f,4.f,6.f}){const auto Mesh=FLightBoxMesh::Build(O,T);const auto World=FLightBoxMotionSystem::Evaluate(S,T);for(const auto& V:Mesh.Vertices){const FVector Q=Camera.InverseTransformPosition(World[0].TransformPosition(V));Worst=FMath::Max(Worst,FMath::Max(FMath::Abs(Q.Y)/Q.X/FMath::Tan(FMath::DegreesToRadians(29.)),FMath::Abs(Q.Z)/Q.X/(FMath::Tan(FMath::DegreesToRadians(29.))/Aspect)));}}
     TestTrue(TEXT("All open/closed petal geometry fits the screen"),Worst<.93);
     const auto Mesh=FLightBoxMesh::Build(O);TestTrue(TEXT("Stem tint is green independent of petal colour"),Mesh.Colors[0].G>Mesh.Colors[0].R*2);return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxSensorsTest,"SpresenseMaze.LightBox.PhoneSensors",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FLightBoxSensorsTest::RunTest(const FString&)
+{
+	FLightBoxStyle S; S.Count=96; S.Behavior=TEXT("drift"); S.Turbulence=0; S.Swirl=0;
+	auto Run=[&](const FLightBoxEnvironment& Env){FLightBoxSimulation Sim;Sim.Reset(S);for(int32 I=0;I<60;++I)Sim.Step(1.f/30,FVector2D::ZeroVector,0,S,Env);return Sim;};
+	auto Mean=[](const FLightBoxSimulation& Sim){FVector M(0);for(const auto& P:Sim.Motes)M+=P.Position;return M/FMath::Max(1,Sim.Motes.Num());};
+	const FLightBoxSimulation Base=Run(FLightBoxEnvironment());
+	FLightBoxSimulation Legacy;Legacy.Reset(S);for(int32 I=0;I<60;++I)Legacy.Step(1.f/30,FVector2D::ZeroVector,0,S);
+	bool Same=true;for(int32 I=0;I<Base.Motes.Num();++I)Same&=Base.Motes[I].Position.Equals(Legacy.Motes[I].Position,0.0);
+	TestTrue(TEXT("A quiet environment changes nothing"),Same);
+	FLightBoxEnvironment Breath;Breath.Wind=FVector(0,1,0);Breath.Flutter=1;
+	TestTrue(TEXT("Breath carries the light away from the camera"),Mean(Run(Breath)).Y>Mean(Base).Y+20);
+	FLightBoxEnvironment Warm;Warm.Warmth=1;
+	TestTrue(TEXT("Warmth makes the light rise"),Mean(Run(Warm)).Z>Mean(Base).Z+15);
+	auto Spread=[&](const FLightBoxSimulation& Sim){double D=0;for(const auto& P:Sim.Motes)D+=FVector::Distance(P.Position,S.Center);return D/Sim.Motes.Num();};
+	FLightBoxEnvironment Dark;Dark.Gather=1;FLightBoxEnvironment Bright;Bright.Gather=-1;
+	TestTrue(TEXT("Darkness or a hand gathers the light"),Spread(Run(Dark))<Spread(Base));
+	TestTrue(TEXT("Bright light scatters it"),Spread(Run(Bright))>Spread(Base));
+
+	float W=0;for(int32 I=0;I<90;++I)W=FLightBoxSensorReader::ApproachWarmth(W,true,1.f/30);
+	TestTrue(TEXT("A resting palm warms fully in about three seconds"),W>.99f);
+	for(int32 I=0;I<90;++I)W=FLightBoxSensorReader::ApproachWarmth(W,false,1.f/30);
+	TestTrue(TEXT("It cools more slowly than it warms"),W>.4f&&W<.6f);
+	float D,B;FLightBoxSensorReader::LightLevels(300,300,D,B);TestTrue(TEXT("The room level is neutral"),D==0&&B==0);
+	FLightBoxSensorReader::LightLevels(20,300,D,B);TestTrue(TEXT("Covering the sensor is dark"),D>.9f&&B==0);
+	FLightBoxSensorReader::LightLevels(5000,300,D,B);TestTrue(TEXT("A torch is bright"),B>.9f&&D==0);
+	TestEqual(TEXT("Turning the phone in the Earth's field is not a magnet"),FLightBoxSensorReader::MagnetStrength(60,45),0.f);
+	TestTrue(TEXT("A nearby magnet is"),FLightBoxSensorReader::MagnetStrength(500,45)>.9f);
+	return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxSensorRulesTest,"SpresenseMaze.LightBox.SensorRulesFromWords",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FLightBoxSensorRulesTest::RunTest(const FString&)
+{
+	const FLightBoxStyle Base;
+	auto WithSensors=[&](const FString& Sensors){FString J=Base.ToJson();J.RemoveFromEnd(TEXT("}"));return J+TEXT(",\"sensors\":")+Sensors+TEXT("}");};
+	FLightBoxStyle Quiet;FString Error;
+	TestTrue(TEXT("A scene can switch sound off"),FLightBoxStyle::Parse(WithSensors(TEXT("{\"sound\":0}")),Quiet,Error));
+	TestEqual(TEXT("Sound is off"),Quiet.Sensors.Sound,0.f);
+	TestEqual(TEXT("Unnamed sensors keep their default"),Quiet.Sensors.Light,1.f);
+	FLightBoxStyle Bad;
+	TestFalse(TEXT("Out of range sensitivity is rejected"),FLightBoxStyle::Parse(WithSensors(TEXT("{\"sound\":3}")),Bad,Error));
+	TestFalse(TEXT("Unknown sensors are rejected"),FLightBoxStyle::Parse(WithSensors(TEXT("{\"smell\":1}")),Bad,Error));
+	FLightBoxStyle Round;TestTrue(TEXT("Saved scenes keep the rule"),FLightBoxStyle::Parse(Quiet.ToJson(),Round,Error)&&Round.Sensors.Sound==0.f);
+	TestEqual(TEXT("Sensitivity never rebuilds the sculpture"),Quiet.RenderContentJson(),Base.RenderContentJson());
+
+	FLightBoxStyle Later;TestTrue(TEXT("A later edit parses"),FLightBoxStyle::Parse(Base.ToJson(),Later,Error));Later.Color=FLinearColor::Red;FString Why;
+	FLightBoxStyle::CompleteGenerated(TEXT("色を赤にして"),Quiet,Later,Why);
+	TestEqual(TEXT("A later edit that does not mention sensors keeps sound off"),Later.Sensors.Sound,0.f);
+	FLightBoxStyle Drift;FLightBoxStyle::Parse(WithSensors(TEXT("{\"sound\":0}")),Drift,Error);Drift.Motion=2.f;
+	FLightBoxStyle::CompleteGenerated(TEXT("音に反応しないようにして"),Base,Drift,Why);
+	TestEqual(TEXT("A sensor-only request changes only the sensors"),Drift.Motion,Base.Motion);
+	TestEqual(TEXT("...and applies them"),Drift.Sensors.Sound,0.f);
+
+	FLightBoxSensorReading R;R.Breath=.8f;R.bClap=true;R.Darkness=.5f;
+	FLightBoxSensorGains G;G.Sound=0;G.Light=2;
+	const FLightBoxSensorReading F=FLightBoxSensorReader::ApplyGains(R,G);
+	TestTrue(TEXT("Sound off drops breath and claps"),F.Breath==0&&!F.bClap);
+	TestEqual(TEXT("Light sensitivity scales darkness"),F.Darkness,1.f);
+	return true;
 }
 #endif

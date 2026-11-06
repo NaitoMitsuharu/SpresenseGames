@@ -53,6 +53,23 @@ void AFlightHUD::NotifyHitBoxClick(FName Id)
 	else if (Id == TEXT("Gesture")) { Ship->ToggleGestureDodge(); }
 }
 
+bool AFlightHUD::IsOverControl(const FVector2D& Point) const
+{
+	if (W <= 0.f || H <= 0.f) { return false; }
+	const float Pad = 18*S;
+	auto Inside = [&](float X, float Y, float BW, float BH)
+	{
+		return Point.X >= X-Pad && Point.X <= X+BW+Pad && Point.Y >= Y-Pad && Point.Y <= Y+BH+Pad;
+	};
+	// Same rectangles as DrawHUD (pause) and DrawDodge.
+	const float PauseSize = 68*S;
+	const float DodgeSize = 82*S, DodgeGap = 14*S;
+	const AFlightPawn* Ship = Cast<AFlightPawn>(GetOwningPawn());
+	const bool bDodgeButtons = !(Ship && Ship->bSplitAim);
+	return Inside(W-104*S, 32*S, PauseSize, PauseSize)
+		|| (bDodgeButtons && Inside(W-36*S-DodgeSize*2-DodgeGap, H-130*S, DodgeSize*2+DodgeGap, DodgeSize));
+}
+
 void AFlightHUD::Dim(float Alpha)
 {
 	DrawRect(FLinearColor(0.012f,0.022f,0.035f,Alpha),0,0,W,H);
@@ -105,7 +122,7 @@ void AFlightHUD::DrawInputChip()
 	UAttitudeInputSubsystem* Input = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>();
 	if (!Input) { return; }
 	const EAttitudeSource Source = Input->GetState().Source;
-	const FString LabelText = Source == EAttitudeSource::SprBox ? TEXT("Spresenseで操作") : Source == EAttitudeSource::DeviceMotion ? TEXT("端末の傾きで操作") : Source == EAttitudeSource::Keyboard ? TEXT("キーボードで操作") : TEXT("入力の接続待ち");
+	const FString LabelText = Source == EAttitudeSource::SprBox ? TEXT("Spresenseで操縦・画面スライドで照準") : Source == EAttitudeSource::DeviceMotion ? TEXT("端末の傾きで操作") : Source == EAttitudeSource::Keyboard ? TEXT("キーボードで操作") : TEXT("入力の接続待ち");
 	const AFlightPawn* Ship = Cast<AFlightPawn>(GetOwningPawn());
 	const float Y = Ship && Ship->State == EFlightState::Paused ? H*0.5f+252*S : H*0.5f+218*S;
 	CenterLabel(LabelText,W*0.5f,Y,16,Muted);
@@ -128,6 +145,18 @@ void AFlightHUD::DrawReticles(AFlightPawn* Ship)
 	const FVector P = Project(Ship->GetCourse()->Path.Frame(Ship->S+Aim.X).ToWorld(0,Aim.Y,Aim.Z),false);
 	if (P.Z <= 0) { return; }
 	const FLinearColor Color = FMath::Lerp(Paper,Mint,Ship->DodgePulse());
+	if (Ship->bSplitAim && (FMath::Abs(Ship->AimYaw-Ship->ShipYaw) > 0.5f || FMath::Abs(Ship->AimPitch-Ship->ShipPitch) > 0.5f))
+	{
+		// Faint tether from where the nose points to where the guns aim.
+		const float NP = FMath::DegreesToRadians(Ship->ShipPitch), NY = FMath::DegreesToRadians(Ship->ShipYaw);
+		const FVector Nose = FVector(0.f, Ship->Off.X, Ship->Off.Y) + FVector(FMath::Cos(NP)*FMath::Cos(NY), FMath::Cos(NP)*FMath::Sin(NY), FMath::Sin(NP)) * Ship->AimDistance;
+		const FVector N = Project(Ship->GetCourse()->Path.Frame(Ship->S+Nose.X).ToWorld(0,Nose.Y,Nose.Z),false);
+		if (N.Z > 0)
+		{
+			DrawLine(N.X,N.Y,P.X,P.Y,Paper.CopyWithNewOpacity(0.22f),1.2f*S);
+			RoundRect(N.X-2.5f*S,N.Y-2.5f*S,5*S,5*S,2.5f*S,Paper.CopyWithNewOpacity(0.35f));
+		}
+	}
 	const float Gap = 9*S, Reach = 17*S;
 	DrawLine(P.X-Reach,P.Y,P.X-Gap,P.Y,Color,1.5f*S);
 	DrawLine(P.X+Gap,P.Y,P.X+Reach,P.Y,Color,1.5f*S);
@@ -176,9 +205,9 @@ void AFlightHUD::DrawAwaitNeutral(AFlightPawn* Ship)
 	Label(Ship->bInputLost?TEXT("持ち方をもう一度合わせよう"):TEXT("空へ、飛び出そう。"),X+42*S,Y+74*S,36,Paper,true);
 	Label(Input.bAvailable?TEXT("いまの持ち方を基準にしてスタート。"):TEXT("Spresenseか端末の姿勢入力を接続してください。"),X+42*S,Y+143*S,21,Muted);
 	const bool Keys=Input.Source==EAttitudeSource::Keyboard;
-	const FString Guide=Keys?TEXT("WASDで移動。Spaceでクイック回避。"):Ship->bGestureDodge?TEXT("傾けて移動。短く傾けて戻すと回避。"):TEXT("傾けて移動。右下のボタンで回避。");
+	const FString Guide=Input.Source==EAttitudeSource::SprBox?TEXT("傾けて移動。素早く傾けて戻すとロールで無敵。"):Keys?TEXT("WASDで移動。Spaceでクイック回避。"):Ship->bGestureDodge?TEXT("傾けて移動。短く傾けて戻すと回避。"):TEXT("傾けて移動。右下のボタンで回避。");
 	Label(Guide,X+42*S,Y+193*S,22,Paper);
-	Label(TEXT("レーザーは自動。リングと撃破をつなごう。"),X+42*S,Y+235*S,20,Muted);
+	Label(Input.Source==EAttitudeSource::SprBox?TEXT("画面をスライドして照準。離すと正面へ戻る。"):TEXT("レーザーは自動。リングと撃破をつなごう。"),X+42*S,Y+235*S,20,Muted);
 	if (Input.bAvailable) { PillButton(TEXT("Reset"),TEXT("姿勢を合わせて開始"),X+42*S,Y+307*S,PW-84*S,74*S,true); }
 	else { CenterLabel(TEXT("接続を待っています"),W*0.5f,Y+329*S,24,Muted); }
 	PillButton(TEXT("Top"),TEXT("トップへ"),X+42*S,Y+397*S,PW-84*S,62*S);
@@ -205,7 +234,8 @@ void AFlightHUD::DrawPaused()
 	Label(TEXT("ひと休み。"),X+42*S,Y+70*S,42,Paper,true);
 	PillButton(TEXT("Resume"),TEXT("フライトを続ける"),X+42*S,Y+149*S,PW-84*S,74*S,true);
 	PillButton(TEXT("Reset"),TEXT("姿勢を合わせ直す"),X+42*S,Y+239*S,PW-84*S,64*S);
-	PillButton(TEXT("Gesture"),Ship&&Ship->bGestureDodge?TEXT("傾けて戻す回避：オン"):TEXT("傾けて戻す回避：オフ"),X+42*S,Y+325*S,PW-84*S,64*S);
+	if (Ship && Ship->bSplitAim) { CenterLabel(TEXT("Spresenseでは、傾けて戻すとロール"),W*0.5f,Y+343*S,19,Muted); }
+	else { PillButton(TEXT("Gesture"),Ship&&Ship->bGestureDodge?TEXT("傾けて戻す回避：オン"):TEXT("傾けて戻す回避：オフ"),X+42*S,Y+325*S,PW-84*S,64*S); }
 	PillButton(TEXT("Top"),TEXT("トップへ"),X+42*S,Y+418*S,PW-84*S,64*S);
 	DrawInputChip();
 }

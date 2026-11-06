@@ -19,6 +19,8 @@ class SPRESENSEMAZE_API AFlightHUD : public AGameHudBase
 public:
 	virtual void DrawHUD() override;
 	virtual void NotifyHitBoxClick(FName BoxName) override;
+	/** True over the pause or dodge buttons, so a tap there never moves the slide aim. */
+	bool IsOverControl(const FVector2D& Point) const;
 
 private:
 	void DrawShield(AFlightPawn* Ship);

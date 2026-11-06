@@ -59,7 +59,7 @@ void AFlightPawn::TickModelReview(float Dt)
 	FindObjectFast<UProceduralMeshComponent>(this,TEXT("ReviewDrone"))->SetVisibility(View.Kind==0);
 	FindObjectFast<UProceduralMeshComponent>(this,TEXT("ReviewTurret"))->SetVisibility(View.Kind==1);
 	FindObjectFast<UProceduralMeshComponent>(this,TEXT("ReviewBoss"))->SetVisibility(View.Kind==2);
-	ShipRoll=-5; ShipPitch=2; UpdateShip(Dt);
+	ShipRoll=-5; ShipPitch=2; AimYaw=ShipYaw; AimPitch=ShipPitch; UpdateShip(Dt);
 	if (View.Kind>=0) { EngineLight->SetIntensity(0); }
 	const FPathFrame Fr=Course->Path.Frame(S);
 	const FVector Pos=Fr.ToWorld(View.Camera.X,View.Camera.Y,View.Camera.Z);

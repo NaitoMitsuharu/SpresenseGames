@@ -6,7 +6,7 @@ import argparse, json, shlex, subprocess, time
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
-DEVICE_JOURNAL='/sdcard/Android/data/com.lati.spresensemaze/files/UnrealGame/SpresenseMaze/SpresenseMaze/Saved/LightBox/Journal/journal.json'
+DEVICE_JOURNAL='/sdcard/Android/data/com.lati.spresensegames/files/UnrealGame/SpresenseMaze/SpresenseMaze/Saved/LightBox/Journal/journal.json'
 CASES=[
     ('voice01','voice','金色の光で輪を作って、ゆっくり回して'),
     ('text01','text','青い海の中を、256匹の魚が3つの群れで泳ぐ景色にして'),

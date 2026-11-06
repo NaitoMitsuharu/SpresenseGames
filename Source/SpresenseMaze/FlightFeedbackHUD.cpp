@@ -63,6 +63,19 @@ void AFlightHUD::DrawThreats(AFlightPawn* Ship)
 void AFlightHUD::DrawDodge(AFlightPawn* Ship)
 {
 	const float Size=82*S,Gap=14*S,X=W-36*S-Size*2-Gap,Y=H-130*S;
+	if (Ship->bSplitAim)
+	{
+		// Spresense mode: no buttons, the tilt-and-return gesture rolls. Show its stamina instead.
+		const float BW=Size*2+Gap, BY=Y+Size-12*S, Fill=Ship->RollStamina.Value/FlightHandling::FRollStamina::Max;
+		const bool CanRoll=Ship->RollStamina.CanSpend();
+		const FLinearColor Bar=Ship->RollDenied>0?Coral:(CanRoll?Mint:Muted);
+		CenterLabel(Ship->IsRolling()?TEXT("ロール中・無敵"):CanRoll?TEXT("傾けて戻すとロール"):TEXT("スタミナ回復中"),X+BW*0.5f,BY-34*S,16,Ship->IsRolling()?Mint:(CanRoll?Paper:Muted));
+		RoundRect(X,BY,BW,8*S,4*S,Paper.CopyWithNewOpacity(0.16f));
+		RoundRect(X,BY,BW*Fill,8*S,4*S,Bar);
+		const float Mark=X+BW*FlightHandling::FRollStamina::Cost/FlightHandling::FRollStamina::Max;
+		DrawLine(Mark,BY-3*S,Mark,BY+11*S,Paper.CopyWithNewOpacity(0.55f),1.5f*S);
+		return;
+	}
 	const bool Ready=Ship->DodgeCooldown<=0 && Ship->State==EFlightState::Playing;
 	CenterLabel(Ship->DodgeCooldown>0?TEXT("チャージ中"):TEXT("クイック回避"),X+Size+Gap*0.5f,Y-27*S,16,Ready?Paper:Muted);
 	for (int32 I=0; I<2; ++I)

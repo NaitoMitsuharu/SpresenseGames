@@ -90,6 +90,64 @@ namespace FlightHandling
 		const float T = FMath::Clamp((FMath::Abs(Angle) - DeadZone) / FMath::Max(FullTilt - DeadZone, 1.f), 0.f, 1.f);
 		return FMath::Sign(Angle) * (0.65f * T + 0.35f * T * T);
 	}
+	/**
+	 * Touch-slide aiming used while the Spresense steers. Dragging moves the
+	 * line of fire (X = yaw right, Y = pitch up, degrees); releasing eases it
+	 * back to the nose. A touch that starts on a HUD control never aims.
+	 */
+	struct FTouchAim
+	{
+		static constexpr float DegreesPerScreenHeight = 72.f;
+		static constexpr float ReturnRate = 6.f;
+		FVector2D Angles = FVector2D::ZeroVector;
+		FVector2D Last = FVector2D::ZeroVector;
+		bool bDragging = false, bIgnored = false;
+		void Reset() { *this = FTouchAim(); }
+		void Update(bool bDown, const FVector2D& Position, bool bStartsOnControl, float ViewHeight, float Dt, const FVector2D& Limits)
+		{
+			if (!bDown)
+			{
+				bDragging = bIgnored = false;
+				Angles *= FMath::Exp(-ReturnRate * Dt);
+				if (Angles.SizeSquared() < 1.e-4) { Angles = FVector2D::ZeroVector; }
+				return;
+			}
+			if (!bDragging && !bIgnored)
+			{
+				if (bStartsOnControl) { bIgnored = true; return; }
+				bDragging = true; Last = Position; return;
+			}
+			if (bIgnored) { return; }
+			const FVector2D Delta = (Position - Last) / FMath::Max(ViewHeight, 1.f) * DegreesPerScreenHeight;
+			Last = Position;
+			Angles.X = FMath::Clamp(Angles.X + Delta.X, -Limits.X, Limits.X);
+			Angles.Y = FMath::Clamp(Angles.Y - Delta.Y, -Limits.Y, Limits.Y);  // screen Y grows downward
+		}
+	};
+
+	/**
+	 * Barrel-roll stamina (Spresense mode). A roll costs more than half the
+	 * gauge, so two rolls can never be chained; it refills after a short pause.
+	 */
+	struct FRollStamina
+	{
+		static constexpr float Max = 100.f, Cost = 55.f, Regen = 26.f, RegenDelay = 0.45f;
+		float Value = Max, Delay = 0.f;
+		bool CanSpend() const { return Value >= Cost; }
+		bool TrySpend()
+		{
+			if (!CanSpend()) { return false; }
+			Value -= Cost; Delay = RegenDelay; return true;
+		}
+		void Tick(float Dt, bool bRolling)
+		{
+			if (bRolling) { Delay = RegenDelay; return; }
+			if (Delay > 0.f) { const float Used = FMath::Min(Delay, Dt); Delay -= Used; Dt -= Used; }
+			Value = FMath::Min(Max, Value + Regen * Dt);
+		}
+		void Refill() { Value = Max; Delay = 0.f; }
+	};
+
 	/** Exact first-order response and its integral, independent of frame rate. */
 	inline double Step(double& Velocity, double Target, double Dt, double Response)
 	{

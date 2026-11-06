@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "LightBoxSensors.h"
 
 /** Independent, composable animation channel. Period is in seconds; phase in cycles. */
 struct FLightBoxMotion
@@ -65,6 +66,7 @@ struct FLightBoxObject
 /** A bounded scene description. Remote responses can only change these values. */
 struct FLightBoxStyle
 {
+    static constexpr int32 DefaultPointCount=131072;
 	FString Title = TEXT("星あかり");
 	FLinearColor Color = FLinearColor(0.22f, 0.8f, 1.f);
 	FLinearColor Accent = FLinearColor(1.f, 0.62f, 0.3f);
@@ -76,6 +78,10 @@ struct FLightBoxStyle
 	float Glow = 1.f;
 	float Trail = 0.6f;
 	float ShakeThreshold = 1.65f;
+	/** How strongly the phone sensors move this scene (optional "sensors" in JSON). */
+	FLightBoxSensorGains Sensors;
+	/** Parse-time only: the response named "sensors" (otherwise an edit keeps the current values). */
+	bool bSensorsSpecified = false;
 	FString Shake = TEXT("scatter");
 	FString Note;
 	int32 Count = 144;
@@ -118,7 +124,7 @@ struct FLightBoxStyle
 	TArray<FLightBoxObject> Objects;
 	bool bPointCloud = true;
 	bool bPointFloor = false;
-	int32 PointCount = 65536;
+	int32 PointCount = DefaultPointCount;
 	float AssembleSeconds = 5, AssembleArc = 65, AssembleTwist = 1.25f, AssembleStagger = .35f;
 
 	static FLightBoxStyle Preset(int32 Index);

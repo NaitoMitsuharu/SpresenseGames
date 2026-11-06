@@ -142,6 +142,13 @@ FString FLightBoxStyle::ToJson() const
 	O->SetNumberField(TEXT("tilt"), Tilt); O->SetNumberField(TEXT("glow"), Glow);
 	O->SetNumberField(TEXT("trail"), Trail); O->SetNumberField(TEXT("shakeThreshold"), ShakeThreshold);
 	O->SetStringField(TEXT("shake"), Shake);
+	if (!Sensors.IsDefault())
+	{
+		auto G = MakeShared<FJsonObject>();
+		G->SetNumberField(TEXT("sound"), Sensors.Sound); G->SetNumberField(TEXT("warmth"), Sensors.Warmth);
+		G->SetNumberField(TEXT("light"), Sensors.Light); G->SetNumberField(TEXT("hand"), Sensors.Hand);
+		G->SetNumberField(TEXT("magnet"), Sensors.Magnet); O->SetObjectField(TEXT("sensors"), G);
+	}
 	O->SetNumberField(TEXT("schema"), 3); O->SetStringField(TEXT("note"), Note);
 	auto Cloud=MakeShared<FJsonObject>();Cloud->SetBoolField(TEXT("enabled"),true);Cloud->SetBoolField(TEXT("floor"),false);Cloud->SetNumberField(TEXT("count"),PointCount);
 	Cloud->SetNumberField(TEXT("duration"),AssembleSeconds);Cloud->SetNumberField(TEXT("arc"),AssembleArc);Cloud->SetNumberField(TEXT("twist"),AssembleTwist);Cloud->SetNumberField(TEXT("stagger"),AssembleStagger);O->SetObjectField(TEXT("pointCloud"),Cloud);
@@ -180,7 +187,7 @@ FString FLightBoxStyle::ToJson() const
 FString FLightBoxStyle::RenderContentJson() const
 {
 	TSharedPtr<FJsonObject> O;FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(ToJson()),O);
-	O->RemoveField(TEXT("camera"));O->RemoveField(TEXT("title"));O->RemoveField(TEXT("note"));
+	O->RemoveField(TEXT("camera"));O->RemoveField(TEXT("title"));O->RemoveField(TEXT("note"));O->RemoveField(TEXT("sensors")); // sensitivity never rebuilds the sculpture
 	FString Json;FJsonSerializer::Serialize(O.ToSharedRef(),TJsonWriterFactory<>::Create(&Json));return Json;
 }
 
@@ -208,7 +215,7 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 		Error = TEXT("景色を読み取れませんでした。もう一度お試しください"); return false;
 	}
 	FLightBoxStyle Candidate;
-	if (!KnownFields(O, { TEXT("title"), TEXT("color"), TEXT("accent"), TEXT("motion"), TEXT("viscosity"), TEXT("swirl"), TEXT("attraction"), TEXT("tilt"), TEXT("glow"), TEXT("trail"), TEXT("shakeThreshold"), TEXT("shake"), TEXT("schema"), TEXT("note"), TEXT("particles"), TEXT("world"), TEXT("camera"), TEXT("objects"), TEXT("pointCloud") }))
+	if (!KnownFields(O, { TEXT("title"), TEXT("color"), TEXT("accent"), TEXT("motion"), TEXT("viscosity"), TEXT("swirl"), TEXT("attraction"), TEXT("tilt"), TEXT("glow"), TEXT("trail"), TEXT("shakeThreshold"), TEXT("shake"), TEXT("schema"), TEXT("note"), TEXT("particles"), TEXT("world"), TEXT("camera"), TEXT("objects"), TEXT("pointCloud"), TEXT("sensors") }))
 	{ Error = TEXT("まだ対応していない景色の操作が含まれています"); return false; }
 	if (!O->TryGetStringField(TEXT("title"), Candidate.Title) || Candidate.Title.IsEmpty() || Candidate.Title.Len() > 24
 		|| Candidate.Title.Contains(TEXT("\n")) || Candidate.Title.Contains(TEXT("\r")) || Candidate.Title.Contains(TEXT("\t"))
@@ -241,6 +248,21 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 	}
 	if (O->HasField(TEXT("note")) && (!O->TryGetStringField(TEXT("note"), Candidate.Note) || Candidate.Note.Len() > 100 || Candidate.Note.Contains(TEXT("\n"))))
 	{ Error = TEXT("景色の説明を読み取れませんでした"); return false; }
+	if (O->HasField(TEXT("sensors")))
+	{
+		const TSharedPtr<FJsonObject>* G = nullptr;
+		bool bValid = O->TryGetObjectField(TEXT("sensors"), G) && G && KnownFields(*G, { TEXT("sound"), TEXT("warmth"), TEXT("light"), TEXT("hand"), TEXT("magnet") });
+		auto Gain = [&](const TCHAR* Key, float& Value)
+		{
+			if (!bValid || !(*G)->HasField(Key)) { return; }
+			double N; bValid = (*G)->TryGetNumberField(Key, N) && FMath::IsFinite(N) && N >= 0.0 && N <= 2.0;
+			if (bValid) { Value = static_cast<float>(N); }
+		};
+		Gain(TEXT("sound"), Candidate.Sensors.Sound); Gain(TEXT("warmth"), Candidate.Sensors.Warmth); Gain(TEXT("light"), Candidate.Sensors.Light);
+		Gain(TEXT("hand"), Candidate.Sensors.Hand); Gain(TEXT("magnet"), Candidate.Sensors.Magnet);
+		if (!bValid) { Error = TEXT("センサーの反応の強さを読み取れませんでした"); return false; }
+		Candidate.bSensorsSpecified = true;
+	}
 	FString Context;
 	auto Extended = [&]() -> bool
 	{
@@ -408,7 +430,7 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 		return true;
 	};
 	if (!Extended()) { if (Diagnostic) { *Diagnostic = Context; } Error = TEXT("景色の形や数を読み取れませんでした。少し分けてお願いしてください"); return false; }
-	if(!Candidate.bPointCloud)Candidate.PointCount=FMath::Max(65536,Candidate.PointCount);
+	if(!Candidate.bPointCloud)Candidate.PointCount=FMath::Max(DefaultPointCount,Candidate.PointCount);
 	Candidate.bPointCloud=true;Candidate.bPointFloor=false;
 	Out = Candidate; // Atomic: a malformed response never partly changes the scene.
 	Error.Reset();
@@ -461,8 +483,9 @@ FString FLightBoxStyle::Instruction(const FLightBoxStyle& Current)
 		"QUALITY: Before writing JSON, silently identify the subject's 4-6 defining anatomical/structural features, proportions, silhouette and markings. Spend geometry and points on these, not unrelated decorations. Preserve stable part IDs on edits. A real place name is a semantic interpretation from your knowledge, NOT a verified replica; note this briefly. Never claim to have searched photos or accurately reproduced a real facility. Do not make a generic whale into a whale shark by changing its colour. Broad flattened head, tapering body, correctly attached pectoral/dorsal fins, vertical tail, eyes/mouth and ordered pale spots define a whale shark. For panda-like mammals, prioritize large rounded white head, two attached black ears, paired slanted black eye patches with visible pupils, short muzzle/nose, white torso with black shoulder band and four thick black limbs; do not omit the face or hide limbs behind unrelated scenery. These are examples of feature-based design, not fixed presets. "
         "For unfamiliar species/objects, construct the shape with loft/lathe/curves instead of stretching a mismatched built-in animal. loft: sections:[[x,halfWidth,halfHeight],...] 3..24 strictly ascending x within[-.5,.5], width/height0...5, first and last width/height0 to close. Local longitudinal axis+X, cross-section YZ; size scales it. Use >=7 sections for a broad head and tapering tail; curve optionally bends centreline using local cm (Y/Z offsets). Connect fins/leaves/panels with polygon outline and hierarchy. All samples are mathematical point targets, no solid model is rendered. "
         "Surface markings OPTIONAL: pattern:none/spots/stripes/patches,patternColor:#RRGGBB,patternScale:2..32,belly:true/false,bellyColor:#RRGGBB. Markings colour individual particles in local coordinates. Use spots on a continuous body instead of hundreds of floating spot spheres. Reserve separate geometry for distinctive face/eye patches, mouths, fins and ears. Before output, check silhouette from both front and side, symmetry where appropriate, physical contacts and hierarchy, readable eyes/mouth, correct tail/wing orientation and enough contrast. Limit scene to the requested subject and useful context. "
+        "OPTIONAL sensors:{sound,warmth,light,hand,magnet} each 0..2: how strongly the PHONE sensors move this scene (sound=breath and claps on the microphone, warmth=a palm resting on the screen, light=ambient light sensor, hand=proximity sensor, magnet=magnetometer). 1 is default, 0 ignores that sensor, 2 is extra sensitive. Include it ONLY when the user asks how the scene reacts to sound/voice/breath/claps, touch/warmth, brightness, a hand or a magnet; otherwise OMIT it and the current values are kept. Device tilt is controlled by tilt, shaking by shake. "
         "REQUIRED base: schema:3,title:Japanese 1..24 chars,color/accent:#RRGGBB,motion:.2..2,viscosity:0..1,swirl:-2..2,attraction:0..1,tilt:0..2,glow:.3..2,trail:0..1,shakeThreshold:1.3..3,shake:scatter/gather/none,note:Japanese<=100 chars. "
-		"PARTICLE-ONLY RENDERER: ALL scenery, animals, water, sky, suns and lights are drawn exclusively as discrete camera-facing particles. No solid mesh, floor, backdrop, grid, reflection or alternate renderer exists. Normally pointCloud:{enabled:true,count:65536,floor:false,duration:3,arc:22,twist:.15,stagger:.18}. Count is the TOTAL ceiling, up to1000000; normally32768..131072. objects are mathematical target surfaces, NEVER rendered models. Their animation and motion channels move the particles themselves, including bird wing deformation, waves, flowing tubes and hierarchy motion. particles.count0..1024 adds freely simulated point lights within the same total budget; use for fireflies, stars, snow, flock etc, or0 for a pure sculpture. Large surfaces should be focus:false so they do not consume the particles needed by the main subject. No automatic solid ground is drawn; add a particle surface object only when requested. Background colour only tints sparse distant points; use coloured particles for sky/sunset, never a backdrop sheet. "
+		"PARTICLE-ONLY RENDERER: ALL scenery, animals, water, sky, suns and lights are drawn exclusively as discrete camera-facing particles. No solid mesh, floor, backdrop, grid, reflection or alternate renderer exists. Normally pointCloud:{enabled:true,count:131072,floor:false,duration:3,arc:22,twist:.15,stagger:.18}. Count is the TOTAL ceiling, up to1000000; Default to131072 for a NEW sculpture, even if the previous scene used65536. Preserve the existing budget on edits unless the user asks to change it. Smaller budgets are allowed when requested or deliberately chosen for a sparse design; independent free lights only use particles.count0..1024. Never duplicate sparse lights just to fill the sculpture budget. objects are mathematical target surfaces, NEVER rendered models. Their animation and motion channels move the particles themselves, including bird wing deformation, waves, flowing tubes and hierarchy motion. particles.count0..1024 adds freely simulated point lights within the same total budget; use for fireflies, stars, snow, flock etc, or0 for a pure sculpture. Large surfaces should be focus:false so they do not consume the particles needed by the main subject. No automatic solid ground is drawn; add a particle surface object only when requested. Background colour only tints sparse distant points; use coloured particles for sky/sunset, never a backdrop sheet. "
 		"A new object noun by itself means build that recognizable complete subject, not just recolour the previous object. You may invent shapes using lathe profile, polygon outlines and curved tubes. lathe requires profile:[[height,radius],...] with 3..32 strictly increasing heights within -.5...5, radius0...5; first/last radius0 to close the body. size scales the profile. Optional curve points (local cm) offset the lathe centreline, allowing curved fruit, bottles, vases, vegetables, limbs. Compose distinctive body, cap, stem and leaves with separate IDs/colours. No predetermined noun-to-preset mapping exists. "
 		"Orient each part for its actual 3D contact surface: polygon/star/leaf lie in localXY with thicknessZ, so rotation[0,0,0] makes a horizontal cap. The X90 rule is ONLY for front-facing silhouettes, never an automatic rule for caps. Use parent anchors or explicit contact points to connect stems/caps/leaves, including when a body is tilted. Preserve distinctive proportions and curvature rather than replacing every subject with a round sphere. "
 		"particles:{count:int0..1024,size:.25..5,behavior:drift/flock/orbit/rain/snow/fire/fountain/fireworks/form,formation:volume/sphere/ring/heart/star/helix/galaxy/grid/wave/torus/cube/fish/bird/butterfly/flower/custom,"
@@ -530,6 +553,13 @@ bool FLightBoxStyle::CompleteGenerated(const FString& Words,const FLightBoxStyle
         for(auto& O:Applied.Objects)if(const auto* N=Next.Objects.FindByPredicate([&](const auto& X){return X.Id==O.Id;})){O.Speed=N->Speed;for(int32 M=0;M<FMath::Min(O.Motions.Num(),N->Motions.Num());++M)if(O.Motions[M].Type==N->Motions[M].Type)O.Motions[M].Period=N->Motions[M].Period;}
     } else Scoped=false;
     if(Scoped){Applied.Title=Next.Title;Applied.Note=Next.Note;Next=MoveTemp(Applied);}
+    // Sensor sensitivity is a standing rule: a response that does not name it keeps the current one.
+    if(!Next.bSensorsSpecified)Next.Sensors=Before.Sensors;
+    // A request only about how the scene reacts must not rebuild the subject.
+    const bool SensorWords=Has({TEXT("反応"),TEXT("センサ"),TEXT("感度"),TEXT("敏感"),TEXT("鈍感"),TEXT("react"),TEXT("sensor")});
+    if(SensorWords&&Next.bSensorsSpecified&&!Has({TEXT("色"),TEXT("形"),TEXT("作って"),TEXT("描いて"),TEXT("追加")})){
+        FLightBoxStyle Kept=Before;Kept.Sensors=Next.Sensors;Kept.Note=Next.Note;Next=MoveTemp(Kept);
+    }
     if(Has({TEXT("文字"),TEXT("日本語")})&&Has({TEXT("読め"),TEXT("表示")}))Next.Note=TEXT("正確な文字描画は未対応です。線の立体による近似表現です");
     if(Has({TEXT("物理実験"),TEXT("流体")})&&Has({TEXT("水"),TEXT("油")}))Next.Note=TEXT("流体の物理計算ではなく、設定した経路と形によるアニメーションです");
 
