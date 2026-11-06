@@ -17,6 +17,9 @@ APP="com.lati.spresensegames/com.epicgames.unreal.SplashActivity"
 
 step() { printf '\n[%s] %s\n' "$1" "$2"; }
 
+# Never stop at a pager (":" prompt) or a package question while installing.
+export DEBIAN_FRONTEND=noninteractive PAGER=cat APT_PAGER=cat LESS=FRX
+
 step 1/5 "必要なツールを確認しています"
 # A freshly installed Termux ships old libraries. Installing nodejs-lts alone then
 # leaves a node that cannot start ("CANNOT LINK EXECUTABLE ... _ZNSt6__ndk1...").
@@ -34,8 +37,14 @@ if ! node_works || ! command -v curl >/dev/null; then
         exit 1
     fi
 fi
-if ! command -v openclaw >/dev/null; then
-    npm install -g "openclaw@$OPENCLAW_VERSION"
+# npm 12 skips install scripts unless they are allowed. OpenClaw needs them
+# (bundled plugins, esbuild), so allow exactly these packages. The marker also
+# repairs an earlier install whose scripts were skipped.
+mkdir -p "$DIR"
+OPENCLAW_MARK="$DIR/.openclaw-$OPENCLAW_VERSION-installed"
+if ! command -v openclaw >/dev/null || [[ ! -f "$OPENCLAW_MARK" ]]; then
+    npm install -g --allow-scripts=@google/genai,esbuild,protobufjs,openclaw "openclaw@$OPENCLAW_VERSION"
+    touch "$OPENCLAW_MARK"
 fi
 printf 'node %s / openclaw %s\n' "$(node --version)" "$(openclaw --version 2>/dev/null | head -n1)"
 
