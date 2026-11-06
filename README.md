@@ -6,7 +6,7 @@ Spresenseやスマートフォンの傾きで遊ぶ、Android向けの3つの体
 
 ## 1. インストール
 
-[**APKをダウンロード**](https://github.com/NaitoMitsuharu/spresesneMaze/releases/download/v0.5.0-preview.3/SpresenseMaze-arm64.apk)して、Android端末で開きます。Android 14以上・arm64向けです。別のゲームデータは不要です。
+[**APKをダウンロード**](https://github.com/NaitoMitsuharu/spresesneMaze/releases/download/v0.5.0-preview.4/SpresenseMaze-arm64.apk)して、Android端末で開きます。Android 14以上・arm64向けです。別のゲームデータは不要です。
 
 PCから更新する場合は、記録を残したまま次のコマンドを実行できます。
 

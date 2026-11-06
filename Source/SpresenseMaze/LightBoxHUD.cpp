@@ -267,7 +267,7 @@ void ALightBoxHUD::OpenSettings()
 	TSharedPtr<STextBlock> Message;
 	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", FMath::RoundToInt(22 * J));
 	Url = SNew(SEditableTextBox).Style(LightBoxUI::FieldStyle()).Font(Font).Text(FText::FromString(D->GetEndpoint()));
-	Token = SNew(SEditableTextBox).Style(LightBoxUI::FieldStyle()).Font(Font).IsPassword(true).HintText(FText::FromString(D->HasCredentials()?TEXT("設定済み（変更するときだけ入力）"):TEXT("認証キーを入力")));
+	Token = SNew(SEditableTextBox).Style(LightBoxUI::FieldStyle()).Font(Font).IsPassword(true).HintText(FText::FromString(D->HasCredentials()?TEXT("設定済み（変更するときだけ入力）"):TEXT("Termuxに表示された認証キー")));
 	Message = SNew(STextBlock).Font(Font).WrapTextAt(FMath::Min(W * Ratio * 0.85f, 800 * J) - 56 * J).ColorAndOpacity(Mint)
 		.Text(FText::FromString(TEXT("")));
 	Dialog = SNew(SOverlay)

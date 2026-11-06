@@ -259,6 +259,23 @@ void FlightEnvironment::Build(AActor* Owner, USceneComponent* Root, bool bWithPl
 	Sky->RegisterComponent();
 	Owner->AddInstanceComponent(Sky);
 
+	// Mobile renders the atmosphere through an IsSky material on an enclosing mesh.
+	// Keep it around the complete course, with no collision, shadows or depth occlusion.
+	if (UStaticMesh* DomeMesh = EngineMesh(TEXT("/Game/Flight/SM_FlightSkyDome.SM_FlightSkyDome")))
+	{
+		UStaticMeshComponent* Dome = NewObject<UStaticMeshComponent>(Owner, TEXT("AtmosphereDome"));
+		Dome->SetupAttachment(Root);
+		Dome->SetStaticMesh(DomeMesh);
+		Dome->SetRelativeScale3D(FVector(100000.f));
+		Dome->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Dome->SetCastShadow(false);
+		Dome->SetReceivesDecals(false);
+		Dome->bUseAsOccluder = false;
+		Dome->SetMaterial(0, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Flight/M_FlightSky.M_FlightSky")));
+		Dome->RegisterComponent();
+		Owner->AddInstanceComponent(Dome);
+	}
+
 	USkyLightComponent* SkyLight = NewObject<USkyLightComponent>(Owner, TEXT("SkyLight"));
 	SkyLight->SetupAttachment(Root);
 	SkyLight->SetMobility(EComponentMobility::Movable);

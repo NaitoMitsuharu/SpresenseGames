@@ -52,7 +52,8 @@ ATitlePawn::ATitlePawn()
 	Camera->FieldOfView = 43.f;
 	MazePreview = CreateDefaultSubobject<USceneComponent>(TEXT("MazePreview"));
 	MazePreview->SetupAttachment(Root);
-	MazePreview->SetRelativeLocation(FVector(520.f, 520.f, 0.f));
+	MazePreview->SetRelativeLocation(FVector(-260.f, -260.f, 0.f));
+	MazePreview->SetRelativeScale3D(FVector(1.6f));
 	MazePreview->SetVisibility(false, true);
 	LightBoxPreview = CreateDefaultSubobject<USceneComponent>(TEXT("LightBoxPreview"));
 	LightBoxPreview->SetupAttachment(Root);
@@ -140,7 +141,7 @@ void ATitlePawn::Tick(float DeltaSeconds)
 	ShipPivot->SetRelativeLocation(FVector(-260.f, -260.f, 45.f + FMath::Sin(T * 0.65f) * 16.f));
 	ShipPivot->SetRelativeRotation(FRotator(2.f + FMath::Sin(T * 0.4f) * 2.f, -12.f + FMath::Sin(T * 0.22f) * 6.f,
 		-6.f + FMath::Sin(T * 0.35f) * 4.f));
-	MazePreview->SetRelativeLocation(FVector(520.f, 520.f, FMath::Sin(T * 0.7f) * 14.f));
+	MazePreview->SetRelativeLocation(FVector(-260.f, -260.f, FMath::Sin(T * 0.7f) * 14.f));
 	MazePreview->SetRelativeRotation(FRotator(0.f, T * 12.f, 0.f));
 	LightBoxPreview->SetRelativeLocation(FVector(-260.f, -260.f, FMath::Sin(T * 0.8f) * 14.f));
 	LightBoxPreview->SetRelativeRotation(FRotator(0.f, T * 10.f, 0.f));
