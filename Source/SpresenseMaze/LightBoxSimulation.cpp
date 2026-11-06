@@ -131,7 +131,7 @@ void FLightBoxSimulation::Impulse(const FLightBoxStyle& S)
 	for (FLightMote& P : Motes) { P.Velocity += (P.Position-S.Center).GetSafeNormal(0.01,FVector::UpVector) * (S.Shake == TEXT("gather") ? -200 : 260); }
 }
 
-void FLightBoxSimulation::Step(float Seconds, const FVector2D& Tilt, float Twist, const FLightBoxStyle& S)
+void FLightBoxSimulation::Step(float Seconds, const FVector2D& Tilt, float Twist, const FLightBoxStyle& S, const FLightBoxEnvironment& Env)
 {
 	if (Motes.Num() != S.Count || Configuration!=Signature(S)) { Reset(S); }
 	float Remaining = FMath::Clamp(Seconds, 0.f, 0.1f);
@@ -150,6 +150,14 @@ void FLightBoxSimulation::Step(float Seconds, const FVector2D& Tilt, float Twist
 			const FVector Delta = P.Position-S.Center; const float T = Time*S.Motion+P.Phase;
 			FVector Force(-Tilt.X*240.f*S.Tilt,Tilt.Y*240.f*S.Tilt,0);
 			Force += S.Wind*100; Force.Z -= S.Gravity*170;
+			if (!Env.IsZero())
+			{
+				// The phone's surroundings: breath, palm warmth, light/hand gathering and a magnet.
+				Force += Env.Wind*420 + Env.Magnet*320;
+				Force += FVector(FMath::Sin(T*5.3f+P.Phase*3),FMath::Cos(T*4.1f+P.Phase*5),FMath::Sin(T*6.7f+P.Phase))*160*Env.Flutter;
+				Force.Z += Env.Warmth*260;
+				Force -= Delta*1.6*Env.Gather;
+			}
 			if (S.Behavior == TEXT("flock"))
 			{
 				const float Group = (I % S.Groups)*2*PI/S.Groups;

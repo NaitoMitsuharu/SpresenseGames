@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.lati.spresensemaze;
+package com.lati.spresensegames;
 
 import com.google.android.vending.expansion.downloader.impl.DownloaderService;
 
@@ -61,6 +61,6 @@ public class OBBDownloaderService extends DownloaderService {
      */
     @Override
     public String getAlarmReceiverClassName() {
-        return com.lati.spresensemaze.AlarmReceiver.class.getName();
+        return com.lati.spresensegames.AlarmReceiver.class.getName();
     }
 }

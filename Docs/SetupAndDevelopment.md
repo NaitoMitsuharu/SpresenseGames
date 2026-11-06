@@ -278,9 +278,10 @@ USBデバッグを使う場合は、PCから次の手順でインストール・
 ```powershell
 adb devices
 adb install -r -t SpresenseMaze-arm64.apk
-adb shell am start -n com.lati.spresensemaze/com.epicgames.unreal.SplashActivity
+adb shell am start -n com.lati.spresensegames/com.epicgames.unreal.SplashActivity
 ```
 
+パッケージ名は `com.lati.spresensegames` です（旧名 `com.lati.spresensemaze` から変更）。旧パッケージのアプリは別アプリ扱いのため `-r` でも記録は引き継がれません。
 `-r` は既存アプリの記録を残して更新します。同じ署名のAPKに限り更新できるため、
 署名の不一致が表示された場合はアンインストールせずに確認してください。
 UEが生成する `Install_SpresenseMaze-arm64.bat` は最初に既存アプリを削除するため、
@@ -401,7 +402,7 @@ Android端末内蔵IMUへ自動で切り替わります(接続表示だけでは
 使えない場合にだけ、画面左下に仮想スティック、右下にジャンプボタンを表示します。
 PCエディタでは従来どおりWASD/矢印キー + Spaceへフォールバックします。
 
-Androidアプリアイコンは `Build/Android/IconSource/SpresenseMazeIcon.png` を原画として、
+Androidアプリアイコンは `Build/Android/IconSource/SpresenseGamesIcon.png` を原画として、
 LDPIからXXXHDPIまでドットの輪郭を保った解像度別PNGを収録しています。
 
 ### キャリブレーション

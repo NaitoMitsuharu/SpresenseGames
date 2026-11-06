@@ -119,4 +119,42 @@ bool FFlightHandlingTest::RunTest(const FString&)
 	TestTrue(TEXT("Same velocity at 30 and 120 fps"), FMath::Abs(V30 - V120) < 0.01);
 	return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FFlightRollStaminaTest, "SpresenseMaze.Flight.RollStamina", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FFlightRollStaminaTest::RunTest(const FString&)
+{
+	FlightHandling::FRollStamina Stamina;
+	TestTrue(TEXT("A full gauge allows a roll"), Stamina.TrySpend());
+	TestFalse(TEXT("Rolls cannot be chained"), Stamina.TrySpend());
+	for (int32 I = 0; I < 37; ++I) { Stamina.Tick(1.f / 60, true); }
+	TestFalse(TEXT("Nothing refills during the roll"), Stamina.CanSpend());
+	float Waited = 0.f;
+	while (!Stamina.CanSpend() && Waited < 5.f) { Stamina.Tick(1.f / 60, false); Waited += 1.f / 60; }
+	TestTrue(TEXT("The next roll needs a short rest"), Waited > 0.6f && Waited < 1.5f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FFlightTouchAimTest, "SpresenseMaze.Flight.TouchAim", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FFlightTouchAimTest::RunTest(const FString&)
+{
+	using FlightHandling::FTouchAim;
+	const FVector2D Limits(18.f, 12.f);
+	FTouchAim Aim;
+	Aim.Update(true, FVector2D(500, 500), false, 1000.f, 1.f / 60, Limits);
+	TestTrue(TEXT("Touch-down alone does not aim"), Aim.Angles.IsNearlyZero());
+	Aim.Update(true, FVector2D(600, 450), false, 1000.f, 1.f / 60, Limits);
+	TestTrue(TEXT("Drag right aims right"), Aim.Angles.X > 0.f);
+	TestTrue(TEXT("Drag up aims up"), Aim.Angles.Y > 0.f);
+	Aim.Update(true, FVector2D(5000, -5000), false, 1000.f, 1.f / 60, Limits);
+	TestEqual(TEXT("Yaw is limited"), float(Aim.Angles.X), 18.f);
+	TestEqual(TEXT("Pitch is limited"), float(Aim.Angles.Y), 12.f);
+	for (int32 I = 0; I < 120; ++I) { Aim.Update(false, FVector2D::ZeroVector, false, 1000.f, 1.f / 60, Limits); }
+	TestTrue(TEXT("Release returns to the nose"), Aim.Angles.Size() < 0.1f);
+
+	FTouchAim OnButton;
+	OnButton.Update(true, FVector2D(100, 100), true, 1000.f, 1.f / 60, Limits);
+	OnButton.Update(true, FVector2D(400, 100), false, 1000.f, 1.f / 60, Limits);
+	TestTrue(TEXT("A touch that starts on a button never aims"), OnButton.Angles.IsNearlyZero());
+	return true;
+}
 #endif

@@ -27,7 +27,7 @@ public final class AudioPromptActivity extends Activity {
             if(!clipCaptured){savedClip=clipboard.getPrimaryClip();clipCaptured=true;}
             clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Input review",getIntent().getStringExtra("text")));
         }
-        startActivity(new Intent().setClassName("com.lati.spresensemaze","com.epicgames.unreal.GameActivity").addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
+        startActivity(new Intent().setClassName("com.lati.spresensegames","com.epicgames.unreal.GameActivity").addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
         finish();
     }
     @Override public void onCreate(Bundle state) {
@@ -45,7 +45,7 @@ public final class AudioPromptActivity extends Activity {
                 public void onDone(String id){handler.post(()->{speech.shutdown();finish();});}
                 public void onError(String id){handler.post(()->{speech.shutdown();finish();});}
             });
-            Intent game=new Intent().setClassName("com.lati.spresensemaze","com.epicgames.unreal.GameActivity").addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            Intent game=new Intent().setClassName("com.lati.spresensegames","com.epicgames.unreal.GameActivity").addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
             startActivity(game);
             handler.postDelayed(()->speech.speak(text,TextToSpeech.QUEUE_FLUSH,null,"review"),4500);
         });

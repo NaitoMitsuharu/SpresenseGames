@@ -66,6 +66,44 @@ void ALightBoxHUD::DrawHUD()
 {
 	Super::DrawHUD(); if (!Canvas) { return; }
 	EnsureControls();
+	DrawSensorChips();
+}
+
+void ALightBoxHUD::DrawSensorChips()
+{
+	const ALightBoxPawn* Pawn = Cast<ALightBoxPawn>(GetOwningPawn());
+	if (!Pawn || Dialog.IsValid()) { return; }
+	const FLightBoxSensorReading& R = Pawn->GetSensorReading();
+	if (R.bClap) { ClapShown = 0.8f; }
+	ClapShown = FMath::Max(0.f, ClapShown - GetWorld()->GetDeltaSeconds());
+	struct FChip { const TCHAR* Label; float Level; FLinearColor Color; };
+	const FChip Chips[] = {
+		{ TEXT("息"), R.Breath, FLinearColor(0.55f,0.9f,1.f) },
+		{ TEXT("拍手"), ClapShown/0.8f, FLinearColor(1.f,1.f,1.f) },
+		{ TEXT("ぬくもり"), R.Warmth, FLinearColor(1.f,0.62f,0.3f) },
+		{ TEXT("暗がり"), R.Darkness, FLinearColor(0.62f,0.58f,1.f) },
+		{ TEXT("まぶしい"), R.Brightness, FLinearColor(1.f,0.95f,0.6f) },
+		{ TEXT("手"), R.Near, FLinearColor(0.55f,1.f,0.8f) },
+		{ TEXT("磁石"), R.Magnet, FLinearColor(1.f,0.45f,0.6f) },
+	};
+	// Only what is reacting right now, centred just above the scene's bottom edge.
+	const float Size = 17.f, Pad = 12*S, GapX = 10*S, ChipH = 32*S;
+	float Total = 0; int32 Count = 0;
+	for (const FChip& C : Chips) { if (C.Level > 0.06f) { Total += TextSize(C.Label, Size).X + Pad*2 + 14*S; ++Count; } }
+	if (!Count) { return; }
+	Total += GapX * (Count - 1);
+	float X = (W - Total) * 0.5f;
+	const float Y = H * 0.72f;
+	for (const FChip& C : Chips)
+	{
+		if (C.Level <= 0.06f) { continue; }
+		const float CW = TextSize(C.Label, Size).X + Pad*2 + 14*S, A = FMath::Clamp(C.Level, 0.f, 1.f);
+		ExperienceUI::RoundRect(Canvas, X, Y, CW, ChipH, ChipH*0.5f, FLinearColor(0.03f,0.06f,0.09f,0.35f+0.3f*A));
+		ExperienceUI::RoundRect(Canvas, X+ChipH*0.3f, Y+ChipH-3*S, (CW-ChipH*0.6f)*A, 3*S, 1.5f*S, C.Color.CopyWithNewOpacity(0.85f));
+		Dot(X+Pad+4*S, Y+ChipH*0.5f, 4*S, C.Color.CopyWithNewOpacity(0.5f+0.5f*A));
+		Text(C.Label, FLinearColor(0.95f,0.98f,1.f,0.7f+0.3f*A), X+Pad+14*S, Y+ChipH*0.5f-Size*0.62f*S, Size, false);
+		X += CW + GapX;
+	}
 }
 
 void ALightBoxHUD::NotifyHitBoxClick(FName Name)

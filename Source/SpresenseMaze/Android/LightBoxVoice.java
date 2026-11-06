@@ -14,7 +14,7 @@ import org.json.JSONObject;
 /** Android owns microphone permission and speech-to-text; UE polls short events. */
 public final class LightBoxVoice {
     private final Activity activity;
-    private SpeechRecognizer recognizer;
+    private volatile SpeechRecognizer recognizer;
     private String event = "";
     private int generation = 0;
     private boolean active = false;
@@ -28,6 +28,9 @@ public final class LightBoxVoice {
             event = value.toString();
         } catch (Exception ignored) { }
     }
+
+    /** True while speech recognition owns the microphone. */
+    public boolean isListening() { return recognizer != null; }
 
     public synchronized String poll() {
         String result = event; event = ""; return result;

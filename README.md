@@ -1,4 +1,4 @@
-# SpresenseMaze
+# Spresense Games
 
 Spresenseやスマートフォンの傾きで遊ぶ、Android向けの3つの体験です。対象実機は **Xperia 1 VII** です。
 
@@ -13,6 +13,8 @@ PCから更新する場合は、記録を残したまま次のコマンドを実
 ```powershell
 adb install -r -t SpresenseMaze-arm64.apk
 ```
+
+> アプリ名を「Spresense Maze」から「Spresense Games」に変更し、パッケージ名も `com.lati.spresensegames` に変わりました。旧アプリ（`com.lati.spresensemaze`）とは別のアプリとしてインストールされ、旧アプリの記録・接続設定は引き継がれません。ひかりのアトリエでは、新アプリの **☰ → 設定** で接続先と認証キーを一度登録し直してください。端末内のTermux／OpenClaw／Copilotは引き続き使えます。不要になった旧アプリは手動でアンインストールしてください。
 
 Spresenseを使う場合は、先に[ServiceアプリとUSB接続の準備](Docs/SetupAndDevelopment.md#1-端末とセンサーを準備する)を行ってください。未接続でも端末内蔵センサーで試せます。
 

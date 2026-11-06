@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "LightBoxStyle.h"
+#include "LightBoxSensors.h"
 
 struct FLightMote
 {
@@ -25,7 +26,7 @@ public:
     static FString Signature(const FLightBoxStyle& Style);
 	static FVector Target(int32 Index, int32 Count, const FLightBoxStyle& Style, float Time);
 	void Impulse(const FLightBoxStyle& Style);
-	void Step(float Seconds, const FVector2D& Tilt, float Twist, const FLightBoxStyle& Style);
+	void Step(float Seconds, const FVector2D& Tilt, float Twist, const FLightBoxStyle& Style, const FLightBoxEnvironment& Env = FLightBoxEnvironment());
 private:
 	FString Configuration;
 	void UpdateFlock(const FLightBoxStyle& Style);

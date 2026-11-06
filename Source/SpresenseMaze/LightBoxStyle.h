@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "LightBoxSensors.h"
 
 /** Independent, composable animation channel. Period is in seconds; phase in cycles. */
 struct FLightBoxMotion
@@ -77,6 +78,10 @@ struct FLightBoxStyle
 	float Glow = 1.f;
 	float Trail = 0.6f;
 	float ShakeThreshold = 1.65f;
+	/** How strongly the phone sensors move this scene (optional "sensors" in JSON). */
+	FLightBoxSensorGains Sensors;
+	/** Parse-time only: the response named "sensors" (otherwise an edit keeps the current values). */
+	bool bSensorsSpecified = false;
 	FString Shake = TEXT("scatter");
 	FString Note;
 	int32 Count = 144;

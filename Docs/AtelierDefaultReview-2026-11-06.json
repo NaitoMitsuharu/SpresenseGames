@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-06",
+  "app": "Spresense Games",
+  "package": "com.lati.spresensegames",
+  "device": "Xperia 1 VII XQ-FS54",
+  "android": 16,
+  "build": "Development ASTC arm64",
+  "method": "Both scene fixtures omit pointCloud.count. Static sculpture and 24 independent moving lights; 8 seconds after assembly. No AI provider calls.",
+  "automation": {
+    "succeeded": 56,
+    "failed": 0
+  },
+  "results": [
+    {
+      "case": "default-sculpture",
+      "points": 131072,
+      "instances": 131072,
+      "fps": 52.95452880859375,
+      "frameMsP95": 33.55088424682617,
+      "frameMsMax": 44.197654724121094,
+      "seconds": 8.006869316101074,
+      "gpuVertexAnimation": true,
+      "particleOnly": true,
+      "solidSceneComponents": 0,
+      "animatedTarget": false,
+      "controlVertices": 3758,
+      "controlTravel": 0
+    },
+    {
+      "case": "sparse-lights",
+      "points": 24,
+      "instances": 24,
+      "fps": 59.94569778442383,
+      "frameMsP95": 17.14078140258789,
+      "frameMsMax": 17.461875915527344,
+      "seconds": 8.007246971130371,
+      "gpuVertexAnimation": true,
+      "particleOnly": true,
+      "solidSceneComponents": 0,
+      "animatedTarget": true,
+      "controlVertices": 24,
+      "controlTravel": 105.99765014648438
+    }
+  ]
+}

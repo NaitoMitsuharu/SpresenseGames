@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.lati.spresensemaze;
+package com.lati.spresensegames;
 
 import com.google.android.vending.expansion.downloader.DownloaderClientMarshaller;
 

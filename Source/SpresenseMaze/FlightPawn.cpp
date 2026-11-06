@@ -8,6 +8,7 @@
 #include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
 #include "FlightCourse.h"
+#include "FlightHUD.h"
 #include "GameFramework/PlayerController.h"
 #include "InputCoreTypes.h"
 #include "Kismet/GameplayStatics.h"
@@ -137,8 +138,8 @@ void AFlightPawn::BeginPlay()
 
 FVector AFlightPawn::NoseDir() const
 {
-	const float P = FMath::DegreesToRadians(ShipPitch);
-	const float Y = FMath::DegreesToRadians(ShipYaw);
+	const float P = FMath::DegreesToRadians(AimPitch);
+	const float Y = FMath::DegreesToRadians(AimYaw);
 	return FVector(FMath::Cos(P) * FMath::Cos(Y), FMath::Cos(P) * FMath::Sin(Y), FMath::Sin(P));
 }
 
@@ -159,7 +160,8 @@ FVector AFlightPawn::GetCameraLocation() const
 
 bool AFlightPawn::IsInvulnerable() const
 {
-	return DodgeTime > 0.035f || GetWorld()->GetTimeSeconds() < InvulnerableUntil;
+	// A barrel roll is invulnerable for its whole length; a sidestep after its first frames.
+	return (bBarrelRoll ? DodgeTime > 0.f : DodgeTime > 0.035f) || GetWorld()->GetTimeSeconds() < InvulnerableUntil;
 }
 
 void AFlightPawn::ShowBanner(const FString& Text, float Seconds)
@@ -200,7 +202,7 @@ void AFlightPawn::Tick(float DeltaSeconds)
 		{
 			State = EFlightState::AwaitNeutral;
 			bInputLost = true;
-			DodgeTime = 0; Flick.Reset();
+			DodgeTime = 0; bBarrelRoll = false; ShipRoll = FMath::UnwindDegrees(ShipRoll); Flick.Reset();
 		}
 	}
 
@@ -252,7 +254,8 @@ void AFlightPawn::Tick(float DeltaSeconds)
 		}
 
 		// Automatic fire, alternating guns that converge on the far reticle.
-		FireTimer -= Dt;
+		// Guns stay silent through a barrel roll and resume half an interval after it.
+		FireTimer = IsRolling() ? FireInterval * 0.5f : FireTimer - Dt;
 		while (FireTimer <= 0.f)
 		{
 			FireTimer += FireInterval;
@@ -323,7 +326,10 @@ void AFlightPawn::UpdateInput(float Dt, bool bSteer)
 	CommandZ = bHasInput ? PitchSign * Map(PitchDeg) : 0.f;
 	if (FMath::Abs(CommandX) > 0.2f) { LastSteerSide = CommandX < 0 ? -1 : 1; }
 	const bool Physical = Att.Source == EAttitudeSource::SprBox || Att.Source == EAttitudeSource::DeviceMotion;
-	if (bSteer && State == EFlightState::Playing && bHasInput && Physical && bGestureDodge && !bAutoShot)
+	// With the Spresense steering, its heading is not used: the slide aims instead,
+	// and the tilt-and-return gesture always rolls (the dodge buttons are hidden).
+	bSplitAim = Att.Source == EAttitudeSource::SprBox && !bAutoShot;
+	if (bSteer && State == EFlightState::Playing && bHasInput && Physical && (bGestureDodge || bSplitAim) && !bAutoShot)
 	{
 		const int32 Gesture = Flick.Update(Map(Att.RawRollDeg), Dt);
 		if (Gesture) { RequestDodge(Gesture); }
@@ -335,11 +341,21 @@ void AFlightPawn::UpdateInput(float Dt, bool bSteer)
 	const float BaseRoll = FMath::Clamp(RollDeg * 1.25f + float(Vel.X) / LateralSpeed * 6.f, -43.f, 43.f);
 	const float TargetRoll = FMath::Clamp(BaseRoll + DodgeDirection * DodgePulse() * 55.f, -68.f, 68.f);
 	const float TargetPitch = FMath::Clamp(PitchSign * PitchDeg, -NosePitchLimitDeg, NosePitchLimitDeg);
-	const float TargetYaw = FMath::Clamp(YawDeg, -YawLimitDeg, YawLimitDeg);
+	const float TargetYaw = bSplitAim ? 0.f : FMath::Clamp(YawDeg, -YawLimitDeg, YawLimitDeg);
 	const float Response = 20.f;
-	ShipRoll = FMath::FInterpTo(ShipRoll, TargetRoll, Dt, Response);
+	if (IsRolling())
+	{
+		// A full barrel roll on top of the current bank; UpdateDodge unwinds the extra turn.
+		const float Progress = 1.f - DodgeTime / DodgeLength;
+		ShipRoll = BaseRoll + DodgeDirection * 360.f * float(FlightHandling::DodgeEase(Progress));
+	}
+	else
+	{
+		ShipRoll = FMath::FInterpTo(ShipRoll, TargetRoll, Dt, Response);
+	}
 	ShipPitch = FMath::FInterpTo(ShipPitch, TargetPitch, Dt, Response);
 	ShipYaw = FMath::FInterpTo(ShipYaw, TargetYaw, Dt, Response);
+	UpdateTouchAim(Dt);
 
 	if (!bSteer)
 	{
@@ -366,6 +382,39 @@ void AFlightPawn::UpdateInput(float Dt, bool bSteer)
 		Off.Y = FMath::Sign(Off.Y) * AFlightCourse::LimitZ;
 		Vel.Y = 0.f;
 	}
+}
+
+void AFlightPawn::UpdateTouchAim(float Dt)
+{
+	if (!bSplitAim)
+	{
+		// One stick: the line of fire is the nose, exactly as before.
+		TouchAim.Reset();
+		AimYaw = ShipYaw;
+		AimPitch = ShipPitch;
+		return;
+	}
+	bool bDown = false;
+	FVector2D Position = FVector2D::ZeroVector;
+	bool bOnControl = false;
+	float ViewHeight = 1080.f;
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (PC && State == EFlightState::Playing)
+	{
+		float X = 0.f, Y = 0.f;
+		PC->GetInputTouchState(ETouchIndex::Touch1, X, Y, bDown);
+		Position = FVector2D(X, Y);
+		int32 VW = 0, VH = 0;
+		PC->GetViewportSize(VW, VH);
+		ViewHeight = float(FMath::Max(VH, 1));
+		if (const AFlightHUD* HUD = Cast<AFlightHUD>(PC->GetHUD()))
+		{
+			bOnControl = HUD->IsOverControl(Position);
+		}
+	}
+	TouchAim.Update(bDown, Position, bOnControl, ViewHeight, Dt, SplitAimLimitDeg);
+	AimYaw = FMath::FInterpTo(AimYaw, TouchAim.Angles.X, Dt, 24.f);
+	AimPitch = FMath::FInterpTo(AimPitch, TouchAim.Angles.Y, Dt, 24.f);
 }
 
 void AFlightPawn::UpdateShip(float Dt)
@@ -615,7 +664,7 @@ void AFlightPawn::Respawn()
 	Shield = MaxShield;
 	Course->ResetFrom(S);
 	NearSurface = 0.f; bHaveLastTips = false; ClearAt = -1.f;
-	DodgeTime = DodgeCooldown = 0; Flick.Reset();
+	DodgeTime = DodgeCooldown = 0; bBarrelRoll = false; RollStamina.Refill(); Flick.Reset(); TouchAim.Reset();
 	ShipPivot->SetVisibility(true, true);
 	InvulnerableUntil = GetWorld()->GetTimeSeconds() + 3.f;
 	UpdateCamera(0.f, true);
@@ -631,7 +680,7 @@ void AFlightPawn::BeginCountdown(float Seconds)
 
 void AFlightPawn::RequestNeutralReset()
 {
-	DodgeTime = 0; Flick.Reset();
+	DodgeTime = 0; bBarrelRoll = false; ShipRoll = FMath::UnwindDegrees(ShipRoll); Flick.Reset();
 	if (UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>())
 	{
 		Attitude->ResetNeutral();
@@ -642,6 +691,7 @@ void AFlightPawn::RequestNeutralReset()
 		}
 	}
 	ShipRoll = ShipPitch = ShipYaw = 0.f;
+	AimYaw = AimPitch = 0.f; TouchAim.Reset();
 	if (State == EFlightState::AwaitNeutral || State == EFlightState::Paused)
 	{
 		bInputLost = false;

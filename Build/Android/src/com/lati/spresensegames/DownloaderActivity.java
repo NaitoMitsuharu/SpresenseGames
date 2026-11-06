@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.lati.spresensemaze;
+package com.lati.spresensegames;
 
 import com.android.vending.expansion.zipfile.ZipResourceFile;
 import com.android.vending.expansion.zipfile.ZipResourceFile.ZipEntryRO;

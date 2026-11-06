@@ -45,6 +45,14 @@ void ALightBoxPawn::BeginPlay()
 	Attitude->EnsureSprBox(); Attitude->ResetNeutral(); SourceEpoch = Attitude->GetSourceEpoch();
 	LastYaw = Attitude->GetState().YawDeg;
 	ConfigureParticles();
+	bool bReview=false;
+#if !UE_BUILD_SHIPPING
+	// Reviews and benchmarks must stay deterministic: no microphone, light or magnet input.
+	for(const TCHAR* Key:{TEXT("LightBoxBatch="),TEXT("LightBoxScene="),TEXT("LightBoxReviewTime="),TEXT("PointCloudPhase="),TEXT("PointCloudReport=")})
+		bReview|=FCString::Stristr(FCommandLine::Get(),Key)!=nullptr;
+	bReview|=FParse::Param(FCommandLine::Get(),TEXT("LightBoxAutoShot"))||FParse::Param(FCommandLine::Get(),TEXT("LightBoxNoSensors"));
+#endif
+	if(!bReview)Sensors.Start();
 #if !UE_BUILD_SHIPPING
 	FString BatchDirectory;
 	if(FParse::Value(FCommandLine::Get(),TEXT("LightBoxBatch="),BatchDirectory))BatchReview=MakeShared<FLightBoxBatchReview>(BatchDirectory);
@@ -87,7 +95,7 @@ void ALightBoxPawn::ApplyScene(const FLightBoxStyle& Style)
 	AppliedContent=Content;
     if(Simulation.Motes.IsEmpty()||Simulation.Motes.Num()!=Style.Count)Simulation.Reset(Style);
     PointCloud->Assemble(Style);ObjectBurst=0;
-    if(PostProcess)PostProcess->Settings.BloomIntensity=Style.Bloom*.55f;
+    BaseBloom=Style.Bloom*.55f;if(PostProcess)PostProcess->Settings.BloomIntensity=BaseBloom;
     int32 Width=16,Height=9;if(auto* PC=Cast<APlayerController>(GetController()))PC->GetViewportSize(Width,Height);
     LastAspect=float(Width)/FMath::Max(1,Height);const FBox NextBounds=FLightBoxMotionSystem::Bounds(Style);
     const bool KeepView=!NewCamera&&CameraBounds.IsValid&&NextBounds.IsValid&&CameraBounds.Min.Equals(NextBounds.Min,.01)&&CameraBounds.Max.Equals(NextBounds.Max,.01);
@@ -98,6 +106,7 @@ void ALightBoxPawn::ApplyScene(const FLightBoxStyle& Style)
 
 void ALightBoxPawn::EndPlay(const EEndPlayReason::Type Reason)
 {
+	Sensors.Stop();
 	if (GetGameInstance()) { GetGameInstance()->GetSubsystem<ULightBoxDirector>()->Cancel(); }
 	Super::EndPlay(Reason);
 }
@@ -124,7 +133,7 @@ void ALightBoxPawn::ResetCameraView()
 
 void ALightBoxPawn::UpdateCameraInput(APlayerController* PC,bool Blocked)
 {
-	if(Blocked||!PC){bViewDragging=false;LastPinchDistance=0;return;}
+	if(Blocked||!PC){bViewDragging=false;LastPinchDistance=0;HoldStarted=-1;bHoldWarm=false;return;}
 	int32 Width,Height;PC->GetViewportSize(Width,Height);if(Width<=0||Height<=0)return;
 	float X=0,Y=0,X2=0,Y2=0;bool Down=false,Down2=false;
 	PC->GetInputTouchState(ETouchIndex::Touch1,X,Y,Down);PC->GetInputTouchState(ETouchIndex::Touch2,X2,Y2,Down2);
@@ -137,16 +146,21 @@ void ALightBoxPawn::UpdateCameraInput(APlayerController* PC,bool Blocked)
 	if(Down&&Down2&&InScene(X,Y)&&InScene(X2,Y2)){
 		const float Distance=FVector2D::Distance(FVector2D(X,Y),FVector2D(X2,Y2));
 		if(LastPinchDistance>8&&Distance>8)ViewDistance=FMath::Clamp(ViewDistance*LastPinchDistance/Distance,.55f,2.5f);
-		LastPinchDistance=Distance;bViewDragging=false;return;
+		LastPinchDistance=Distance;bViewDragging=false;HoldStarted=-1;bHoldWarm=false;return;
 	}
 	if(LastPinchDistance>0){LastPinchDistance=0;bViewDragging=false;return;}
 	if(Down&&InScene(X,Y)){
 		const FVector2D Touch(X,Y);
-		if(bViewDragging){const FVector2D Delta=Touch-LastViewTouch;ViewAngles.X=FMath::UnwindDegrees(ViewAngles.X-Delta.X/Height*180);
+		// A resting palm or finger warms the light; moving it turns the camera instead.
+		const double Now=FPlatformTime::Seconds();
+		if(HoldStarted<0){HoldStarted=Now;HoldOrigin=Touch;bHoldMoved=false;}
+		if(FVector2D::Distance(Touch,HoldOrigin)>Height*.015f)bHoldMoved=true;
+		bHoldWarm=!bHoldMoved&&Now-HoldStarted>.5;
+		if(bViewDragging&&!bHoldWarm){const FVector2D Delta=Touch-LastViewTouch;ViewAngles.X=FMath::UnwindDegrees(ViewAngles.X-Delta.X/Height*180);
 			const float Pitch=GetGameInstance()->GetSubsystem<ULightBoxDirector>()->GetStyle().CameraPitch;
 			ViewAngles.Y=FMath::Clamp(ViewAngles.Y+Delta.Y/Height*140,10.f-Pitch,85.f-Pitch);if(Delta.SizeSquared()>1)ViewOrbitSpeed=0;}
 		LastViewTouch=Touch;bViewDragging=true;
-	}else bViewDragging=false;
+	}else{bViewDragging=false;HoldStarted=-1;bHoldWarm=false;}
 }
 
 void ALightBoxPawn::UpdateCameraView(const FLightBoxStyle& Style,float Dt)
@@ -159,6 +173,18 @@ void ALightBoxPawn::UpdateCameraView(const FLightBoxStyle& Style,float Dt)
 	CameraTarget=FLightBoxMotionSystem::CameraForBounds(Style,CameraBounds,LastAspect,ViewAngles,ViewDistance);
 	const float A=FMath::SmoothStep(0.f,1.f,FMath::Clamp(CameraBlendAge/FMath::Max(.01f,CameraBlendSeconds),0.f,1.f));
 	FTransform C;C.Blend(CameraStart,CameraTarget,A);Camera->SetRelativeTransform(C);
+}
+
+void ALightBoxPawn::ApplySensorLook(float Dt)
+{
+	if (!PostProcess) { return; }
+	const FLightBoxSensorReading& S = Felt;
+	// Warmth tints toward candle light; darkness lets the motes glow, bright light washes them out.
+	const float Target = BaseBloom * FMath::Max(.2f, 1.f + .7f*S.Warmth + .5f*S.Darkness - .35f*S.Brightness);
+	FPostProcessSettings& P = PostProcess->Settings;
+	P.BloomIntensity = FMath::FInterpTo(P.BloomIntensity, Target, Dt, 4.f);
+	P.bOverride_ColorGain = true;
+	P.ColorGain = FMath::Lerp(FVector4(1,1,1,1), FVector4(1.18,1.0,.78,1), double(S.Warmth));
 }
 
 void ALightBoxPawn::Tick(float DeltaSeconds)
@@ -213,8 +239,18 @@ void ALightBoxPawn::Tick(float DeltaSeconds)
 		}
 	}
 	UpdateCameraView(Style,DeltaSeconds);
-	Simulation.Step(Dt,Tilt,Twist,Style);
-    PointCloud->Advance(DeltaSeconds,Tilt,Camera->GetRightVector(),Camera->GetUpVector(),&Simulation);
+	APlayerController* SensePC = Cast<APlayerController>(GetController());
+	if (SensePC) { if (const ALightBoxHUD* LH = Cast<ALightBoxHUD>(SensePC->GetHUD()); LH && LH->HasDialog()) { SensePC = nullptr; } }  // typing must not trigger the PC stand-in keys
+	Felt = FLightBoxSensorReader::ApplyGains(Sensors.Update(Dt, SensePC, bHoldWarm), Style.Sensors);
+	const FLightBoxSensorReading& Sense = Felt;
+	if (Sense.bClap && ShakeCooldown <= 0) { Pulse(); ShakeCooldown = 0.6f; }
+	if (Sense.bNearReleased && PointCloud) { PointCloud->ScatterPulse(); }
+	const FLightBoxEnvironment Env = FLightBoxSensorReader::ToEnvironment(Sense, Camera->GetForwardVector(), Camera->GetRightVector(), Camera->GetUpVector());
+	Simulation.Step(Dt,Tilt,Twist,Style,Env);
+	// The sculpture leans away from a breath and flutters with it, through the tilt path.
+	const FVector2D CloudTilt = Tilt + FVector2D(FMath::Sin(Elapsed*9.f)*.18f, .55f + FMath::Sin(Elapsed*6.3f)*.15f) * Sense.Breath;
+    PointCloud->Advance(DeltaSeconds,CloudTilt,Camera->GetRightVector(),Camera->GetUpVector(),&Simulation);
+	ApplySensorLook(Dt);
 #if !UE_BUILD_SHIPPING
 	if (!bAutoShot && GetWorld()->GetTimeSeconds() > 3 && FParse::Param(FCommandLine::Get(), TEXT("LightBoxAutoShot")))
 	{

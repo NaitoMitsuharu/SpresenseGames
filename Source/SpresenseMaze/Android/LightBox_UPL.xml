@@ -12,6 +12,7 @@
     </androidManifestUpdates>
     <resourceCopies>
         <copyFile src="$S(PluginDir)/LightBoxVoice.java" dst="$S(BuildDir)/src/com/lati/lightbox/LightBoxVoice.java" />
+        <copyFile src="$S(PluginDir)/LightBoxSensors.java" dst="$S(BuildDir)/src/com/lati/lightbox/LightBoxSensors.java" />
         <copyFile src="$S(PluginDir)/LightBoxCredentials.java" dst="$S(BuildDir)/src/com/lati/lightbox/LightBoxCredentials.java" />
         <copyFile src="$S(PluginDir)/lightbox_network_security_config.xml" dst="$S(BuildDir)/res/xml/lightbox_network_security_config.xml" />
     </resourceCopies>
@@ -68,12 +69,30 @@
     public String AndroidThunkJava_LightBoxPollVoice() {
         return lightBoxVoice == null ? "" : lightBoxVoice.poll();
     }
+    private com.lati.lightbox.LightBoxSensors lightBoxSensors;
+    public void AndroidThunkJava_LightBoxSensorsStart() {
+        if (lightBoxSensors == null) {
+            lightBoxSensors = new com.lati.lightbox.LightBoxSensors(this, () -> lightBoxVoice != null && lightBoxVoice.isListening());
+        }
+        lightBoxSensors.start();
+    }
+    public void AndroidThunkJava_LightBoxSensorsStop() {
+        if (lightBoxSensors != null) { lightBoxSensors.stop(); }
+    }
+    public String AndroidThunkJava_LightBoxSensorsPoll() {
+        return lightBoxSensors == null ? "" : lightBoxSensors.poll();
+    }
         ]]></insert>
     </gameActivityClassAdditions>
     <gameActivityOnPauseAdditions>
-        <insert>if (lightBoxVoice != null) { lightBoxVoice.pause(); }</insert>
+        <insert>if (lightBoxVoice != null) { lightBoxVoice.pause(); }
+if (lightBoxSensors != null) { lightBoxSensors.pause(); }</insert>
     </gameActivityOnPauseAdditions>
+    <gameActivityOnResumeAdditions>
+        <insert>if (lightBoxSensors != null) { lightBoxSensors.resume(); }</insert>
+    </gameActivityOnResumeAdditions>
     <gameActivityOnDestroyAdditions>
-        <insert>if (lightBoxVoice != null) { lightBoxVoice.stop(); }</insert>
+        <insert>if (lightBoxVoice != null) { lightBoxVoice.stop(); }
+if (lightBoxSensors != null) { lightBoxSensors.stop(); }</insert>
     </gameActivityOnDestroyAdditions>
 </root>
