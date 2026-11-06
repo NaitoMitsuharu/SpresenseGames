@@ -68,6 +68,7 @@ namespace
 void ULightBoxDirector::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+	Readiness=MakeUnique<FLightBoxReadiness>(MakeLightBoxTermuxBridge());
 	#if !UE_BUILD_SHIPPING
 	FString BatchDirectory;
 	if(FParse::Param(FCommandLine::Get(),TEXT("PointCloudReview"))) {bJournalEnabled=false;Journal.bPersistent=false;return;}
@@ -94,9 +95,47 @@ void ULightBoxDirector::Initialize(FSubsystemCollectionBase& Collection)
 	BearerToken=LoadCredential(Endpoint);
 }
 
+bool ULightBoxDirector::EnsureCredential()
+{
+	if (BearerToken.IsEmpty()) { BearerToken = LoadCredential(Endpoint); }
+	return !BearerToken.IsEmpty();
+}
+
+void ULightBoxDirector::BeginReadiness()
+{
+	if (!Readiness) { return; }
+	// A retry must not receive the result of a probe from the previous run.
+	if (ProbeRequest.IsValid()) { ProbeRequest->OnProcessRequestComplete().Unbind(); ProbeRequest->CancelRequest(); ProbeRequest.Reset(); }
+	Readiness->Begin(FPlatformTime::Seconds(), EnsureCredential());
+}
+
+void ULightBoxDirector::TickReadiness()
+{
+	if (!Readiness) { return; }
+	const double Now = FPlatformTime::Seconds();
+	Readiness->Tick(Now, !BearerToken.IsEmpty());
+	if (Readiness->ConsumeKeyStored() && EnsureCredential()) { Status = TEXT("接続の準備ができました。言葉で景色を作れます"); }
+	if (!Readiness->WantsProbe(Now)) { return; }
+	// Any HTTP answer means the Gateway is listening; auth is checked by real requests.
+	ProbeRequest = FHttpModule::Get().CreateRequest();
+	ProbeRequest->SetURL(Endpoint + TEXT("/"));
+	ProbeRequest->SetVerb(TEXT("GET"));
+	ProbeRequest->SetTimeout(2.f);
+	TWeakObjectPtr<ULightBoxDirector> Weak(this);
+	ProbeRequest->OnProcessRequestComplete().BindLambda([Weak](FHttpRequestPtr, FHttpResponsePtr Response, bool bConnected)
+	{
+		if (!Weak.IsValid() || !Weak->Readiness) { return; }
+		Weak->ProbeRequest.Reset();
+		Weak->Readiness->OnProbeResult(FPlatformTime::Seconds(), bConnected && Response.IsValid(), !Weak->BearerToken.IsEmpty());
+	});
+	Readiness->ProbeSent(Now);
+	ProbeRequest->ProcessRequest();
+}
+
 void ULightBoxDirector::Deinitialize()
 {
 	Cancel(); BearerToken.Reset();
+	if (ProbeRequest.IsValid()) { ProbeRequest->OnProcessRequestComplete().Unbind(); ProbeRequest->CancelRequest(); ProbeRequest.Reset(); }
 	for(auto R:{HistoryRequest,MeterRequest}) if(R.IsValid()) { R->OnProcessRequestComplete().Unbind(); R->CancelRequest(); }
 	Super::Deinitialize();
 }
@@ -181,6 +220,7 @@ FString ULightBoxDirector::TakeVoiceDraft()
 void ULightBoxDirector::PollVoice()
 {
 	PollJournal();
+	TickReadiness();
     if(bCapturingReview&&FPlatformTime::Seconds()-ReviewCaptureAt>8){Cancel();Status=TEXT("画面を取得できませんでした。もう一度お試しください");}
 #if PLATFORM_ANDROID
 	if (!bListening) { return; }
@@ -216,7 +256,7 @@ void ULightBoxDirector::Submit(const FString& Words)
 	if (Prompt == TEXT("元に戻して") || Prompt == TEXT("ひとつ前に戻して")) { Undo(); return; }
 	if (Prompt.IsEmpty() || Prompt.Len() > 500) { Status = TEXT("お願いは1〜500文字で入力してください"); return; }
 	Cancel(); Heard = Prompt;
-	if (BearerToken.IsEmpty()) { Status = TEXT("接続設定で認証キーを入力してください"); return; }
+	if (!EnsureCredential()) { Status = TEXT("接続設定で認証キーを入力してください"); return; }
 	bThinking = true;OperationStarted=FPlatformTime::Seconds(); Status = TEXT("AIが景色を設計中");
 	RequestScene(Prompt);
 }

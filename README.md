@@ -14,7 +14,7 @@ PCから更新する場合は、記録を残したまま次のコマンドを実
 adb install -r -t SpresenseMaze-arm64.apk
 ```
 
-> アプリ名を「Spresense Maze」から「Spresense Games」に変更し、パッケージ名も `com.lati.spresensegames` に変わりました。旧アプリ（`com.lati.spresensemaze`）とは別のアプリとしてインストールされ、旧アプリの記録・接続設定は引き継がれません。ひかりのアトリエでは、新アプリの **☰ → 設定** で接続先と認証キーを一度登録し直してください。端末内のTermux／OpenClaw／Copilotは引き続き使えます。不要になった旧アプリは手動でアンインストールしてください。
+> アプリ名を「Spresense Maze」から「Spresense Games」に変更し、パッケージ名も `com.lati.spresensegames` に変わりました。旧アプリ（`com.lati.spresensemaze`）とは別のアプリとしてインストールされ、旧アプリの記録・接続設定は引き継がれません。ひかりのアトリエの認証キーは、Termuxで `bash start-lightbox.sh` を実行すると新アプリへ自動で設定されます。端末内のTermux／OpenClaw／Copilotは引き続き使えます。不要になった旧アプリは手動でアンインストールしてください。
 
 Spresenseを使う場合は、先に[ServiceアプリとUSB接続の準備](Docs/SetupAndDevelopment.md#1-端末とセンサーを準備する)を行ってください。未接続でも端末内蔵センサーで試せます。
 
@@ -62,14 +62,14 @@ Spresenseを使う場合は、先に[ServiceアプリとUSB接続の準備](Docs
 初回だけ、同じ端末の **Termux → OpenClaw → Copilot** を準備します。
 
 1. [初回セットアップ](Docs/SetupAndDevelopment.md#新規android端末でひかりのアトリエを使う)に沿って、ログインと端末内サービスの起動を行います。
-2. アプリの **☰ → 設定** で、接続先 `http://127.0.0.1:18789` と、起動時に表示された認証キーを保存します。
+2. `start-lightbox.sh` がアプリを開き、認証キーを自動で設定します。アプリの **☰ → 設定** で接続先 `http://127.0.0.1:18789` と「設定済み」を確認します。
 3. マイクを許可し、SIMまたはWi-Fiにつないで話しかけます。
 
 <img src="Docs/images/readme-settings.jpg" alt="接続設定画面。接続先と認証キーを指定し、チェックで保存します" width="640">
 
-画像は設定済みの状態です。初回は認証キーを入力して、**✓** で保存します。
+画像は設定済みの状態です。自動設定されなかったときは、認証キーを入力して **✓** で保存します。
 
-翌日以降はTermuxで次を実行してから、アプリを開きます。
+翌日以降は、ひかりのアトリエを開くと接続を確認し、必要に応じて演出サービスを起動します。やり直す場合は **☰ → 設定 → 「接続を自動で準備する」** を押します（初回だけTermux側の許可設定が必要です。[手順](Docs/SetupAndDevelopment.md#翌日以降の起動と困ったとき)）。Termuxから起動する場合は次を実行します。
 
 ```bash
 cd ~/lightbox

@@ -3,10 +3,12 @@
     <androidManifestUpdates>
         <addPermission android:name="android.permission.RECORD_AUDIO" />
         <addPermission android:name="android.permission.INTERNET" />
+        <addPermission android:name="com.termux.permission.RUN_COMMAND" />
         <addAttribute tag="application" name="android:networkSecurityConfig" value="@xml/lightbox_network_security_config" />
         <addElements tag="manifest">
             <queries>
                 <intent><action android:name="android.speech.RecognitionService" /></intent>
+                <package android:name="com.termux" />
             </queries>
         </addElements>
     </androidManifestUpdates>
@@ -14,6 +16,7 @@
         <copyFile src="$S(PluginDir)/LightBoxVoice.java" dst="$S(BuildDir)/src/com/lati/lightbox/LightBoxVoice.java" />
         <copyFile src="$S(PluginDir)/LightBoxSensors.java" dst="$S(BuildDir)/src/com/lati/lightbox/LightBoxSensors.java" />
         <copyFile src="$S(PluginDir)/LightBoxCredentials.java" dst="$S(BuildDir)/src/com/lati/lightbox/LightBoxCredentials.java" />
+        <copyFile src="$S(PluginDir)/LightBoxTermux.java" dst="$S(BuildDir)/src/com/lati/lightbox/LightBoxTermux.java" />
         <copyFile src="$S(PluginDir)/lightbox_network_security_config.xml" dst="$S(BuildDir)/res/xml/lightbox_network_security_config.xml" />
     </resourceCopies>
     <gameActivityClassAdditions>
@@ -24,6 +27,26 @@
     }
     public boolean AndroidThunkJava_LightBoxSaveCredential(String endpoint, String token) {
         return new com.lati.lightbox.LightBoxCredentials(this).save(endpoint, token);
+    }
+    private com.lati.lightbox.LightBoxTermux lightBoxTermux;
+    private com.lati.lightbox.LightBoxTermux lightBoxTermux() {
+        if (lightBoxTermux == null) { lightBoxTermux = new com.lati.lightbox.LightBoxTermux(this); }
+        return lightBoxTermux;
+    }
+    public int AndroidThunkJava_LightBoxTermuxAvailability() { return lightBoxTermux().availability(); }
+    public void AndroidThunkJava_LightBoxTermuxRequestPermission() {
+        runOnUiThread(new Runnable() { public void run() { lightBoxTermux().requestPermission(); } });
+    }
+    public boolean AndroidThunkJava_LightBoxTermuxDoctor() { return lightBoxTermux().doctor(); }
+    public boolean AndroidThunkJava_LightBoxTermuxStartService() { return lightBoxTermux().startService(); }
+    public boolean AndroidThunkJava_LightBoxTermuxFetchToken() { return lightBoxTermux().fetchToken(); }
+    public String AndroidThunkJava_LightBoxTermuxPoll() { return lightBoxTermux().poll(); }
+    public boolean AndroidThunkJava_LightBoxTermuxConsumeResumed() { return lightBoxTermux().consumeResumed(); }
+    public void AndroidThunkJava_LightBoxTermuxCopySetup(final String command) {
+        runOnUiThread(new Runnable() { public void run() { lightBoxTermux().copyAndOpenTermux(command); } });
+    }
+    public void AndroidThunkJava_LightBoxTermuxOpen() {
+        runOnUiThread(new Runnable() { public void run() { lightBoxTermux().openTermux(); } });
     }
     private float lightBoxKeyboardTextSize;
     private android.content.res.ColorStateList lightBoxKeyboardTextColors;
@@ -84,15 +107,23 @@
     }
         ]]></insert>
     </gameActivityClassAdditions>
+    <gameActivityOnCreateAdditions>
+        <insert>com.lati.lightbox.LightBoxCredentials.acceptProvisioning(this, getIntent());</insert>
+    </gameActivityOnCreateAdditions>
+    <gameActivityOnNewIntentAdditions>
+        <insert>com.lati.lightbox.LightBoxCredentials.acceptProvisioning(this, newIntent);</insert>
+    </gameActivityOnNewIntentAdditions>
     <gameActivityOnPauseAdditions>
         <insert>if (lightBoxVoice != null) { lightBoxVoice.pause(); }
 if (lightBoxSensors != null) { lightBoxSensors.pause(); }</insert>
     </gameActivityOnPauseAdditions>
     <gameActivityOnResumeAdditions>
-        <insert>if (lightBoxSensors != null) { lightBoxSensors.resume(); }</insert>
+        <insert>if (lightBoxSensors != null) { lightBoxSensors.resume(); }
+if (lightBoxTermux != null) { lightBoxTermux.onResume(); }</insert>
     </gameActivityOnResumeAdditions>
     <gameActivityOnDestroyAdditions>
         <insert>if (lightBoxVoice != null) { lightBoxVoice.stop(); }
-if (lightBoxSensors != null) { lightBoxSensors.stop(); }</insert>
+if (lightBoxSensors != null) { lightBoxSensors.stop(); }
+if (lightBoxTermux != null) { lightBoxTermux.stop(); }</insert>
     </gameActivityOnDestroyAdditions>
 </root>

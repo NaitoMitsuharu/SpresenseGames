@@ -66,6 +66,7 @@ void ALightBoxHUD::DrawHUD()
 {
 	Super::DrawHUD(); if (!Canvas) { return; }
 	EnsureControls();
+	UpdateSetupDialog();
 	DrawSensorChips();
 }
 
@@ -144,7 +145,144 @@ void ALightBoxHUD::CloseDialog()
 		GetWorld()->GetGameViewport()->RemoveViewportWidgetContent(Dialog.ToSharedRef());
 	}
 	Dialog.Reset();
+	bSetupOpen = false;
 	if (APlayerController* PC = GetOwningPlayerController()) { PC->SetInputMode(FInputModeGameAndUI().SetHideCursorDuringCapture(false).SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock)); PC->bShowMouseCursor = true; FSlateApplication::Get().SetAllUserFocusToGameViewport(); }
+}
+
+namespace
+{
+	int32 SetupStage(const FLightBoxReadiness& R)
+	{
+		if (R.GetStep() == ELightBoxReadyStep::Failed) { return 3; }
+		switch (R.GetNeed())
+		{
+		case ELightBoxSetupNeed::InstallTermux: return 0;
+		case ELightBoxSetupNeed::Permission: return 1;
+		case ELightBoxSetupNeed::RunSetup: return 2;
+		default: return 3;
+		}
+	}
+
+	FString SetupGuide(const FLightBoxReadiness& R)
+	{
+		if (R.GetStep() == ELightBoxReadyStep::Failed) { return R.Detail(); }
+		switch (R.GetNeed())
+		{
+		case ELightBoxSetupNeed::InstallTermux:
+			return TEXT("言葉で景色を作るには、Termuxアプリが必要です。下のボタンから入手してインストールしてください。インストール後にこの画面へ戻ると、自動で続きを進めます。");
+		case ELightBoxSetupNeed::Permission:
+			return TEXT("表示された許可ダイアログで「許可」を選んでください。ダイアログが出ないときは、下のボタンを押してください。許可すると自動で続きを進めます。");
+		case ELightBoxSetupNeed::RunSetup:
+			return TEXT("最初の1回だけ、Termuxでセットアップを行います。\n1. 下のボタンを押すと、セットアップ用の1行がコピーされてTermuxが開きます。\n2. Termuxの画面を長押しして「Paste」を選び、Enterを押します。\n3. Copilotへのログインを案内されたら、画面の指示に従います。\n終わると自動でこのアプリに戻り、続きを進めます。");
+		case ELightBoxSetupNeed::CheckTermux:
+			return R.Detail();
+		default:
+			return FString();
+		}
+	}
+
+	FString SetupAction(const FLightBoxReadiness& R)
+	{
+		if (R.GetStep() == ELightBoxReadyStep::Failed) { return TEXT("もう一度"); }
+		switch (R.GetNeed())
+		{
+		case ELightBoxSetupNeed::InstallTermux: return TEXT("Termuxを入手");
+		case ELightBoxSetupNeed::Permission: return TEXT("許可する");
+		case ELightBoxSetupNeed::RunSetup: return TEXT("コピーしてTermuxを開く");
+		case ELightBoxSetupNeed::CheckTermux: return TEXT("Termuxを開く");
+		default: return TEXT("もう一度");
+		}
+	}
+}
+
+void ALightBoxHUD::UpdateSetupDialog()
+{
+	ULightBoxDirector* D = GetGameInstance()->GetSubsystem<ULightBoxDirector>();
+	const FLightBoxReadiness& R = D->GetReadiness();
+	const bool bAsks = R.GetStep() == ELightBoxReadyStep::NeedsSetup || R.GetStep() == ELightBoxReadyStep::Failed;
+	if (bSetupOpen && !bAsks)
+	{
+		CloseDialog();
+		return;
+	}
+	const bool bDismissed = R.GetStep() == ELightBoxReadyStep::Failed ? bDismissedFailure : R.GetNeed() == DismissedNeed;
+	if (bAsks && !bDismissed && !Dialog.IsValid()) { OpenSetup(); }
+}
+
+void ALightBoxHUD::OpenSetup()
+{
+	CloseDialog();
+	const auto Host = GetWorld()->GetGameViewport()->GetGameLayerManager();
+	const float Ratio = Host.IsValid() && H > 0 ? Host->GetViewportWidgetHostGeometry().GetLocalSize().Y / H : 1.f, J = S * Ratio;
+	ULightBoxDirector* D = GetGameInstance()->GetSubsystem<ULightBoxDirector>();
+	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", FMath::RoundToInt(22 * J));
+	const FSlateFontInfo Small = FCoreStyle::GetDefaultFontStyle("Regular", FMath::RoundToInt(19 * J));
+	const float Width = FMath::Min(W * Ratio * 0.85f, 860 * J);
+	const TCHAR* Steps[] = { TEXT("Termuxアプリ"), TEXT("コマンド実行の許可"), TEXT("Termuxの初回セットアップ"), TEXT("演出サービスと認証キー") };
+	TSharedRef<SVerticalBox> Checklist = SNew(SVerticalBox);
+	for (int32 I = 0; I < 4; ++I)
+	{
+		Checklist->AddSlot().AutoHeight().Padding(0, 3 * J)
+		[
+			SNew(STextBlock).Font(Small)
+			.ColorAndOpacity_Lambda([D, I]() { return SetupStage(D->GetReadiness()) == I ? FSlateColor(Mint) : FSlateColor(Ink.CopyWithNewOpacity(.7f)); })
+			.Text_Lambda([D, I, Label = FString(Steps[I])]()
+			{
+				const int32 Stage = SetupStage(D->GetReadiness());
+				return FText::FromString((I < Stage ? TEXT("✓  ") : I == Stage ? TEXT("▶  ") : TEXT("・  ")) + Label);
+			})
+		];
+	}
+	Dialog = SNew(SOverlay)
+	+ SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0, 0, 0, .18f))]
+	+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
+	[
+		SNew(SBox).WidthOverride(Width)
+		[
+			SNew(SBorder).Padding(28 * J).BorderImage(ExperienceUI::ModalBrush()).BorderBackgroundColor(ExperienceUI::Ink.CopyWithNewOpacity(.82f))
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 12 * J)
+				[SNew(STextBlock).Font(Font).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("言葉で景色を作る準備")))]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 12 * J)
+				[Checklist]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 16 * J)
+				[SNew(STextBlock).Font(Small).ColorAndOpacity(Ink).AutoWrapText(true)
+					.Text_Lambda([D]() { return FText::FromString(SetupGuide(D->GetReadiness())); })]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot().FillWidth(1).Padding(0, 0, 12 * J, 0)
+					[SNew(SButton).ButtonStyle(LightBoxUI::ButtonStyle()).HAlign(HAlign_Center).ContentPadding(12 * J)
+					.OnClicked_Lambda([Weak = TWeakObjectPtr<ALightBoxHUD>(this), D]()
+					{
+						if (Weak.IsValid())
+						{
+							const FLightBoxReadiness& R = D->GetReadiness();
+							if (R.GetStep() == ELightBoxReadyStep::Failed) { Weak->bDismissedFailure = true; }
+							else { Weak->DismissedNeed = R.GetNeed(); }
+							Weak->CloseDialog();
+						}
+						return FReply::Handled();
+					})
+					[SNew(STextBlock).Font(Font).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("あとで")))]]
+					+ SHorizontalBox::Slot().FillWidth(2)
+					[SNew(SButton).ButtonStyle(LightBoxUI::ButtonStyle(true)).HAlign(HAlign_Center).ContentPadding(12 * J)
+					.OnClicked_Lambda([D]()
+					{
+						FLightBoxReadiness& R = D->GetReadiness();
+						if (R.GetStep() == ELightBoxReadyStep::Failed) { D->BeginReadiness(); }
+						else { R.PerformSetupAction(); }
+						return FReply::Handled();
+					})
+					[SNew(STextBlock).Font(Font).ColorAndOpacity(FLinearColor(0.02f, 0.05f, 0.07f))
+						.Text_Lambda([D]() { return FText::FromString(SetupAction(D->GetReadiness())); })]]
+				]
+			]
+		]
+	];
+	AttachDialog();
+	bSetupOpen = true;
 }
 
 void ALightBoxHUD::EndPlay(const EEndPlayReason::Type Reason)
@@ -267,7 +405,7 @@ void ALightBoxHUD::OpenSettings()
 	TSharedPtr<STextBlock> Message;
 	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", FMath::RoundToInt(22 * J));
 	Url = SNew(SEditableTextBox).Style(LightBoxUI::FieldStyle()).Font(Font).Text(FText::FromString(D->GetEndpoint()));
-	Token = SNew(SEditableTextBox).Style(LightBoxUI::FieldStyle()).Font(Font).IsPassword(true).HintText(FText::FromString(D->HasCredentials()?TEXT("設定済み（変更するときだけ入力）"):TEXT("Termuxに表示された認証キー")));
+	Token = SNew(SEditableTextBox).Style(LightBoxUI::FieldStyle()).Font(Font).IsPassword(true).HintText(FText::FromString(D->EnsureCredential()?TEXT("設定済み（変更するときだけ入力）"):TEXT("Termuxに表示された認証キー")));
 	Message = SNew(STextBlock).Font(Font).WrapTextAt(FMath::Min(W * Ratio * 0.85f, 800 * J) - 56 * J).ColorAndOpacity(Mint)
 		.Text(FText::FromString(TEXT("")));
 	Dialog = SNew(SOverlay)
@@ -289,6 +427,23 @@ void ALightBoxHUD::OpenSettings()
 				[SNew(STextBlock).Font(Font).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("認証キー")))]
 				+ SVerticalBox::Slot().AutoHeight()
 				[Token.ToSharedRef()]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 14 * J, 0, 0)
+				[
+					// Re-runs the open-time check (start Gateway, fetch key, guide setup).
+					SNew(SButton).ButtonStyle(LightBoxUI::ButtonStyle()).HAlign(HAlign_Center).ContentPadding(12 * J)
+					.OnClicked_Lambda([Weak = TWeakObjectPtr<ALightBoxHUD>(this)]()
+					{
+						if (Weak.IsValid())
+						{
+							ALightBoxHUD* HUD = Weak.Get();
+							HUD->DismissedNeed = ELightBoxSetupNeed::None; HUD->bDismissedFailure = false;
+							HUD->CloseDialog();
+							HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>()->BeginReadiness();
+						}
+						return FReply::Handled();
+					})
+					[SNew(STextBlock).Font(Font).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("接続を自動で準備する")))]
+				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 12 * J)
 				[Message.ToSharedRef()]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 12 * J, 0, 0)
