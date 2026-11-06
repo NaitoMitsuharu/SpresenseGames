@@ -100,7 +100,7 @@ Android上のOpenClawホスティングは公式の管理サービス対象外�
 
    モデルIDの部分は表示されたものへ置き換えます。契約・組織ポリシーによって使用可能なモデルが異なります。
    [Copilot接続の公式資料](https://docs.openclaw.ai/providers/github-copilot)
-3. このリポジトリの `Tools/OpenClaw/start-lightbox.sh`、`lightbox-token.cjs`、`lightbox-observer.cjs`、`lightbox-pricing.json` をXperia 1 VIIの同じフォルダーへコピーし、実行します。
+3. このリポジトリの `Tools/OpenClaw/start-lightbox.sh`、`pair-lightbox.sh`、`lightbox-token.cjs`、`lightbox-observer.cjs`、`lightbox-pricing.json` をXperia 1 VIIの同じフォルダーへコピーし、実行します。
 
    ```bash
    bash start-lightbox.sh
@@ -110,7 +110,7 @@ Android上のOpenClawホスティングは公式の管理サービス対象外�
    ループバックの18789番ポートでGatewayを起動します。保存済みの認証キーがある場合は再利用し、なければ生成して専用設定へ保存し、画面に表示します。
    通常のOpenClawプロファイルは変更しません。
 4. Termuxの電池最適化を無効にし、Gatewayを起動したままSpresenseMazeへ戻ります。
-5. 「ひかりのアトリエ」→「設定」で接続先 `http://127.0.0.1:18789` と、起動画面の認証キーを入力します。
+5. `start-lightbox.sh` はアプリ専用の明示Intentで認証キーを渡し、アプリに未設定のときだけ保存されます（設定済みのキーは置き換えません）。自動設定しない場合は「ひかりのアトリエ」→「設定」で接続先 `http://127.0.0.1:18789` と起動画面の認証キーを入力します。
    Androidでは認証キーをAndroid Keystoreの鍵で暗号化し、アプリ専用のバックアップ対象外領域へ保存します。再起動後も同じ接続先で復元されます。SaveGame、ソース、履歴には含めません。Windowsでは起動中だけ保持します。
 6. 文字入力で1回依頼し、次に内蔵マイクで依頼します。SIMでCopilotへ到達できることもここで確認します。
 

@@ -21,7 +21,7 @@ FString ULightBoxDirector::CurrentCreditsLabel() const
 void ULightBoxDirector::RefineScene()
 {
     if(bThinking||bListening)return;
-    if(BearerToken.IsEmpty()){Status=TEXT("接続設定で認証キーを入力してください");return;}
+    if(!EnsureCredential()){Status=TEXT("接続設定で認証キーを入力してください");return;}
     Cancel();OperationStarted=ReviewCaptureAt=FPlatformTime::Seconds();bThinking=bCapturingReview=true;
     Status=TEXT("造形を確認する画面を準備中");const uint64 RequestGeneration=Generation;
     ReviewScreenshotHandle=UGameViewportClient::OnScreenshotCaptured().AddWeakLambda(this,[this,RequestGeneration](int32 W,int32 H,const TArray<FColor>& Pixels){

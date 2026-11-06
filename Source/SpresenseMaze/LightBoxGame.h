@@ -6,6 +6,7 @@
 #include "GameHudBase.h"
 #include "LightBoxSimulation.h"
 #include "LightBoxSensors.h"
+#include "LightBoxReadiness.h"
 #include "LightBoxGame.generated.h"
 
 class UCameraComponent;
@@ -96,6 +97,7 @@ public:
 	void OpenSettings();
 	void OpenExamples();
 	void OpenJournal();
+	void OpenSetup();
 	void OpenMenu();
 	void CloseDialog();
 	bool HasDialog() const;
@@ -103,6 +105,10 @@ public:
 private:
 	void EnsureControls();
 	void DrawSensorChips();
+	void UpdateSetupDialog();
+	bool bSetupOpen = false;
+	ELightBoxSetupNeed DismissedNeed = ELightBoxSetupNeed::None;
+	bool bDismissedFailure = false;
 	float ClapShown = 0;
 	void AttachDialog(TSharedPtr<SWidget> Focus = nullptr);
 	TSharedPtr<SWidget> Dialog;

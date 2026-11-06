@@ -70,6 +70,58 @@ public final class LightBoxCredentials {
         }
     }
 
+    /** Extras sent by Tools/OpenClaw/start-lightbox.sh through an explicit `am start`. */
+    public static final String EXTRA_ENDPOINT = "com.lati.lightbox.GATEWAY_ENDPOINT";
+    public static final String EXTRA_TOKEN = "com.lati.lightbox.GATEWAY_TOKEN";
+
+    // Same rule as ULightBoxDirector::ValidateEndpoint: on-device Gateway only.
+    private static boolean loopbackEndpoint(String endpoint) {
+        return endpoint != null
+                && endpoint.matches("http://(127\\.0\\.0\\.1|localhost):[0-9]{1,5}")
+                && Integer.parseInt(endpoint.substring(endpoint.lastIndexOf(':') + 1)) > 0
+                && Integer.parseInt(endpoint.substring(endpoint.lastIndexOf(':') + 1)) <= 65535;
+    }
+
+    /**
+     * Stores the Gateway key handed over by the Termux launcher, but only when no
+     * key is saved for that endpoint yet: a key the user saved is never replaced
+     * by an intent. The extras are always removed so the key does not linger in
+     * the activity's intent.
+     *
+     * @return true when a new key was stored.
+     */
+    public static boolean acceptProvisioning(Context context, android.content.Intent intent) {
+        if (intent == null || !intent.hasExtra(EXTRA_TOKEN)) return false;
+        String token;
+        String endpoint;
+        try {
+            token = intent.getStringExtra(EXTRA_TOKEN);
+            endpoint = intent.getStringExtra(EXTRA_ENDPOINT);
+        } catch (RuntimeException malformed) {
+            token = null;
+            endpoint = null;
+        } finally {
+            intent.removeExtra(EXTRA_TOKEN);
+            intent.removeExtra(EXTRA_ENDPOINT);
+        }
+        if (endpoint == null) endpoint = "http://127.0.0.1:18789";
+        if (!loopbackEndpoint(endpoint) || !valid(token)) return false;
+        LightBoxCredentials vault = new LightBoxCredentials(context);
+        // One record per vault: a working key for any endpoint counts as "set".
+        String saved = vault.savedEndpoint();
+        if (!saved.isEmpty() && !vault.load(saved).isEmpty()) return false;
+        return vault.save(endpoint, token);
+    }
+
+    private synchronized String savedEndpoint() {
+        try {
+            return new JSONObject(new String(file.readFully(), StandardCharsets.UTF_8))
+                    .optString("endpoint", "");
+        } catch (Exception missing) {
+            return "";
+        }
+    }
+
     public synchronized String load(String endpoint) {
         try {
             JSONObject record = new JSONObject(new String(file.readFully(), StandardCharsets.UTF_8));

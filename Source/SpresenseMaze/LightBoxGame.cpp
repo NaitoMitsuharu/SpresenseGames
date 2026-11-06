@@ -52,7 +52,7 @@ void ALightBoxPawn::BeginPlay()
 		bReview|=FCString::Stristr(FCommandLine::Get(),Key)!=nullptr;
 	bReview|=FParse::Param(FCommandLine::Get(),TEXT("LightBoxAutoShot"))||FParse::Param(FCommandLine::Get(),TEXT("LightBoxNoSensors"));
 #endif
-	if(!bReview)Sensors.Start();
+	if(!bReview){Sensors.Start();GetGameInstance()->GetSubsystem<ULightBoxDirector>()->BeginReadiness();}
 #if !UE_BUILD_SHIPPING
 	FString BatchDirectory;
 	if(FParse::Value(FCommandLine::Get(),TEXT("LightBoxBatch="),BatchDirectory))BatchReview=MakeShared<FLightBoxBatchReview>(BatchDirectory);

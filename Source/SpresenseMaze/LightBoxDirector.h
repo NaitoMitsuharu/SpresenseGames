@@ -4,6 +4,7 @@
 #include "Interfaces/IHttpRequest.h"
 #include "LightBoxStyle.h"
 #include "LightBoxJournal.h"
+#include "LightBoxReadiness.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "GameFramework/SaveGame.h"
 #include "LightBoxDirector.generated.h"
@@ -26,6 +27,10 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	void PollVoice();
+	/** Runs the open-time check: Gateway up? Termux usable? start it, fetch the key. */
+	void BeginReadiness();
+	FLightBoxReadiness& GetReadiness() { return *Readiness; }
+	const FLightBoxReadiness& GetReadiness() const { return *Readiness; }
 	void StartVoice();
 	FString TakeVoiceDraft();
 	void Cancel();
@@ -52,6 +57,13 @@ public:
 	const FLightBoxStyle& GetStyle() const { return Style; }
 	const FString& GetEndpoint() const { return Endpoint; }
 	bool HasCredentials() const { return !BearerToken.IsEmpty(); }
+	/** Picks up a key stored after launch (Termux handover via onNewIntent). */
+	bool EnsureCredential();
+private:
+	void TickReadiness();
+	TUniquePtr<FLightBoxReadiness> Readiness;
+	FHttpRequestPtr ProbeRequest;
+public:
 	FString Status = TEXT("箱を傾けて、光を動かしてみよう");
 	FString Heard;
 	FString JournalStatus;

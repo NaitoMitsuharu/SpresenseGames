@@ -311,20 +311,22 @@ void SLightBoxControls::Tick(const FGeometry& G,double Time,float Dt)
 bool SLightBoxControls::IsInteracting()const{return bMenu||(Input.IsValid()&&(Input->HasKeyboardFocus()||Input->HasFocusedDescendants()));}
 bool SLightBoxControls::IsSceneBusy()const
 {
-    if(!HUD.IsValid())return false;auto* D=HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>();if(D->bThinking||D->bListening)return true;
+    if(!HUD.IsValid())return false;auto* D=HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>();if(D->bThinking||D->bListening||D->GetReadiness().IsBusy())return true;
     if(auto* P=Cast<ALightBoxPawn>(HUD->GetOwningPlayerController()->GetPawn()))if(P->PointCloud)return P->PointCloud->IsPreparing()||P->PointCloud->Progress()<1;
     return false;
 }
 TOptional<float> SLightBoxControls::SceneProgress()const
 {
     if(!HUD.IsValid())return {};auto* D=HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>();if(D->bThinking||D->bListening)return {};
+    if(D->GetReadiness().IsBusy())return D->GetReadiness().Fraction(FPlatformTime::Seconds());
     if(auto* P=Cast<ALightBoxPawn>(HUD->GetOwningPlayerController()->GetPawn()))if(P->PointCloud&&!P->PointCloud->IsPreparing())return P->PointCloud->Progress();
     return {};
 }
 FString SLightBoxControls::SceneProgressText()const
 {
     if(!HUD.IsValid())return FString();auto* D=HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>();
-    if(D->bThinking||D->bListening)return D->Heard.IsEmpty()?D->ProgressLabel():TEXT("「")+D->Heard.Left(70)+TEXT("」\n")+D->ProgressLabel();const auto Value=SceneProgress();
+    if(D->bThinking||D->bListening)return D->Heard.IsEmpty()?D->ProgressLabel():TEXT("「")+D->Heard.Left(70)+TEXT("」\n")+D->ProgressLabel();
+    if(D->GetReadiness().IsBusy())return D->GetReadiness().Label();const auto Value=SceneProgress();
     return Value.IsSet()?FString::Printf(TEXT("粒子を配置中 · %d%%"),FMath::Clamp(FMath::FloorToInt(Value.GetValue()*100),0,100)):TEXT("粒子の行き先を準備中");
 }
 void SLightBoxControls::OpenMenu(){bMenu=true;FSlateApplication::Get().SetKeyboardFocus(SharedThis(this),EFocusCause::SetDirectly);}

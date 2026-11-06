@@ -1,10 +1,10 @@
 package com.epicgames.unreal;
 
-import com.lati.spresensemaze.OBBDownloaderService;
-import com.lati.spresensemaze.DownloaderActivity;
+import com.lati.spresensegames.OBBDownloaderService;
+import com.lati.spresensegames.DownloaderActivity;
 import android.app.Activity;
 import com.google.android.vending.expansion.downloader.Helpers;
-import com.lati.spresensemaze.OBBData;
+import com.lati.spresensegames.OBBData;
 
 
 public class DownloadShim
