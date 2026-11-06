@@ -18,8 +18,21 @@ APP="com.lati.spresensegames/com.epicgames.unreal.SplashActivity"
 step() { printf '\n[%s] %s\n' "$1" "$2"; }
 
 step 1/5 "必要なツールを確認しています"
-if ! command -v node >/dev/null || ! command -v curl >/dev/null; then
+# A freshly installed Termux ships old libraries. Installing nodejs-lts alone then
+# leaves a node that cannot start ("CANNOT LINK EXECUTABLE ... _ZNSt6__ndk1...").
+# So when node is missing or broken, bring every package up to date first.
+node_works() { command -v node >/dev/null && node --version >/dev/null 2>&1; }
+if ! node_works || ! command -v curl >/dev/null; then
+    printf 'Termuxのパッケージを最新にしています（初回は数分かかります）\n'
+    pkg upgrade -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold
     pkg install -y nodejs-lts curl
+    if ! node_works; then
+        pkg reinstall -y nodejs-lts libc++ || true
+    fi
+    if ! node_works; then
+        printf 'Node.jsを起動できません。Termuxで pkg upgrade を実行してから、この1行をもう一度実行してください。\n' >&2
+        exit 1
+    fi
 fi
 if ! command -v openclaw >/dev/null; then
     npm install -g "openclaw@$OPENCLAW_VERSION"
