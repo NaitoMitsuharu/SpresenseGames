@@ -52,7 +52,7 @@ adb install -r Package/LightBox/Android_ASTC/SpresenseMaze-arm64.apk
 python Tools/ReviewParticleScenesAndroid.py
 ```
 
-描画用の形状例は、リポジトリ内の`Docs/LightBoxCameraReview-2026-11-05.json`にある旧版の景色を使用します。新しいAndroid端末の準備は[README](../README.md#新規android端末でひかりの箱を使う)を参照してください。
+描画用の形状例は、リポジトリ内の`Docs/LightBoxCameraReview-2026-11-05.json`にある旧版の景色を使用します。新しいAndroid端末の準備は[セットアップガイド](SetupAndDevelopment.md#新規android端末でひかりの箱を使う)を参照してください。
 
 ## Xperia 1 VIIの実測（2026-11-06）
 
