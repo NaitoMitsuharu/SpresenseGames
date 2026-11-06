@@ -30,7 +30,7 @@ def main():
             else:raise TimeoutError('Missing particle scene report: '+name)
             row=json.loads(path.read_text(encoding='utf-8-sig'));row['case']=name
             assert row['particleOnly'] and row['solidSceneComponents']==0,row
-            expected=max(65536,value['pointCloud']['count']) if name=='legacy-gulls' else value['pointCloud']['count']
+            expected=max(131072,value['pointCloud']['count']) if name=='legacy-gulls' else value['pointCloud']['count']
             assert row['instances']==row['points']==expected,row
             if name.startswith(('gulls','fireflies')):assert row['animatedTarget'] and row['controlTravel']>1,row
             adb('shell','screencap','-p',BASE+'/ParticleScenesReview/screen.png');adb('pull',BASE+'/ParticleScenesReview/screen.png',a.out/(name+'.png'))

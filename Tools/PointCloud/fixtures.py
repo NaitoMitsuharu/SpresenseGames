@@ -4,7 +4,7 @@ import copy
 def object(id,shape,color,position,size,**kw):
     return dict(id=id,shape=shape,color=color,position=position,size=size,**kw)
 
-def scene(subject='eggplant',count=65536):
+def scene(subject='eggplant',count=131072):
     value=dict(schema=3,title=subject,color='#8B4BCB',accent='#84CA54',motion=1,viscosity=.35,swirl=.3,attraction=.5,tilt=1,glow=.65,trail=0,shakeThreshold=1.65,shake='scatter',note='粒が動き、立体の表面を構成します。',particles=dict(count=0),world=dict(background='#030712',floor='#101520',ambient=1,bloom=.35,box=False,keyDirection=[-40,-35,0]),camera=dict(autoFrame=True,yaw=-8,pitch=24,zoom=1,fill=.76),pointCloud=dict(enabled=True,count=count,floor=False,duration=5,arc=65,twist=1.25,stagger=.35))
     if subject=='eggplant':
         value['title']='粒のなす'

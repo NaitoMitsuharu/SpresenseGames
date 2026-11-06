@@ -11,7 +11,7 @@ ROOT=Path(__file__).resolve().parents[1]
 BASE='/sdcard/Android/data/com.lati.spresensemaze/files/UnrealGame/SpresenseMaze/SpresenseMaze/Saved'
 def adb(*args,check=True):return subprocess.run(['adb',*map(str,args)],capture_output=True,check=check)
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--counts',default='10000,65536,100000,300000,1000000');p.add_argument('--out',type=Path,default=ROOT/'Saved/PointSculpture/phone');a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--counts',default='10000,65536,100000,131072,300000,1000000');p.add_argument('--out',type=Path,default=ROOT/'Saved/PointSculpture/phone');a=p.parse_args()
     a.out.mkdir(parents=True,exist_ok=True);results=[]
     adb('pull',BASE+'/LightBox/Journal/journal.json',a.out/'journal-before.json',check=False)
     adb('shell','mkdir','-p',BASE+'/PointCloudBench')

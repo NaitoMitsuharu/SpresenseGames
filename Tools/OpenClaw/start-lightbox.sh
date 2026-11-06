@@ -17,8 +17,8 @@ openclaw --profile lightbox config set tools.deny '["*"]' --strict-json
 OPENCLAW_GATEWAY_TOKEN="$(node "$SCRIPT_DIR/lightbox-token.cjs")"
 export OPENCLAW_GATEWAY_TOKEN
 openclaw --profile lightbox config validate
-printf '\nひかりの箱 → 設定\n接続先: http://127.0.0.1:18789\n認証キー: %s\n\n' "$OPENCLAW_GATEWAY_TOKEN"
-printf 'この画面を閉じずに、ひかりの箱へ戻ってください。\n'
+printf '\nひかりのアトリエ → 設定\n接続先: http://127.0.0.1:18789\n認証キー: %s\n\n' "$OPENCLAW_GATEWAY_TOKEN"
+printf 'この画面を閉じずに、ひかりのアトリエへ戻ってください。\n'
 
 if command -v termux-wake-lock >/dev/null; then
     termux-wake-lock

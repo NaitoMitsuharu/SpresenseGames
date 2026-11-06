@@ -191,7 +191,7 @@ void ATitleHUD::DrawHUD()
 	const float CH = 104 * S, Gap = 14 * S, Y = H * 0.31f;
 	DrawCard(TEXT("Maze"), TEXT("迷路"), Left, Y, CW, CH, 0);
 	DrawCard(TEXT("Flight"), TEXT("フライト"), Left, Y + CH + Gap, CW, CH, 1);
-	DrawCard(TEXT("LightBox"), TEXT("ひかりの箱"), Left, Y + (CH + Gap) * 2, CW, CH, 2);
+	DrawCard(TEXT("LightBox"), TEXT("ひかりのアトリエ"), Left, Y + (CH + Gap) * 2, CW, CH, 2);
 	DrawRect(Paper.CopyWithNewOpacity(0.1f), Left, H * 0.89f, W - Left - 64 * S, S);
 
 	if (UAttitudeInputSubsystem* Attitude = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>())

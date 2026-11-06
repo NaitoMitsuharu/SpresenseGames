@@ -65,6 +65,7 @@ struct FLightBoxObject
 /** A bounded scene description. Remote responses can only change these values. */
 struct FLightBoxStyle
 {
+    static constexpr int32 DefaultPointCount=131072;
 	FString Title = TEXT("星あかり");
 	FLinearColor Color = FLinearColor(0.22f, 0.8f, 1.f);
 	FLinearColor Accent = FLinearColor(1.f, 0.62f, 0.3f);
@@ -118,7 +119,7 @@ struct FLightBoxStyle
 	TArray<FLightBoxObject> Objects;
 	bool bPointCloud = true;
 	bool bPointFloor = false;
-	int32 PointCount = 65536;
+	int32 PointCount = DefaultPointCount;
 	float AssembleSeconds = 5, AssembleArc = 65, AssembleTwist = 1.25f, AssembleStagger = .35f;
 
 	static FLightBoxStyle Preset(int32 Index);

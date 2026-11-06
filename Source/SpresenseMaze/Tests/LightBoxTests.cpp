@@ -86,7 +86,7 @@ bool FLightBoxParticleMigrationTest::RunTest(const FString&)
     auto S=FLightBoxStyle::Example(8);TSharedPtr<FJsonObject> J;FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(S.ToJson()),J);
     J->GetObjectField(TEXT("pointCloud"))->SetBoolField(TEXT("enabled"),false);J->GetObjectField(TEXT("pointCloud"))->SetNumberField(TEXT("count"),256);J->GetObjectField(TEXT("pointCloud"))->SetBoolField(TEXT("floor"),true);
     FString Old;FJsonSerializer::Serialize(J.ToSharedRef(),TJsonWriterFactory<>::Create(&Old));FLightBoxStyle Read;FString Error;
-    TestTrue(TEXT("Previously saved scenes still open"),FLightBoxStyle::Parse(Old,Read,Error));TestTrue(TEXT("Old solid renderer is migrated to particles"),Read.bPointCloud);TestFalse(TEXT("Old floor cannot reactivate solid drawing"),Read.bPointFloor);TestEqual(TEXT("Unused legacy point budget is raised so the migrated scene remains recognizable"),Read.PointCount,65536);TestEqual(TEXT("Shape descriptions are retained"),Read.Objects.Num(),S.Objects.Num());return true;
+    TestTrue(TEXT("Previously saved scenes still open"),FLightBoxStyle::Parse(Old,Read,Error));TestTrue(TEXT("Old solid renderer is migrated to particles"),Read.bPointCloud);TestFalse(TEXT("Old floor cannot reactivate solid drawing"),Read.bPointFloor);TestEqual(TEXT("Unused legacy point budget is raised so the migrated scene remains recognizable"),Read.PointCount,FLightBoxStyle::DefaultPointCount);TestEqual(TEXT("Shape descriptions are retained"),Read.Objects.Num(),S.Objects.Num());return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxParticleComponentsTest,"SpresenseMaze.LightBox.ParticleOnlyComponents",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
