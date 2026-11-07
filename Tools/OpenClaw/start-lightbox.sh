@@ -11,6 +11,12 @@ OPENCLAW_BIN="$(command -v openclaw)"
 openclaw() { node "$OPENCLAW_BIN" "$@"; }
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
+# Termux's Android runtime cannot identify a previous boot's PID namespace.
+# Retire only owner records whose creation and heartbeat both predate this boot.
+if [[ -f "$SCRIPT_DIR/lightbox-boot.cjs" ]]; then
+    node "$SCRIPT_DIR/lightbox-boot.cjs"
+fi
+
 # The app's start button may be pressed while the Gateway already runs.
 if node -e 'const s=require("node:net").connect(18789,"127.0.0.1");s.on("connect",()=>process.exit(0));s.on("error",()=>process.exit(1));setTimeout(()=>process.exit(1),1000)'; then
     printf '演出サービスはすでに起動しています（127.0.0.1:18789）。\n'

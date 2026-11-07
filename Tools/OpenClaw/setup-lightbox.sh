@@ -51,7 +51,7 @@ printf 'node %s / openclaw %s\n' "$(node --version)" "$(openclaw --version 2>/de
 step 2/6 "ひかりのアトリエ用のファイルを取得しています"
 mkdir -p "$DIR"
 # LIGHTBOX_SOURCE_DIR: copy from a local folder instead (testing unreleased changes).
-for file in start-lightbox.sh pair-lightbox.sh setup-lightbox.sh lightbox-token.cjs lightbox-observer.cjs lightbox-pricing.json; do
+for file in start-lightbox.sh pair-lightbox.sh setup-lightbox.sh lightbox-token.cjs lightbox-boot.cjs lightbox-observer.cjs lightbox-pricing.json; do
     if [[ -n "${LIGHTBOX_SOURCE_DIR:-}" ]]; then
         cp "$LIGHTBOX_SOURCE_DIR/$file" "$DIR/$file.download"
     else
