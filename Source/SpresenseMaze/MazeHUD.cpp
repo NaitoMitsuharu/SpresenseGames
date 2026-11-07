@@ -18,10 +18,16 @@
 #include "Styling/CoreStyle.h"
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 
 namespace
 {
-	const FLinearColor Accent(0.35f, 0.94f, 0.75f);
+	const FLinearColor Accent(0.96f, 0.59f, 0.12f);
+	const FLinearColor ToyPaper(1.f, 0.96f, 0.83f);
+	const FLinearColor ToyInk(0.055f, 0.12f, 0.085f);
+	const FLinearColor ToyMuted(0.16f, 0.24f, 0.18f);
+	const FLinearColor ToyGreen(0.12f, 0.40f, 0.22f);
 	float UiScale(const UCanvas* Canvas) { return Canvas ? FMath::Clamp(Canvas->SizeY / 1080.f, 0.6f, 1.6f) : 1.f; }
 
 	float LeftHudMargin(const UCanvas* Canvas)
@@ -70,7 +76,7 @@ void AMazeHUD::JText(const FString& Text, const FLinearColor& Color, float X, fl
 	FCanvasTextItem Item(FVector2D(X, Y), FText::FromString(Text), ExactSizeFont, Color);
 	// Small baked drop shadow: keeps white text readable over the bright stage
 	// palettes without drawing every string twice.
-	Item.EnableShadow(FLinearColor(0.f, 0.f, 0.f, 0.25f * Color.A), FVector2D(1.f, 1.f));
+	if (Color.GetLuminance()>0.7f) { Item.EnableShadow(FLinearColor(0.f,0.f,0.f,0.25f*Color.A),FVector2D(1.f,1.f)); }
 	Canvas->DrawItem(Item);
 }
 
@@ -223,12 +229,14 @@ AMazeGenerator* AMazeHUD::FindMaze()
 
 void AMazeHUD::DrawGlassPanel(float X, float Y, float W, float H)
 {
-	ExperienceUI::Glass(Canvas, X, Y, W, H, FMath::Min(22.f * UiScale(Canvas), H * 0.3f), 0.88f);
+	const float R = FMath::Min(24.f * UiScale(Canvas), H * 0.3f);
+	ExperienceUI::RoundRect(Canvas, X, Y + 6.f * UiScale(Canvas), W, H, R, FLinearColor(0.29f,0.22f,0.10f,0.4f));
+	ExperienceUI::RoundRect(Canvas, X, Y, W, H, R, ToyPaper);
 }
 
 void AMazeHUD::DrawStatusDot(float X, float Y, bool bOn)
 {
-	const FLinearColor C = bOn ? ExperienceUI::Mint : ExperienceUI::Coral;
+	const FLinearColor C = bOn ? ToyGreen : ExperienceUI::Coral;
 	ExperienceUI::RoundRect(Canvas, X - 3, Y - 3, 16, 16, 8, C.CopyWithNewOpacity(0.12f));
 	ExperienceUI::RoundRect(Canvas, X, Y, 10, 10, 5, C);
 }
@@ -247,10 +255,13 @@ void AMazeHUD::DrawHUD()
 	FString Review;
 	if (FParse::Value(FCommandLine::Get(), TEXT("MazeUIReview="), Review))
 	{
-		if (!bReviewSetup && GetWorld()->GetTimeSeconds() > 1.f)
+		if (!bReviewSetup && GetWorld()->GetRealTimeSeconds() > 1.f)
 		{
 			bReviewSetup = true;
 			if (Review == TEXT("playing")) { Maze->StartGame(); }
+			else if (Review == TEXT("pause")) { Maze->StartGame(); NotifyHitBoxClick(TEXT("Pause")); }
+			else if (Review == TEXT("map")) { Maze->StartGame(); bMapOpen = true; }
+			else if (Review == TEXT("celebration")) { Maze->StartGame(); Maze->TransitionMessage=TEXT("STAGE CLEAR"); Maze->TransitionStartTime=GetWorld()->GetTimeSeconds()+1.f; }
 			else if (Review == TEXT("tutorial")) { Maze->StartTutorial(); }
 			else if (Review == TEXT("clear")) { Maze->Flow = EMazeFlow::ClearChoice; }
 			else if (Review == TEXT("ranking"))
@@ -267,14 +278,27 @@ void AMazeHUD::DrawHUD()
 				}
 			}
 		}
-		if (!bReviewShot && GetWorld()->GetTimeSeconds() > 3.f)
+		if (!bReviewShot && GetWorld()->GetRealTimeSeconds() > 3.f)
 		{
 			bReviewShot = true;
+			if (Review==TEXT("pause"))
+			{
+				ensureMsgf(UGameplayStatics::IsGamePaused(this),TEXT("Toy review: menu pauses the world"));
+				NotifyHitBoxClick(TEXT("Resume"));
+				ensureMsgf(!UGameplayStatics::IsGamePaused(this) && !bMenuOpen,TEXT("Toy review: resume releases pause"));
+				NotifyHitBoxClick(TEXT("Pause"));
+				UE_LOG(LogTemp,Display,TEXT("ToyReview: pause and resume handlers verified"));
+			}
+			if (const AMazeBallPawn* Ball=Cast<AMazeBallPawn>(GetOwningPawn()))
+			{
+				UE_LOG(LogTemp,Display,TEXT("ToyCamera: cell %.1f mazeScale %s arm %.1f camera %s ball %s"), Maze->CellSize,*Maze->GetActorScale3D().ToString(),Ball->SpringArm->TargetArmLength,*Ball->Camera->GetComponentLocation().ToString(),*Ball->GetActorLocation().ToString());
+			}
 			FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / TEXT("AutoShots") / (TEXT("ui_maze_") + Review + TEXT(".png")), true, false);
 		}
 	}
 #endif
 
+	if (bMenuOpen) { DrawToyMenu(); return; }
 	switch (Maze->Flow)
 	{
 	case EMazeFlow::Home:
@@ -288,27 +312,29 @@ void AMazeHUD::DrawHUD()
 		break;
 	case EMazeFlow::Playing:
 	default:
-		DrawMinimap(Maze);
-		DrawButton(TEXT("Home"), TEXT("ホーム"), LeftHudMargin(Canvas) + 320.f * Scale, 36.f * Scale, 124.f * Scale, 54.f * Scale, false);
-		if (AMazeBallPawn* Ball = Cast<AMazeBallPawn>(GetOwningPawn()); Ball && !Ball->IsTouchControllerActive())
-		{
-			DrawAttitudeIndicator();
-			DrawButton(TEXT("LevelReset"), TEXT("姿勢リセット"), LeftHudMargin(Canvas), 230.f * Scale, 218.f * Scale, 48.f * Scale, false);
-		}
+		if (bMapOpen) { DrawMinimap(Maze); }
+		DrawButton(TEXT("Pause"), TEXT("ひとやすみ"), LeftHudMargin(Canvas) + 340.f*Scale, 34.f*Scale, 204.f*Scale, 64.f*Scale, false);
+		DrawButton(TEXT("Map"), bMapOpen ? TEXT("とじる") : TEXT("ちず"), Canvas->SizeX - 200.f*Scale, 34.f*Scale, 164.f*Scale, 64.f*Scale, false);
+
 		DrawJumpFeedback();
-		DrawGoalArrow(Maze);
+		const FVector GoalScreen=Project(Maze->GoalLocation+FVector(0,0,150));
+		if (GoalScreen.Z>0 && GoalScreen.X>90*Scale && GoalScreen.X<Canvas->SizeX-90*Scale && GoalScreen.Y>160*Scale && GoalScreen.Y<Canvas->SizeY-160*Scale)
+		{
+			DrawGlassPanel(GoalScreen.X-60*Scale,GoalScreen.Y-48*Scale,120*Scale,45*Scale);
+			JText(TEXT("ゴール"),ToyGreen,GoalScreen.X-42*Scale,GoalScreen.Y-43*Scale,FMath::RoundToInt(24*Scale));
+		}
 		DrawMessages(Maze);
 		DrawTutorialHint(Maze);
 		DrawOrientationWarning();
 		DrawTouchController();
 		if (AMazeBallPawn* Ball = Cast<AMazeBallPawn>(GetOwningPawn()); Ball && Ball->IsAwaitingNeutral())
 		{
-			const FString Msg = TEXT("入力切替：持ち方を整えて「姿勢リセット」");
+			const FString Msg = TEXT("「ひとやすみ」で もちかたを あわせよう");
 			const FVector2D MS = JSize(Msg, 26);
 			const float MX = (Canvas->SizeX - MS.X) * 0.5f;
 			const float MY = Canvas->SizeY * 0.72f;
 			DrawGlassPanel(MX - 24.f, MY - 14.f, MS.X + 48.f, MS.Y + 28.f);
-			JText(Msg, FLinearColor(1.f, 0.82f, 0.45f), MX, MY, 26);
+			JText(Msg, ToyInk, MX, MY, 26);
 		}
 		break;
 	}
@@ -405,17 +431,21 @@ void AMazeHUD::DrawTouchController()
 	const FVector2D Knob = StickCenter + FVector2D(Move.Y, -Move.X) * StickRadius * 0.62f;
 	const float KnobRadius = StickRadius * 0.27f;
 	ExperienceUI::RoundRect(Canvas, Knob.X - KnobRadius, Knob.Y - KnobRadius, KnobRadius * 2, KnobRadius * 2, KnobRadius,
-		ExperienceUI::Paper.CopyWithNewOpacity(0.2f));
+		ToyPaper.CopyWithNewOpacity(0.2f));
 	Ring(Knob, KnobRadius, FLinearColor(0.28f, 0.88f, 1.f, 0.9f), 4.f);
 
 	const bool bJumpDown = Ball->IsTouchJumpPressed();
 	const FLinearColor JumpColor = bJumpDown
-		? ExperienceUI::Mint
-		: ExperienceUI::Paper.CopyWithNewOpacity(0.65f);
+		? ToyGreen
+		: ToyPaper.CopyWithNewOpacity(0.65f);
 	ExperienceUI::RoundRect(Canvas, JumpCenter.X - JumpRadius, JumpCenter.Y - JumpRadius, JumpRadius * 2, JumpRadius * 2, JumpRadius,
-		ExperienceUI::Ink.CopyWithNewOpacity(0.5f));
+		ToyInk.CopyWithNewOpacity(0.5f));
 	Ring(JumpCenter, JumpRadius, JumpColor, bJumpDown ? 7.f : 5.f);
 	// Two upward chevrons communicate jump without another label.
+	const FString JumpLabel = TEXT("ジャンプ");
+	const int32 JumpSize = FMath::RoundToInt(19.f*UiScale(Canvas));
+	const FVector2D JS = JSize(JumpLabel, JumpSize);
+	JText(JumpLabel, ToyInk, JumpCenter.X-JS.X*0.5f, JumpCenter.Y-JumpRadius-30.f*UiScale(Canvas), JumpSize);
 	const float Icon = JumpRadius * 0.24f;
 	for (int32 Row = 0; Row < 2; ++Row)
 	{
@@ -436,6 +466,21 @@ void AMazeHUD::NotifyHitBoxClick(FName BoxName)
 		return;
 	}
 
+	if (BoxName == TEXT("Pause"))
+	{
+		bMenuOpen = true;
+		UGameplayStatics::SetGamePaused(this, true);
+		return;
+	}
+	if (BoxName == TEXT("Resume") || BoxName == TEXT("MenuHome") || BoxName == TEXT("MenuReset"))
+	{
+		bMenuOpen = false; UGameplayStatics::SetGamePaused(this, false);
+		if (BoxName == TEXT("MenuHome")) { Maze->GoHome(); }
+		if (BoxName == TEXT("MenuReset") && Ball) { Ball->StartCalibration(false); }
+		return;
+	}
+	if (bMenuOpen) { return; }
+	if (BoxName == TEXT("Map")) { bMapOpen = !bMapOpen; return; }
 	if (BoxName == TEXT("Start"))
 	{
 		Maze->StartGame();
@@ -473,13 +518,15 @@ void AMazeHUD::NotifyHitBoxClick(FName BoxName)
 void AMazeHUD::DrawButton(FName Id, const FString& Label, float X, float Y, float W, float H, bool bPrimary)
 {
 	const bool Hover = ExperienceUI::Hovered(GetOwningPlayerController(), X, Y, W, H);
-	ExperienceUI::RoundRect(Canvas, X, Y, W, H, H * 0.5f,
-		bPrimary ? (Hover ? Accent : ExperienceUI::Paper) : ExperienceUI::Ink.CopyWithNewOpacity(Hover ? 0.98f : 0.82f));
+	const float Lift = 5.f * UiScale(Canvas);
+	ExperienceUI::RoundRect(Canvas, X, Y + Lift, W, H, 19.f * UiScale(Canvas), FLinearColor(0.35f,0.27f,0.12f,0.8f));
+	ExperienceUI::RoundRect(Canvas, X, Y, W, H, 19.f * UiScale(Canvas),
+		bPrimary ? (Hover ? FLinearColor(1.f,0.79f,0.32f) : Accent) : ToyPaper);
 	const float Scale = UiScale(Canvas);
 	const int32 Size = FMath::RoundToInt((H / Scale > 62.f ? 26.f : 20.f) * Scale);
 	const FVector2D TS = JSize(Label, Size);
 	JText(Label,
-		bPrimary ? ExperienceUI::Ink : ExperienceUI::Paper,
+		ToyInk,
 		X + (W - TS.X) * 0.5f, Y + (H - TS.Y) * 0.5f, Size);
 
 	AddHitBox(FVector2D(X, Y), FVector2D(W, H), Id, true);
@@ -490,57 +537,57 @@ void AMazeHUD::DrawHomeScreen(AMazeGenerator* Maze)
     using namespace ExperienceUI;
     const float Scale = UiScale(Canvas), Width = Canvas->SizeX, Height = Canvas->SizeY;
     const float Left = LeftHudMargin(Canvas), Top = Height * 0.19f;
-    Gradient(Canvas, 0, 0, Width, Height, FLinearColor(0.008f, 0.018f, 0.028f, 0.98f), FLinearColor(0.008f, 0.018f, 0.028f, 0.18f), true);
-    Gradient(Canvas, 0, Height * 0.7f, Width, Height * 0.3f, FLinearColor(0,0,0,0), Ink.CopyWithNewOpacity(0.9f));
-    JText(TEXT("01  /  MAZE"), Mint, Left, Top, FMath::RoundToInt(17 * Scale));
-    JText(TEXT("迷路"), Paper, Left - 2 * Scale, Top + 38 * Scale, FMath::RoundToInt(80 * Scale));
-    JText(TEXT("転がして、仕掛けを越える。"), Paper.CopyWithNewOpacity(0.8f), Left, Top + 150 * Scale, FMath::RoundToInt(25 * Scale));
-    JText(TEXT("傾きとジャンプで進む、6つのステージ。"), Muted, Left, Top + 195 * Scale, FMath::RoundToInt(18 * Scale));
+    Gradient(Canvas, 0, 0, Width, Height, ToyPaper.CopyWithNewOpacity(0.98f), ToyPaper.CopyWithNewOpacity(0.05f), true);
+    Gradient(Canvas, 0, Height * 0.7f, Width, Height * 0.3f, FLinearColor(0,0,0,0), ToyPaper.CopyWithNewOpacity(0.35f));
+    JText(TEXT("ころころ ・ からくり"), ToyGreen, Left, Top, FMath::RoundToInt(17 * Scale));
+    JText(TEXT("めいろ"), ToyInk, Left - 2 * Scale, Top + 38 * Scale, FMath::RoundToInt(80 * Scale));
+    JText(TEXT("ころがして、ジャンプして、ゴール！"), ToyInk, Left, Top + 150 * Scale, FMath::RoundToInt(25 * Scale));
+    JText(TEXT("6つの めいろで あそぼう。"), ToyMuted, Left, Top + 195 * Scale, FMath::RoundToInt(18 * Scale));
     DrawButton(TEXT("Top"), TEXT("トップ"), Width - 190 * Scale, 60 * Scale, 124 * Scale, 54 * Scale, false);
     const float ButtonY = Height * 0.55f;
     DrawButton(TEXT("Start"), TEXT("はじめる"), Left, ButtonY, 390 * Scale, 78 * Scale, true);
-    DrawButton(TEXT("Tutorial"), TEXT("操作ガイド"), Left, ButtonY + 96 * Scale, 188 * Scale, 58 * Scale, false);
-    DrawButton(TEXT("Calibrate"), TEXT("姿勢を調整"), Left + 202 * Scale, ButtonY + 96 * Scale, 188 * Scale, 58 * Scale, false);
+    DrawButton(TEXT("Tutorial"), TEXT("あそびかた"), Left, ButtonY + 96 * Scale, 188 * Scale, 58 * Scale, false);
+    DrawButton(TEXT("Calibrate"), TEXT("もちかた"), Left + 202 * Scale, ButtonY + 96 * Scale, 188 * Scale, 58 * Scale, false);
     const EAttitudeSource Input = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>()->GetState().Source;
     const FString InputName = Input == EAttitudeSource::SprBox ? TEXT("箱を傾けて操作") : Input == EAttitudeSource::DeviceMotion ? TEXT("端末を傾けて操作") :
         Input == EAttitudeSource::Keyboard ? TEXT("キーボードで操作") : TEXT("画面のスティックで操作");
     const float StatusY = ButtonY + 184 * Scale;
-    RoundRect(Canvas, Left + 2 * Scale, StatusY + 8 * Scale, 7 * Scale, 7 * Scale, 3.5f * Scale, Mint);
-    JText(InputName, Muted, Left + 22 * Scale, StatusY, FMath::RoundToInt(17 * Scale));
-    JText(TEXT("小さな傾きで、少しずつ。"), Paper.CopyWithNewOpacity(0.6f), Width * 0.66f, Height * 0.86f, FMath::RoundToInt(18 * Scale));
+    RoundRect(Canvas, Left + 2 * Scale, StatusY + 8 * Scale, 7 * Scale, 7 * Scale, 3.5f * Scale, ToyGreen);
+    JText(InputName, ToyMuted, Left + 22 * Scale, StatusY, FMath::RoundToInt(17 * Scale));
+    JText(TEXT("小さな傾きで、少しずつ。"), ToyMuted, Width * 0.66f, Height * 0.86f, FMath::RoundToInt(18 * Scale));
 }
 
 void AMazeHUD::DrawClearChoice(AMazeGenerator* Maze)
 {
     using namespace ExperienceUI;
     const float Scale = UiScale(Canvas), CX = Canvas->SizeX * 0.5f, CY = Canvas->SizeY * 0.5f;
-    DrawRect(Ink.CopyWithNewOpacity(0.72f), 0, 0, Canvas->SizeX, Canvas->SizeY);
-    Glass(Canvas, CX - 300 * Scale, CY - 238 * Scale, 600 * Scale, 476 * Scale, 32 * Scale, 0.96f);
-    const FString Number = FString::Printf(TEXT("STAGE %02d / %02d"), Maze->CurrentStage + 1, Maze->GetStageCount());
+    DrawRect(ToyInk.CopyWithNewOpacity(0.72f), 0, 0, Canvas->SizeX, Canvas->SizeY);
+    DrawGlassPanel(CX - 300 * Scale, CY - 238 * Scale, 600 * Scale, 476 * Scale);
+    const FString Number = FString::Printf(TEXT("ステージ %d / %d"), Maze->CurrentStage + 1, Maze->GetStageCount());
     const FVector2D NS = JSize(Number, FMath::RoundToInt(17 * Scale));
-    JText(Number, Mint, CX - NS.X * 0.5f, CY - 191 * Scale, FMath::RoundToInt(17 * Scale));
-    const FString Title = TEXT("クリア！");
+    JText(Number, ToyGreen, CX - NS.X * 0.5f, CY - 191 * Scale, FMath::RoundToInt(17 * Scale));
+    const FString Title = TEXT("やったね！");
     const FVector2D TS = JSize(Title, FMath::RoundToInt(56 * Scale));
-    JText(Title, Paper, CX - TS.X * 0.5f, CY - 135 * Scale, FMath::RoundToInt(56 * Scale));
+    JText(Title, ToyGreen, CX - TS.X * 0.5f, CY - 135 * Scale, FMath::RoundToInt(56 * Scale));
     const FString Stage = Maze->GetStageName();
     const FVector2D SS = JSize(Stage, FMath::RoundToInt(21 * Scale));
-    JText(Stage, Muted, CX - SS.X * 0.5f, CY - 43 * Scale, FMath::RoundToInt(21 * Scale));
-    DrawButton(TEXT("Next"), TEXT("次のステージへ"), CX - 204 * Scale, CY + 27 * Scale, 408 * Scale, 72 * Scale, true);
-    DrawButton(TEXT("Home"), TEXT("ホームへ"), CX - 204 * Scale, CY + 117 * Scale, 408 * Scale, 58 * Scale, false);
+    JText(Stage, ToyMuted, CX - SS.X * 0.5f, CY - 43 * Scale, FMath::RoundToInt(21 * Scale));
+    DrawButton(TEXT("Next"), TEXT("つぎへ"), CX - 204 * Scale, CY + 27 * Scale, 408 * Scale, 72 * Scale, true);
+    DrawButton(TEXT("Home"), TEXT("もどる"), CX - 204 * Scale, CY + 117 * Scale, 408 * Scale, 58 * Scale, false);
 }
 
 void AMazeHUD::DrawAllClearRanking(AMazeGenerator* Maze)
 {
     using namespace ExperienceUI;
     const float Scale = UiScale(Canvas), Width = Canvas->SizeX, Height = Canvas->SizeY;
-    DrawRect(Ink.CopyWithNewOpacity(0.91f), 0, 0, Width, Height);
+    DrawRect(ToyPaper, 0, 0, Width, Height);
     const FString Heading = TEXT("すべてのステージをクリア");
     const int32 HeadingFont = FMath::RoundToInt(42 * Scale);
     const FVector2D HS = JSize(Heading, HeadingFont);
-    JText(Heading, Paper, (Width - HS.X) * 0.5f, Height * 0.07f, HeadingFont);
+    JText(Heading, ToyInk, (Width - HS.X) * 0.5f, Height * 0.07f, HeadingFont);
     const FString Subtitle = TEXT("ステージ別の記録");
     const FVector2D SS = JSize(Subtitle, FMath::RoundToInt(18 * Scale));
-    JText(Subtitle, Mint, (Width - SS.X) * 0.5f, Height * 0.07f + 68 * Scale, FMath::RoundToInt(18 * Scale));
+    JText(Subtitle, ToyGreen, (Width - SS.X) * 0.5f, Height * 0.07f + 68 * Scale, FMath::RoundToInt(18 * Scale));
     const int32 Count = Maze->GetStageCount(), Columns = Count > 6 ? 3 : 2, Rows = FMath::DivideAndRoundUp(Count, Columns);
     const float TotalW = FMath::Min(Width * 0.84f, 1600 * Scale), Gap = 22 * Scale;
     const float CardW = (TotalW - Gap * (Columns - 1)) / Columns;
@@ -554,33 +601,33 @@ void AMazeHUD::DrawAllClearRanking(AMazeGenerator* Maze)
     for (int32 I = 0; I < Count; ++I)
     {
         const float X = (Width - TotalW) * 0.5f + (I % Columns) * (CardW + Gap), Y = ListTop + (I / Columns) * RowH;
-        Glass(Canvas, X, Y, CardW, RowH - 14 * Scale, 24 * Scale, 0.94f);
+        DrawGlassPanel(X, Y, CardW, RowH - 14 * Scale);
         const int32 Font = FMath::RoundToInt(18 * Scale);
         const FString Stage = FString::Printf(TEXT("STAGE %02d"), I + 1);
-        JText(Stage, Muted, X + 22 * Scale, Y + 16 * Scale, Font);
+        JText(Stage, ToyMuted, X + 22 * Scale, Y + 16 * Scale, Font);
         const float Run = Maze->RunStageTimes.IsValidIndex(I) ? Maze->RunStageTimes[I] : -1.f;
         const FString Current = TEXT("今回  ") + TimeLabel(Run);
         const FVector2D CS = JSize(Current, Font);
-        JText(Current, Paper, X + CardW - CS.X - 22 * Scale, Y + 16 * Scale, Font);
+        JText(Current, ToyInk, X + CardW - CS.X - 22 * Scale, Y + 16 * Scale, Font);
         if (Maze->SaveGameData && Maze->SaveGameData->StageBestTimes.IsValidIndex(I))
         {
             const TArray<float>& Times = Maze->SaveGameData->StageBestTimes[I].Times;
             if (Times.Num() > 0 && Run >= 0 && FMath::IsNearlyEqual(Times[0], Run, 0.001f))
             {
-                RoundRect(Canvas, X + 132 * Scale, Y + 17 * Scale, 54 * Scale, 22 * Scale, 11 * Scale, Mint);
-                JText(TEXT("BEST"), Ink, X + 141 * Scale, Y + 20 * Scale, FMath::RoundToInt(12 * Scale));
+                RoundRect(Canvas, X + 132 * Scale, Y + 17 * Scale, 54 * Scale, 22 * Scale, 11 * Scale, ToyGreen);
+                JText(TEXT("BEST"), ToyPaper, X + 141 * Scale, Y + 20 * Scale, FMath::RoundToInt(12 * Scale));
             }
             const float CellW = (CardW - 44 * Scale) / 3;
             for (int32 Rank = 0; Rank < Times.Num(); ++Rank)
             {
                 const bool CurrentRun = Run >= 0 && FMath::IsNearlyEqual(Times[Rank], Run, 0.001f);
                 const FString Record = FString::Printf(TEXT("%d  %s"), Rank + 1, *TimeLabel(Times[Rank]));
-                JText(Record, CurrentRun ? Mint : Paper.CopyWithNewOpacity(0.72f), X + 22 * Scale + (Rank % 3) * CellW,
+                JText(Record, CurrentRun ? ToyGreen : ToyMuted, X + 22 * Scale + (Rank % 3) * CellW,
                     Y + 64 * Scale + (Rank / 3) * 42 * Scale, FMath::RoundToInt(16 * Scale));
             }
         }
     }
-    DrawButton(TEXT("Home"), TEXT("ホームへ"), Width * 0.5f - 170 * Scale, Height - 104 * Scale, 340 * Scale, 66 * Scale, true);
+    DrawButton(TEXT("Home"), TEXT("もどる"), Width * 0.5f - 170 * Scale, Height - 104 * Scale, 340 * Scale, 66 * Scale, true);
 }
 
 void AMazeHUD::DrawCalibrationOverlay()
@@ -638,14 +685,14 @@ void AMazeHUD::DrawAttitudeIndicator()
     if (!Ball) { return; }
     using namespace ExperienceUI;
     const float Scale = UiScale(Canvas), X = LeftHudMargin(Canvas), Y = 132 * Scale;
-    Glass(Canvas, X, Y, 218 * Scale, 82 * Scale, 22 * Scale, 0.7f);
-    JText(TEXT("傾き"), Muted, X + 20 * Scale, Y + 26 * Scale, FMath::RoundToInt(18 * Scale));
+    DrawGlassPanel(X, Y, 218 * Scale, 82 * Scale);
+    JText(TEXT("傾き"), ToyMuted, X + 20 * Scale, Y + 26 * Scale, FMath::RoundToInt(18 * Scale));
     const float CX = X + 154 * Scale, CY = Y + 41 * Scale;
-    RoundRect(Canvas, CX - 30 * Scale, CY - 2 * Scale, 60 * Scale, 4 * Scale, 2 * Scale, Paper.CopyWithNewOpacity(0.18f));
-    RoundRect(Canvas, CX - 2 * Scale, CY - 24 * Scale, 4 * Scale, 48 * Scale, 2 * Scale, Paper.CopyWithNewOpacity(0.18f));
+    RoundRect(Canvas, CX - 30 * Scale, CY - 2 * Scale, 60 * Scale, 4 * Scale, 2 * Scale, ToyPaper.CopyWithNewOpacity(0.18f));
+    RoundRect(Canvas, CX - 2 * Scale, CY - 24 * Scale, 4 * Scale, 48 * Scale, 2 * Scale, ToyPaper.CopyWithNewOpacity(0.18f));
     const float DX = FMath::Clamp(Ball->CurrentRollDeg / 30.f, -1.f, 1.f) * 27 * Scale;
     const float DY = FMath::Clamp(Ball->CurrentPitchDeg / 30.f, -1.f, 1.f) * 21 * Scale;
-    RoundRect(Canvas, CX + DX - 5 * Scale, CY + DY - 5 * Scale, 10 * Scale, 10 * Scale, 5 * Scale, Ball->bOrientationWarning ? Coral : Mint);
+    RoundRect(Canvas, CX + DX - 5 * Scale, CY + DY - 5 * Scale, 10 * Scale, 10 * Scale, 5 * Scale, Ball->bOrientationWarning ? Coral : ToyGreen);
 }
 
 void AMazeHUD::DrawOrientationWarning()
@@ -696,12 +743,12 @@ void AMazeHUD::DrawMinimap(AMazeGenerator* Maze)
 	const float MapH = Cell * NumCols;
 	const float Pad = 18.f * Scale;
 	const float PX = Canvas->SizeX - MapW - MinimapMargin * Scale - Pad * 2.f;
-	const float PY = 30.f * Scale;
+	const float PY = 122.f * Scale;
 	const float X0 = PX + Pad;
 	const float Y0 = PY + Pad + 30 * Scale;
 
 	DrawGlassPanel(PX, PY, MapW + Pad * 2.f, MapH + Pad * 2.f + 30 * Scale);
-	JText(TEXT("マップ"), ExperienceUI::Muted, PX + Pad, PY + 12 * Scale, FMath::RoundToInt(15 * Scale));
+	JText(TEXT("ちず"), ToyMuted, PX + Pad, PY + 12 * Scale, FMath::RoundToInt(15 * Scale));
 
 	const float T = GetWorld()->GetTimeSeconds();
 	const float Pulse = 0.5f + 0.5f * FMath::Sin(T * 5.f);
@@ -750,9 +797,9 @@ void AMazeHUD::DrawMinimap(AMazeGenerator* Maze)
 			const float Px = X0 + Row * Cell;
 			const float Py = Y0 + (NumCols - Col) * Cell;
 			const float R = FMath::Max(Cell * 0.32f, 3.f);
-			ExperienceUI::RoundRect(Canvas, Px - R - 3, Py - R - 3, (R + 3) * 2, (R + 3) * 2, R + 3, ExperienceUI::Mint.CopyWithNewOpacity(0.2f));
-			ExperienceUI::RoundRect(Canvas, Px - R, Py - R, R * 2, R * 2, R, ExperienceUI::Paper);
-			ExperienceUI::RoundRect(Canvas, Px - R * 0.5f, Py - R * 0.5f, R, R, R * 0.5f, ExperienceUI::Mint);
+			ExperienceUI::RoundRect(Canvas, Px - R - 3, Py - R - 3, (R + 3) * 2, (R + 3) * 2, R + 3, ToyGreen.CopyWithNewOpacity(0.2f));
+			ExperienceUI::RoundRect(Canvas, Px - R, Py - R, R * 2, R * 2, R, ToyPaper);
+			ExperienceUI::RoundRect(Canvas, Px - R * 0.5f, Py - R * 0.5f, R, R, R * 0.5f, ToyGreen);
 		}
 	}
 }
@@ -855,7 +902,7 @@ void AMazeHUD::DrawTutorialHint(AMazeGenerator* Maze)
 	{
 		DrawLessonIcon(Icon, ContentX + IconBox * 0.5f, PY + PH * 0.5f, IconBox);
 	}
-	JText(Hint, FLinearColor::White, ContentX + IconBox + Gap, PY + (PH - TS.Y) * 0.5f, Size);
+	JText(Hint, ToyInk, ContentX + IconBox + Gap, PY + (PH - TS.Y) * 0.5f, Size);
 }
 
 void AMazeHUD::DrawMessages(AMazeGenerator* Maze)
@@ -864,11 +911,14 @@ void AMazeHUD::DrawMessages(AMazeGenerator* Maze)
     {
         using namespace ExperienceUI;
         const float Scale = UiScale(Canvas), X = LeftHudMargin(Canvas), Y = 30 * Scale;
-        Glass(Canvas, X, Y, 300 * Scale, 82 * Scale, 24 * Scale, 0.84f);
-        const FString Stage = Maze->bTutorialMode ? FString::Printf(TEXT("GUIDE %02d / %02d"), Maze->CurrentStage + 1, Maze->GetStageCount()) :
-            FString::Printf(TEXT("STAGE %02d / %02d"), Maze->CurrentStage + 1, Maze->GetStageCount());
-        JText(Stage, Mint, X + 20 * Scale, Y + 12 * Scale, FMath::RoundToInt(15 * Scale));
-        JText(Maze->GetStageName(), Paper, X + 20 * Scale, Y + 38 * Scale, FMath::RoundToInt(22 * Scale));
+        DrawGlassPanel(X, Y, 300 * Scale, 108 * Scale);
+        const FString Stage = Maze->bTutorialMode ? FString::Printf(TEXT("れんしゅう %d / %d"), Maze->CurrentStage + 1, Maze->GetStageCount()) :
+            FString::Printf(TEXT("ステージ %d / %d"), Maze->CurrentStage + 1, Maze->GetStageCount());
+        JText(Stage, ToyGreen, X + 20 * Scale, Y + 12 * Scale, FMath::RoundToInt(15 * Scale));
+        JText(Maze->GetStageName(), ToyInk, X + 20 * Scale, Y + 36 * Scale, FMath::RoundToInt(23 * Scale));
+        if (!Maze->bTutorialMode) { for (int32 I=0; I<Maze->GetStageCount(); ++I) {
+            RoundRect(Canvas, X+(20+I*24)*Scale, Y+83*Scale, 14*Scale, 9*Scale, 4.5f*Scale, I<=Maze->CurrentStage?ToyGreen:ToyGreen.CopyWithNewOpacity(0.15f));
+        } }
     }
 
 	// ---- Stage-clear celebration ----
@@ -933,10 +983,25 @@ void AMazeHUD::DrawMessages(AMazeGenerator* Maze)
 
 	FLinearColor TextColor = FLinearColor::White;
 	TextColor.A = Fade;
-	JText(Maze->TransitionMessage, TextColor, X, Y, Size);
+	const FString Cheer = bAllClear ? TEXT("ぜんぶ できたね！") : TEXT("やったね！");
+	const FVector2D CheerSize = JSize(Cheer, Size);
+	JText(Cheer, TextColor, (Canvas->SizeX-CheerSize.X)*0.5f, Y, Size);
 
 	const float LineW = TextW * 1.1f * Ease;
 	FLinearColor LineColor = Accent; LineColor.A = Fade;
 	DrawRect(LineColor, (Canvas->SizeX - LineW) * 0.5f, Y + TextH + 14.f, LineW, 4.f);
 
+}
+
+void AMazeHUD::DrawToyMenu()
+{
+    const float S=UiScale(Canvas), CX=Canvas->SizeX*0.5f, CY=Canvas->SizeY*0.5f;
+    DrawRect(FLinearColor(0.04f,0.07f,0.04f,0.45f),0,0,Canvas->SizeX,Canvas->SizeY);
+    DrawGlassPanel(CX-290*S,CY-250*S,580*S,500*S);
+    const FString Heading=TEXT("ひとやすみ");
+    const int32 Size=FMath::RoundToInt(44*S);
+    JText(Heading,ToyInk,CX-JSize(Heading,Size).X*0.5f,CY-194*S,Size);
+    DrawButton(TEXT("Resume"),TEXT("つづける"),CX-220*S,CY-88*S,440*S,76*S,true);
+    DrawButton(TEXT("MenuReset"),TEXT("もちかたを あわせる"),CX-220*S,CY+12*S,440*S,64*S,false);
+    DrawButton(TEXT("MenuHome"),TEXT("さいしょに もどる"),CX-220*S,CY+104*S,440*S,64*S,false);
 }

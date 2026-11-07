@@ -140,7 +140,7 @@ namespace FlightModels
 			Bar(Shell,FVector(-239+I*19,-19,41+I),FVector(-246+I*19,19,41+I),4,1.5f,Carbon);
 		}
 		Out.Body = Part(Owner,Parent,TEXT("ShipBody"));
-		Shell.Upload(Out.Body,0,FlightMaterials::Surface(Owner,FLinearColor::White,0.24f,0.29f,0.6f));
+		Shell.Upload(Out.Body,0,FlightMaterials::Surface(Owner,FLinearColor(0.38f,0.48f,0.66f),0.48f,0.24f,0.6f));
 		Chassis.Upload(Out.Body,1,FlightMaterials::Surface(Owner,Carbon,0.38f,0.46f,0.35f));
 		Glass.Upload(Out.Body,2,FlightMaterials::Surface(Owner,FLinearColor(0.012f,0.045f,0.06f),0.48f,0.08f,0.8f,FLinearColor(0,0.008f,0.01f)));
 		Out.TrimGlow = FlightMaterials::Glow(Owner,FlightPalette::Mint*2.1f);

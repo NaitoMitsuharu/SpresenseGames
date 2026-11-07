@@ -111,8 +111,8 @@ namespace FlightModels
 /** Airframe colours share the HUD's mint / coral identification language. */
 namespace FlightPalette
 {
-	inline const FLinearColor Mint(0.35f, 0.94f, 0.75f);
-	inline const FLinearColor Coral(1.f, 0.25f, 0.32f);
+	inline const FLinearColor Mint(0.05f, 0.80f, 1.f);
+	inline const FLinearColor Coral(1.f, 0.08f, 0.42f);
 	inline const FLinearColor Graphite(0.045f, 0.065f, 0.085f);
 	inline const FLinearColor HostileArmor(0.48f, 0.55f, 0.60f);
 }

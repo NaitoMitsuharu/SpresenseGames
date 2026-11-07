@@ -1,4 +1,5 @@
 #include "LightBoxStyle.h"
+#include "LightBoxModels.h"
 
 #include "Dom/JsonObject.h"
 #include "LightBoxGeometry.h"
@@ -78,6 +79,40 @@ namespace
 	{
 		TArray<TSharedPtr<FJsonValue>> A; for(const FVector& P:Points) A.Add(MakeShared<FJsonValueArray>(Vec(P))); return A;
 	}
+	bool ReadSdfParts(const FObject& O,TArray<FLightBoxSdfPart>& Out)
+	{
+		if(!O->HasField(TEXT("parts")))return true;
+		const TArray<TSharedPtr<FJsonValue>>* A;if(!O->TryGetArrayField(TEXT("parts"),A)||A->Num()<1||A->Num()>LightBoxSdf::MaxParts)return false;
+		bool bAdd=false;
+		for(const auto& V:*A){
+			if(V->Type!=EJson::Object)return false;const FObject J=V->AsObject();FLightBoxSdfPart S;
+			if(!KnownFields(J,{TEXT("type"),TEXT("a"),TEXT("b"),TEXT("r"),TEXT("rot"),TEXT("k"),TEXT("round"),TEXT("cut"),TEXT("smooth"),TEXT("color")})
+				||!Choice(J,TEXT("type"),S.Type,{TEXT("ellipsoid"),TEXT("capsule"),TEXT("box"),TEXT("torus")})
+				||!Vector(J,TEXT("a"),S.A,-400,400,true)||!Vector(J,TEXT("b"),S.B,-400,400,S.Type==TEXT("capsule"))||!Vector(J,TEXT("rot"),S.Rotation,-360,360)
+				||!Number(J,TEXT("k"),S.Blend,0,60)||!Number(J,TEXT("round"),S.Round,0,100)
+				||(J->HasField(TEXT("cut"))&&!J->TryGetBoolField(TEXT("cut"),S.bCut))||(J->HasField(TEXT("smooth"))&&!J->TryGetBoolField(TEXT("smooth"),S.bSmooth)))return false;
+			if(J->HasField(TEXT("color"))){if(!ReadColor(J,TEXT("color"),S.Color))return false;S.bHasColor=true;}
+			const TArray<TSharedPtr<FJsonValue>>* R;if(!J->TryGetArrayField(TEXT("r"),R)||R->Num()<1||R->Num()>3)return false;
+			double Radii[3];for(int32 I=0;I<R->Num();++I)if(!(*R)[I]->TryGetNumber(Radii[I])||!FMath::IsFinite(Radii[I])||Radii[I]<.2||Radii[I]>300)return false;
+			for(int32 I=R->Num();I<3;++I)Radii[I]=Radii[R->Num()-1];
+			S.R=FVector(Radii[0],Radii[1],Radii[2]);
+			if(S.Type==TEXT("box")&&S.Round>=S.R.GetMin())S.Round=S.R.GetMin()*.95f;
+			bAdd|=!S.bCut;Out.Add(MoveTemp(S));
+		}
+		return bAdd;
+	}
+	TArray<TSharedPtr<FJsonValue>> SdfPartsJson(const TArray<FLightBoxSdfPart>& Parts)
+	{
+		TArray<TSharedPtr<FJsonValue>> A;
+		for(const auto& S:Parts){auto J=MakeShared<FJsonObject>();J->SetStringField(TEXT("type"),S.Type);J->SetArrayField(TEXT("a"),Vec(S.A));
+			if(S.Type==TEXT("capsule"))J->SetArrayField(TEXT("b"),Vec(S.B));
+			TArray<TSharedPtr<FJsonValue>> R;const int32 Count=S.Type==TEXT("capsule")||S.Type==TEXT("torus")?2:3;for(int32 I=0;I<Count;++I)R.Add(MakeShared<FJsonValueNumber>(S.R[I]));J->SetArrayField(TEXT("r"),R);
+			if(!S.Rotation.IsZero())J->SetArrayField(TEXT("rot"),Vec(S.Rotation));
+			J->SetNumberField(TEXT("k"),S.Blend);if(S.Round>0)J->SetNumberField(TEXT("round"),S.Round);
+			if(S.bCut)J->SetBoolField(TEXT("cut"),true);if(S.bSmooth)J->SetBoolField(TEXT("smooth"),true);if(S.bHasColor)J->SetStringField(TEXT("color"),Hex(S.Color));
+			A.Add(MakeShared<FJsonValueObject>(J));}
+		return A;
+	}
 	TSharedRef<FJsonObject> ObjectJson(const FLightBoxObject& N)
 	{
 		auto O = MakeShared<FJsonObject>();
@@ -90,6 +125,9 @@ namespace
 		O->SetStringField(TEXT("anchor"),N.Anchor);O->SetStringField(TEXT("parentAnchor"),N.ParentAnchor);
 		if(N.Sections.Num()) O->SetArrayField(TEXT("sections"),JsonPoints(N.Sections));
         O->SetStringField(TEXT("pattern"),N.Pattern);O->SetStringField(TEXT("patternColor"),Hex(N.PatternColor));O->SetNumberField(TEXT("patternScale"),N.PatternScale);O->SetBoolField(TEXT("belly"),N.bBelly);O->SetStringField(TEXT("bellyColor"),Hex(N.BellyColor));
+        if(!N.Model.IsEmpty())O->SetStringField(TEXT("model"),N.Model);
+        if(N.SdfParts.Num())O->SetArrayField(TEXT("parts"),SdfPartsJson(N.SdfParts));
+        if(N.Detail!=TEXT("none")){O->SetStringField(TEXT("detail"),N.Detail);O->SetNumberField(TEXT("detailLength"),N.DetailLength);}
         if(N.Profile.Num()) { TArray<TSharedPtr<FJsonValue>> A;for(auto P:N.Profile)A.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueNumber>(P.X),MakeShared<FJsonValueNumber>(P.Y)}));O->SetArrayField(TEXT("profile"),A); }
 		if(!N.StartObject.IsEmpty()) {O->SetStringField(TEXT("startObject"),N.StartObject);O->SetStringField(TEXT("startAnchor"),N.StartAnchor);O->SetArrayField(TEXT("startOffset"),Vec(N.StartOffset));}
 		if(!N.EndObject.IsEmpty()) {O->SetStringField(TEXT("endObject"),N.EndObject);O->SetStringField(TEXT("endAnchor"),N.EndAnchor);O->SetArrayField(TEXT("endOffset"),Vec(N.EndOffset));}
@@ -150,8 +188,14 @@ FString FLightBoxStyle::ToJson() const
 		G->SetNumberField(TEXT("magnet"), Sensors.Magnet); O->SetObjectField(TEXT("sensors"), G);
 	}
 	O->SetNumberField(TEXT("schema"), 3); O->SetStringField(TEXT("note"), Note);
+	if(Story.Num()){
+		auto Board=MakeShared<FJsonObject>();Board->SetNumberField(TEXT("hold"),StoryHold);Board->SetBoolField(TEXT("loop"),bStoryLoop);TArray<TSharedPtr<FJsonValue>> Frames;
+		for(const auto& F:Story){auto J=MakeShared<FJsonObject>();J->SetNumberField(TEXT("hold"),F.Hold);J->SetNumberField(TEXT("move"),F.Move);
+			TArray<TSharedPtr<FJsonValue>> Set;FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(F.Set),Set);J->SetArrayField(TEXT("set"),Set);Frames.Add(MakeShared<FJsonValueObject>(J));}
+		Board->SetArrayField(TEXT("frames"),Frames);O->SetObjectField(TEXT("storyboard"),Board);
+	}
 	auto Cloud=MakeShared<FJsonObject>();Cloud->SetBoolField(TEXT("enabled"),true);Cloud->SetBoolField(TEXT("floor"),false);Cloud->SetNumberField(TEXT("count"),PointCount);
-	Cloud->SetNumberField(TEXT("duration"),AssembleSeconds);Cloud->SetNumberField(TEXT("arc"),AssembleArc);Cloud->SetNumberField(TEXT("twist"),AssembleTwist);Cloud->SetNumberField(TEXT("stagger"),AssembleStagger);O->SetObjectField(TEXT("pointCloud"),Cloud);
+	Cloud->SetNumberField(TEXT("duration"),AssembleSeconds);Cloud->SetNumberField(TEXT("arc"),AssembleArc);Cloud->SetNumberField(TEXT("twist"),AssembleTwist);Cloud->SetNumberField(TEXT("stagger"),AssembleStagger);if(PointStyle!=TEXT("color"))Cloud->SetStringField(TEXT("style"),PointStyle);O->SetObjectField(TEXT("pointCloud"),Cloud);
 	auto P = MakeShared<FJsonObject>();
 	P->SetNumberField(TEXT("count"), Count); P->SetNumberField(TEXT("size"), ParticleSize);
 	P->SetStringField(TEXT("behavior"), Behavior); P->SetStringField(TEXT("formation"), Formation);
@@ -215,7 +259,7 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 		Error = TEXT("景色を読み取れませんでした。もう一度お試しください"); return false;
 	}
 	FLightBoxStyle Candidate;
-	if (!KnownFields(O, { TEXT("title"), TEXT("color"), TEXT("accent"), TEXT("motion"), TEXT("viscosity"), TEXT("swirl"), TEXT("attraction"), TEXT("tilt"), TEXT("glow"), TEXT("trail"), TEXT("shakeThreshold"), TEXT("shake"), TEXT("schema"), TEXT("note"), TEXT("particles"), TEXT("world"), TEXT("camera"), TEXT("objects"), TEXT("pointCloud"), TEXT("sensors") }))
+	if (!KnownFields(O, { TEXT("title"), TEXT("color"), TEXT("accent"), TEXT("motion"), TEXT("viscosity"), TEXT("swirl"), TEXT("attraction"), TEXT("tilt"), TEXT("glow"), TEXT("trail"), TEXT("shakeThreshold"), TEXT("shake"), TEXT("schema"), TEXT("note"), TEXT("particles"), TEXT("world"), TEXT("camera"), TEXT("objects"), TEXT("pointCloud"), TEXT("sensors"), TEXT("storyboard") }))
 	{ Error = TEXT("まだ対応していない景色の操作が含まれています"); return false; }
 	if (!O->TryGetStringField(TEXT("title"), Candidate.Title) || Candidate.Title.IsEmpty() || Candidate.Title.Len() > 24
 		|| Candidate.Title.Contains(TEXT("\n")) || Candidate.Title.Contains(TEXT("\r")) || Candidate.Title.Contains(TEXT("\t"))
@@ -268,8 +312,9 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 	{
 		const FObject* P;
 		if(O->HasField(TEXT("pointCloud"))) {
-			Context=TEXT("pointCloud: enabled/floor booleans,count integer256..1000000,duration1..15,arc0..200,twist-4..4,stagger0...75");
-			if(!O->TryGetObjectField(TEXT("pointCloud"),P)||!KnownFields(*P,{TEXT("enabled"),TEXT("floor"),TEXT("count"),TEXT("duration"),TEXT("arc"),TEXT("twist"),TEXT("stagger")})
+			Context=TEXT("pointCloud: enabled/floor booleans,count integer256..1000000,duration1..15,arc0..200,twist-4..4,stagger0...75,style color/crystal");
+			if(!O->TryGetObjectField(TEXT("pointCloud"),P)||!KnownFields(*P,{TEXT("enabled"),TEXT("floor"),TEXT("count"),TEXT("duration"),TEXT("arc"),TEXT("twist"),TEXT("stagger"),TEXT("style")})
+				||!Choice(*P,TEXT("style"),Candidate.PointStyle,{TEXT("color"),TEXT("crystal")})
 				||!(*P)->TryGetBoolField(TEXT("enabled"),Candidate.bPointCloud)
 				||((*P)->HasField(TEXT("floor"))&&!(*P)->TryGetBoolField(TEXT("floor"),Candidate.bPointFloor))
 				||!Integer(*P,TEXT("count"),Candidate.PointCount,256,1000000)||!Number(*P,TEXT("duration"),Candidate.AssembleSeconds,1,15)
@@ -334,9 +379,9 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 				const FObject N = V->AsObject(); FLightBoxObject Obj;
 				FString Id; N->TryGetStringField(TEXT("id"), Id);
 				Context = TEXT("object ") + Id + TEXT(": check allowed shape/animation/layout/reaction, color, required position/size, ranges and unique id. For custom shapes use polygon outline.");
-				if (!KnownFields(N, { TEXT("id"), TEXT("shape"), TEXT("color"), TEXT("position"), TEXT("size"), TEXT("rotation"), TEXT("emission"), TEXT("wobble"), TEXT("copies"), TEXT("layout"), TEXT("spacing"), TEXT("animation"), TEXT("speed"), TEXT("amplitude"), TEXT("reaction"), TEXT("path"), TEXT("outline"),TEXT("parent"),TEXT("pivot"),TEXT("roughness"),TEXT("metallic"),TEXT("radius"),TEXT("curve"),TEXT("motions"),TEXT("focus"),TEXT("closed"),TEXT("anchor"),TEXT("parentAnchor"),TEXT("startObject"),TEXT("endObject"),TEXT("startAnchor"),TEXT("endAnchor"),TEXT("startOffset"),TEXT("endOffset"),TEXT("profile"),TEXT("sections"),TEXT("attached"),TEXT("pattern"),TEXT("patternColor"),TEXT("patternScale"),TEXT("belly"),TEXT("bellyColor") })
+				if (!KnownFields(N, { TEXT("id"), TEXT("shape"), TEXT("color"), TEXT("position"), TEXT("size"), TEXT("rotation"), TEXT("emission"), TEXT("wobble"), TEXT("copies"), TEXT("layout"), TEXT("spacing"), TEXT("animation"), TEXT("speed"), TEXT("amplitude"), TEXT("reaction"), TEXT("path"), TEXT("outline"),TEXT("parent"),TEXT("pivot"),TEXT("roughness"),TEXT("metallic"),TEXT("radius"),TEXT("curve"),TEXT("motions"),TEXT("focus"),TEXT("closed"),TEXT("anchor"),TEXT("parentAnchor"),TEXT("startObject"),TEXT("endObject"),TEXT("startAnchor"),TEXT("endAnchor"),TEXT("startOffset"),TEXT("endOffset"),TEXT("profile"),TEXT("sections"),TEXT("attached"),TEXT("pattern"),TEXT("patternColor"),TEXT("patternScale"),TEXT("belly"),TEXT("bellyColor"),TEXT("detail"),TEXT("detailLength"),TEXT("model"),TEXT("parts") })
 					|| !N->TryGetStringField(TEXT("id"), Obj.Id) || Obj.Id.IsEmpty() || Obj.Id.Len() > 32 || Ids.Contains(Obj.Id)
-					|| !N->HasField(TEXT("shape")) || !Choice(N, TEXT("shape"), Obj.Shape, { TEXT("sphere"), TEXT("box"), TEXT("cylinder"), TEXT("cone"), TEXT("torus"), TEXT("disk"), TEXT("star"), TEXT("heart"), TEXT("leaf"), TEXT("fish"), TEXT("flower"), TEXT("polygon"),TEXT("group"),TEXT("bird"),TEXT("bowl"),TEXT("tube"),TEXT("ribbon"),TEXT("water"),TEXT("rock"),TEXT("tree"),TEXT("elephant"),TEXT("giraffe"),TEXT("lion"),TEXT("butterfly"),TEXT("whale"),TEXT("petal"),TEXT("roof"),TEXT("gear"),TEXT("blossom"),TEXT("lathe"),TEXT("loft") })
+					|| !N->HasField(TEXT("shape")) || !Choice(N, TEXT("shape"), Obj.Shape, { TEXT("sphere"), TEXT("box"), TEXT("cylinder"), TEXT("cone"), TEXT("torus"), TEXT("disk"), TEXT("star"), TEXT("heart"), TEXT("leaf"), TEXT("fish"), TEXT("flower"), TEXT("polygon"),TEXT("group"),TEXT("bird"),TEXT("bowl"),TEXT("tube"),TEXT("ribbon"),TEXT("water"),TEXT("rock"),TEXT("tree"),TEXT("elephant"),TEXT("giraffe"),TEXT("lion"),TEXT("butterfly"),TEXT("whale"),TEXT("petal"),TEXT("roof"),TEXT("gear"),TEXT("blossom"),TEXT("lathe"),TEXT("loft"),TEXT("model"),TEXT("sdf") })
 					|| !ReadColor(N, TEXT("color"), Obj.Color) || !Vector(N, TEXT("position"), Obj.Position, -400, 450, true)
 					|| !Vector(N, TEXT("size"), Obj.Size, 1, 600, true) || !Vector(N, TEXT("rotation"), Obj.Rotation, -360, 360)
 					|| !Number(N, TEXT("emission"), Obj.Emission, 0, 8) || !Number(N, TEXT("wobble"), Obj.Wobble, 0, 0.35)
@@ -362,7 +407,11 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
                 if(Obj.Shape==TEXT("lathe")&&Obj.Profile.Num()<3)return false;
                 if(!Points(N,TEXT("sections"),Obj.Sections,3,24,1)||!Choice(N,TEXT("pattern"),Obj.Pattern,{TEXT("none"),TEXT("spots"),TEXT("stripes"),TEXT("patches")})
                     ||(N->HasField(TEXT("patternColor"))&&!ReadColor(N,TEXT("patternColor"),Obj.PatternColor))||(N->HasField(TEXT("bellyColor"))&&!ReadColor(N,TEXT("bellyColor"),Obj.BellyColor))||!Number(N,TEXT("patternScale"),Obj.PatternScale,2,32)
-                    ||(N->HasField(TEXT("belly"))&&!N->TryGetBoolField(TEXT("belly"),Obj.bBelly)))return false;
+                    ||(N->HasField(TEXT("belly"))&&!N->TryGetBoolField(TEXT("belly"),Obj.bBelly))
+                    ||!Choice(N,TEXT("detail"),Obj.Detail,{TEXT("none"),TEXT("fur"),TEXT("foliage"),TEXT("bark"),TEXT("feather"),TEXT("grass")})||!Number(N,TEXT("detailLength"),Obj.DetailLength,.5,40)
+                    ||(N->HasField(TEXT("model"))&&!N->TryGetStringField(TEXT("model"),Obj.Model)))return false;
+                if(Obj.Shape==TEXT("model")&&!LightBoxModels::IsKnown(Obj.Model))return false;
+                if(!ReadSdfParts(N,Obj.SdfParts)||(Obj.Shape==TEXT("sdf")&&Obj.SdfParts.IsEmpty()))return false;
                 for(int32 J=0;J<Obj.Sections.Num();++J){const auto Section=Obj.Sections[J];if(FMath::Abs(Section.X)>.5||Section.Y<0||Section.Y>.5||Section.Z<0||Section.Z>.5||(J>0&&Section.X-Obj.Sections[J-1].X<.005))return false;}
                 if(Obj.Shape==TEXT("loft")&&(Obj.Sections.Num()<3||Obj.Sections[0].Y>0||Obj.Sections[0].Z>0||Obj.Sections.Last().Y>0||Obj.Sections.Last().Z>0))return false;
 
@@ -424,7 +473,7 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 			TSet<FString> Chain; const FLightBoxObject* Node=&Obj;
 			while(Node) { if(Chain.Contains(Node->Id)||Chain.Num()>=8) return false; Chain.Add(Node->Id); if(Node->Parent.IsEmpty()) break;
 				const FString ParentId=Node->Parent; Node=Candidate.Objects.FindByPredicate([&](const auto& X){return X.Id==ParentId;}); if(!Node) return false; }
-			const int32 Cost=Obj.Copies*(Obj.Shape==TEXT("group")?0:Obj.Shape==TEXT("tree")?2400:Obj.Shape==TEXT("bird")?2200:Obj.Shape==TEXT("blossom")?6500:Obj.Shape==TEXT("butterfly")?5000:Obj.Shape==TEXT("whale")?3000:Obj.Shape==TEXT("elephant")||Obj.Shape==TEXT("giraffe")||Obj.Shape==TEXT("lion")?6500:1200);
+			const int32 Cost=Obj.Copies*(Obj.Shape==TEXT("group")?0:Obj.Shape==TEXT("model")?8:Obj.Shape==TEXT("sdf")?LightBoxSdf::MaxVertices:Obj.Shape==TEXT("tree")?8600:Obj.Shape==TEXT("bird")?2200:Obj.Shape==TEXT("blossom")?6500:Obj.Shape==TEXT("butterfly")?5000:Obj.Shape==TEXT("whale")?3000:Obj.Shape==TEXT("elephant")||Obj.Shape==TEXT("giraffe")||Obj.Shape==TEXT("lion")?6500:1200);
 			Vertices+=Cost; if(Obj.IsDeforming()) DynamicVertices+=Cost;
 		} if(Vertices>250000||DynamicVertices>60000) return false;
 		return true;
@@ -432,6 +481,23 @@ bool FLightBoxStyle::Parse(const FString& Json, FLightBoxStyle& Out, FString& Er
 	if (!Extended()) { if (Diagnostic) { *Diagnostic = Context; } Error = TEXT("景色の形や数を読み取れませんでした。少し分けてお願いしてください"); return false; }
 	if(!Candidate.bPointCloud)Candidate.PointCount=FMath::Max(DefaultPointCount,Candidate.PointCount);
 	Candidate.bPointCloud=true;Candidate.bPointFloor=false;
+	if(O->HasField(TEXT("storyboard"))){
+		// Keyframes are overrides of the base scene; every resolved pose must itself be a valid scene.
+		const FObject* B=nullptr;const TArray<TSharedPtr<FJsonValue>>* Frames=nullptr;bool Ok=O->TryGetObjectField(TEXT("storyboard"),B)&&KnownFields(*B,{TEXT("hold"),TEXT("loop"),TEXT("frames")})
+			&&Number(*B,TEXT("hold"),Candidate.StoryHold,0,20)&&(!(*B)->HasField(TEXT("loop"))||(*B)->TryGetBoolField(TEXT("loop"),Candidate.bStoryLoop))
+			&&(*B)->TryGetArrayField(TEXT("frames"),Frames)&&Frames->Num()>=1&&Frames->Num()<=8;
+		for(int32 I=0;Ok&&I<Frames->Num();++I){
+			const auto& V=(*Frames)[I];FLightBoxStoryFrame F;const TArray<TSharedPtr<FJsonValue>>* Set=nullptr;
+			Ok=V->Type==EJson::Object&&KnownFields(V->AsObject(),{TEXT("hold"),TEXT("move"),TEXT("set")})&&Number(V->AsObject(),TEXT("hold"),F.Hold,0,20)&&Number(V->AsObject(),TEXT("move"),F.Move,.3,10)
+				&&V->AsObject()->TryGetArrayField(TEXT("set"),Set)&&Set->Num()>=1&&Set->Num()<=16;
+			for(int32 K=0;Ok&&K<Set->Num();++K){FString Id;Ok=(*Set)[K]->Type==EJson::Object&&(*Set)[K]->AsObject()->TryGetStringField(TEXT("id"),Id)&&Candidate.Objects.ContainsByPredicate([&](const auto& X){return X.Id==Id;});}
+			if(Ok){FJsonSerializer::Serialize(*Set,TJsonWriterFactory<TCHAR,TCondensedJsonPrintPolicy<TCHAR>>::Create(&F.Set));Candidate.Story.Add(MoveTemp(F));}
+		}
+		FString Why;
+		for(int32 I=1;Ok&&I<=Candidate.Story.Num();++I){FLightBoxStyle Resolved;if(!Candidate.Pose(I,Resolved,&Why)){Ok=false;Why=FString::Printf(TEXT("storyboard frame %d: "),I)+Why;}}
+		if(!Ok){if(Diagnostic)*Diagnostic=Why.IsEmpty()?TEXT("storyboard: {hold0..20,loop,frames:[1..8 {hold0..20,move.3..10,set:[1..16 {id of an EXISTING object,...fields to override,patch:[{i:part index,...sdf part fields}]}]}]}"):Why;
+			Error=TEXT("景色の動きの流れを読み取れませんでした");return false;}
+	}
 	Out = Candidate; // Atomic: a malformed response never partly changes the scene.
 	Error.Reset();
 	return true;
@@ -455,7 +521,28 @@ bool FLightBoxStyle::ParseCompletion(const FString& Json, FLightBoxStyle& Out, F
 	{
 		Error = TEXT("演出が完成しませんでした。もう一度お試しください"); return false;
 	}
-	return Parse(Content, Out, Error, Diagnostic);
+    TSharedPtr<FJsonObject> Scene;
+    const TArray<TSharedPtr<FJsonValue>>* Nodes = nullptr;
+    if (FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Content), Scene) && Scene.IsValid()
+        && Scene->TryGetArrayField(TEXT("objects"), Nodes))
+    {
+        bool Changed = false;
+        for (const auto& Node : *Nodes)
+        {
+            if (!Node.IsValid() || Node->Type != EJson::Object) { continue; }
+            auto Object = Node->AsObject(); FString Shape;
+            // A non-uniformly scaled sphere is exactly an ellipsoid in this renderer.
+            if (Object->TryGetStringField(TEXT("shape"), Shape) && Shape == TEXT("ellipsoid"))
+            { Object->SetStringField(TEXT("shape"), TEXT("sphere")); Changed = true; }
+            const TSharedPtr<FJsonObject>* Story = nullptr;
+            // A single object's storyboard has only one possible owner. Never merge ambiguous tracks
+            // or replace an explicit root storyboard; unknown fields/ranges remain strict errors.
+            if (Nodes->Num() == 1 && !Scene->HasField(TEXT("storyboard")) && Object->TryGetObjectField(TEXT("storyboard"), Story))
+            { Scene->SetObjectField(TEXT("storyboard"), *Story); Object->RemoveField(TEXT("storyboard")); Changed = true; }
+        }
+        if (Changed) { Content.Reset(); FJsonSerializer::Serialize(Scene.ToSharedRef(), TJsonWriterFactory<>::Create(&Content)); }
+    }
+    return Parse(Content, Out, Error, Diagnostic);
 }
 
 FString FLightBoxStyle::ObjectMotionKey(const FLightBoxObject& Object)
@@ -471,21 +558,30 @@ FString FLightBoxStyle::CameraContentJson() const
     FString Json;FJsonSerializer::Serialize(O->GetObjectField(TEXT("camera")).ToSharedRef(),TJsonWriterFactory<>::Create(&Json));return Json;
 }
 
-FString FLightBoxStyle::Instruction(const FLightBoxStyle& Current)
+namespace
 {
-	return TEXT("You compose polished animated miniature exhibits from Japanese requests. Return ONE compact complete JSON, no prose/markdown/tools/code. "
+    FString ModelCatalog()
+    {
+        FString Out;for(const auto& E:LightBoxModels::Catalog())Out+=FString::Printf(TEXT("%s%s (%s)"),Out.IsEmpty()?TEXT(""):TEXT("; "),E.Id,E.Description);
+        return Out;
+    }
+}
+
+FString FLightBoxStyle::Instruction(const FLightBoxStyle& Current,int32 Budget)
+{
+	return FString(TEXT("You compose polished animated miniature exhibits from Japanese requests. Return ONE compact complete JSON, no prose/markdown/tools/code. "
 		"EVERYTHING IS PARTICLES. A named concrete subject, even when the user says particles gather into its shape, means a complete FILLED THREE-DIMENSIONAL point sculpture: use objects target surfaces (lathe, tube, sphere, polygon, etc) and particles.count:0. objects are mathematical particle-placement recipes, NOT rendered 3D models; DO use them. pointCloud.count controls sculpture density. Use custom point contours ONLY for an explicit outline/line drawing; never substitute a flat contour for a complete tangible subject. particles.count is only for independent freely moving lights/weather/schools, NOT the sculpture itself. "
 		"Distinguish a NEW SUBJECT from an EDIT. Reset irrelevant independent lights for a new subject, count:0 unless separately requested fireflies, weather, free stars or schools. Do not inherit decorative particles from the previous scene. "
 		"For edits (only/keep/as-is/add/change-speed), preserve every unmentioned object, motion and light exactly. Keep ids stable; make the smallest requested change. "
         "PARENT COORDINATES ARE LOCAL: for body position[0,0,100], a fin at world[20,-30,90] must use parent:body,position:[20,-30,-10], NOT [20,-30,90]. Never add the body's world height twice. Set attached:true for anatomical parts, eyes, fins, ears, limbs, stems or panels that must touch their parent; detached required connections are rejected. Prefer a group root at the subject's world position, with all part positions local to that root. Parent group does not itself have a physical surface; ensure its sibling parts visibly meet. Use a low oblique camera with a large subject, not a distant tiny body inside a huge decorative tank. "
 		"When the requested SUBJECT is made of light (light ring, neon, glowing shapes, 光輪, 光の輪), make that subject visibly emissive (emission 1.2..3), not merely a metallic object lit from outside. Keep ordinary objects non-emissive. "
 		"Requested motion must be VISIBLE: a uniform ring/cylinder spinning around its symmetry axis appears stationary; use a tilted rotation axis or a small contrasting rim detail. A uniform sphere needs a visible surface detail or an orbit to show movement. "
-		"QUALITY: Before writing JSON, silently identify the subject's 4-6 defining anatomical/structural features, proportions, silhouette and markings. Spend geometry and points on these, not unrelated decorations. Preserve stable part IDs on edits. A real place name is a semantic interpretation from your knowledge, NOT a verified replica; note this briefly. Never claim to have searched photos or accurately reproduced a real facility. Do not make a generic whale into a whale shark by changing its colour. Broad flattened head, tapering body, correctly attached pectoral/dorsal fins, vertical tail, eyes/mouth and ordered pale spots define a whale shark. For panda-like mammals, prioritize large rounded white head, two attached black ears, paired slanted black eye patches with visible pupils, short muzzle/nose, white torso with black shoulder band and four thick black limbs; do not omit the face or hide limbs behind unrelated scenery. These are examples of feature-based design, not fixed presets. "
+		"QUALITY: Before writing JSON, silently identify the subject's 4-6 defining anatomical/structural features, proportions, silhouette and markings. Spend geometry and points on these, not unrelated decorations. Preserve stable part IDs on edits. A real place name is a semantic interpretation from your knowledge, NOT a verified replica; note this briefly. Never claim to have searched photos or accurately reproduced a real facility. Do not make a generic whale into a whale shark by changing its colour. Broad flattened head, tapering body, correctly attached pectoral/dorsal fins, vertical tail, eyes/mouth and ordered pale spots define a whale shark. A giant panda is a heavy bear: pear-shaped barrel body about 1.6x its height in length, head only about a third of body length with a broad skull and protruding muzzle, small rounded black ears, drooping teardrop black eye patches, black legs continuous with a black shoulder saddle, big plantigrade paws; do not omit the face or hide limbs behind unrelated scenery. These are examples of feature-based design, not fixed presets. REALISM TARGET: the result must read like a museum-grade naturalistic sculpture or a 3D laser-engraved crystal figure, NOT a chibi, mascot, toy, plush, cartoon, emoji or low-poly model. Use true adult proportions (never an oversized head or stubby generic limbs), real silhouette landmarks (shoulder hump, haunch, neck, jaw, brow, muzzle, knees/elbows, paws/hooves/claws, tail root) and asymmetric natural pose. A hero animal or plant normally needs 14..30 parts: loft torso with 10..24 sections, a head LOFT along X whose sections model skull, brow, cheeks and protruding muzzle (not a sphere), ears, eyes/nostrils, and each limb as ONE lathe (vertical local Z; profile widest at shoulder/hip, narrowing through knee/wrist, slight flare at the foot) or loft, with a separate flattened paw/hoof. NEVER stack separate spheres as limb segments and never leave pinched necks or gaps between body parts. Overlapping solid parts (sphere/box/cylinder/loft/lathe) are MERGED: surfaces buried inside another part are not drawn, so overlap limbs 20..35% into the torso, head into neck, muzzle into head, to get one continuous skin. Surface micro-structure is REQUIRED for organic subjects: object detail:fur/feather/foliage/bark/grass with detailLength cm (fur 1.5..6 short coat, 6..12 shaggy; feather 1..4; foliage 4..14; bark 1..4; grass 3..15). Detail displaces particles into real strands/leaf clumps/ridges; it is applied to parts that are not animated, so keep a showcase subject still unless motion was requested. Do not put fur on eyes, nose, claws or hard objects. "
         "For unfamiliar species/objects, construct the shape with loft/lathe/curves instead of stretching a mismatched built-in animal. loft: sections:[[x,halfWidth,halfHeight],...] 3..24 strictly ascending x within[-.5,.5], width/height0...5, first and last width/height0 to close. Local longitudinal axis+X, cross-section YZ; size scales it. Use >=7 sections for a broad head and tapering tail; curve optionally bends centreline using local cm (Y/Z offsets). Connect fins/leaves/panels with polygon outline and hierarchy. All samples are mathematical point targets, no solid model is rendered. "
         "Surface markings OPTIONAL: pattern:none/spots/stripes/patches,patternColor:#RRGGBB,patternScale:2..32,belly:true/false,bellyColor:#RRGGBB. Markings colour individual particles in local coordinates. Use spots on a continuous body instead of hundreds of floating spot spheres. Reserve separate geometry for distinctive face/eye patches, mouths, fins and ears. Before output, check silhouette from both front and side, symmetry where appropriate, physical contacts and hierarchy, readable eyes/mouth, correct tail/wing orientation and enough contrast. Limit scene to the requested subject and useful context. "
         "OPTIONAL sensors:{sound,warmth,light,hand,magnet} each 0..2: how strongly the PHONE sensors move this scene (sound=breath and claps on the microphone, warmth=a palm resting on the screen, light=ambient light sensor, hand=proximity sensor, magnet=magnetometer). 1 is default, 0 ignores that sensor, 2 is extra sensitive. Include it ONLY when the user asks how the scene reacts to sound/voice/breath/claps, touch/warmth, brightness, a hand or a magnet; otherwise OMIT it and the current values are kept. Device tilt is controlled by tilt, shaking by shake. "
         "REQUIRED base: schema:3,title:Japanese 1..24 chars,color/accent:#RRGGBB,motion:.2..2,viscosity:0..1,swirl:-2..2,attraction:0..1,tilt:0..2,glow:.3..2,trail:0..1,shakeThreshold:1.3..3,shake:scatter/gather/none,note:Japanese<=100 chars. "
-		"PARTICLE-ONLY RENDERER: ALL scenery, animals, water, sky, suns and lights are drawn exclusively as discrete camera-facing particles. No solid mesh, floor, backdrop, grid, reflection or alternate renderer exists. Normally pointCloud:{enabled:true,count:131072,floor:false,duration:3,arc:22,twist:.15,stagger:.18}. Count is the TOTAL ceiling, up to1000000; Default to131072 for a NEW sculpture, even if the previous scene used65536. Preserve the existing budget on edits unless the user asks to change it. Smaller budgets are allowed when requested or deliberately chosen for a sparse design; independent free lights only use particles.count0..1024. Never duplicate sparse lights just to fill the sculpture budget. objects are mathematical target surfaces, NEVER rendered models. Their animation and motion channels move the particles themselves, including bird wing deformation, waves, flowing tubes and hierarchy motion. particles.count0..1024 adds freely simulated point lights within the same total budget; use for fireflies, stars, snow, flock etc, or0 for a pure sculpture. Large surfaces should be focus:false so they do not consume the particles needed by the main subject. No automatic solid ground is drawn; add a particle surface object only when requested. Background colour only tints sparse distant points; use coloured particles for sky/sunset, never a backdrop sheet. "
+		"PARTICLE-ONLY RENDERER: ALL scenery, animals, water, sky, suns and lights are drawn exclusively as discrete camera-facing particles. No solid mesh, floor, backdrop, grid, reflection or alternate renderer exists. Normally pointCloud:{enabled:true,count:131072,floor:false,duration:3,arc:22,twist:.15,stagger:.18}. Count is the TOTAL ceiling, up to{BUDGET} on this device; Default to131072 for a NEW sculpture, even if the previous scene used65536. Preserve the existing budget on edits unless the user asks to change it. Smaller budgets are allowed when requested or deliberately chosen for a sparse design; independent free lights only use particles.count0..1024. Never duplicate sparse lights just to fill the sculpture budget. objects are mathematical target surfaces, NEVER rendered models. Their animation and motion channels move the particles themselves, including bird wing deformation, waves, flowing tubes and hierarchy motion. particles.count0..1024 adds freely simulated point lights within the same total budget; use for fireflies, stars, snow, flock etc, or0 for a pure sculpture. Large surfaces should be focus:false so they do not consume the particles needed by the main subject. No automatic solid ground is drawn; add a particle surface object only when requested. Background colour only tints sparse distant points; use coloured particles for sky/sunset, never a backdrop sheet. "
 		"A new object noun by itself means build that recognizable complete subject, not just recolour the previous object. You may invent shapes using lathe profile, polygon outlines and curved tubes. lathe requires profile:[[height,radius],...] with 3..32 strictly increasing heights within -.5...5, radius0...5; first/last radius0 to close the body. size scales the profile. Optional curve points (local cm) offset the lathe centreline, allowing curved fruit, bottles, vases, vegetables, limbs. Compose distinctive body, cap, stem and leaves with separate IDs/colours. No predetermined noun-to-preset mapping exists. "
 		"Orient each part for its actual 3D contact surface: polygon/star/leaf lie in localXY with thicknessZ, so rotation[0,0,0] makes a horizontal cap. The X90 rule is ONLY for front-facing silhouettes, never an automatic rule for caps. Use parent anchors or explicit contact points to connect stems/caps/leaves, including when a body is tilted. Preserve distinctive proportions and curvature rather than replacing every subject with a round sphere. "
 		"particles:{count:int0..1024,size:.25..5,behavior:drift/flock/orbit/rain/snow/fire/fountain/fireworks/form,formation:volume/sphere/ring/heart/star/helix/galaxy/grid/wave/torus/cube/fish/bird/butterfly/flower/custom,"
@@ -495,8 +591,9 @@ FString FLightBoxStyle::Instruction(const FLightBoxStyle& Current)
 		"world:{background/floor:#RRGGBB,ambient:.1..3,bloom:0..2,box:boolean,keyColor/fillColor:#RRGGBB,keyIntensity:.1..12,keyDirection:[pitch,yaw,roll] degrees,lights:[{position:[x,y,z],color:#RRGGBB,intensity:0..20000,radius:50..1200}] up to4 local lights}. "
 		"camera:{autoFrame:true,yaw:-360..360,pitch:10..85,orbit:-30..30 DEGREES/SECOND (0=stopped; 8..15=slow continuous orbit around subject),zoom:.65..2.2,fill:.4.. .88,focus:[x,y,z]}. Camera-only requests preserve geometry and particle settings; use orbit for a moving camera, not object spin. autoFrame fits the animated subject bounds; use fill .72,zoom1. Disable box normally; no visible grid for object scenes. "
 		"objects:[up to48 object groups, <=256 total copies]. REQUIRED object fields: id<=32chars,shape,color:#RRGGBB,position:[x,y,z],size:[width,depth,height]1..600 cm. "
+		"Use sphere with nonuniform size for an ellipsoid object; ellipsoid is otherwise an SDF part type. Put storyboard ONLY at the scene root, beside objects, NEVER inside an object. "
 		"Shapes: loft/lathe/sphere/box/cylinder/cone/torus/disk/star/heart/leaf/fish/flower/polygon/group/bird/bowl/tube/ribbon/water/rock/tree/elephant/giraffe/lion/butterfly/whale/petal/roof/gear/blossom. "
-		"Prefer native assemblies when available: blossom includes stem,leaves,hub and TEN connected petals. blossom animation:bloom,amplitude55,speed1 opens/closes around fixed roots; size[190,190,210],position[0,0,105],color pink. Do NOT add a second stem or hub to blossom. gear is a toothed ring with a central hole, axial direction localZ; gear size[110,110,16],rotation[90,0,0],animation:spinLocal,speed1 or-1 turns about its own axle. Prefer gear+spinLocal for gears over separately calculated rotated teeth. roof is a closed gabled roof: ridge runs alongY, bottom is position.Z-size.Z/2, ridge is position.Z+size.Z/2; put its bottom on top of house walls without rotation. butterfly has thin patterned wings and antennae, whale has eyes/flukes/fins, petal is a curved thin volume; use these silhouettes instead of fat spheres for wings or petals. bird includes eyes,beak,body,wings; tree includes trunk,branches,rounded leafy crowns; animals include FOUR legs,eyes,ears,tail and characteristic features. bowl is HOLLOW; water is a wave surface with specular highlights. "
+		"Prefer native assemblies when available: blossom includes stem,leaves,hub and TEN connected petals. blossom animation:bloom,amplitude55,speed1 opens/closes around fixed roots; size[190,190,210],position[0,0,105],color pink. Do NOT add a second stem or hub to blossom. gear is a toothed ring with a central hole, axial direction localZ; gear size[110,110,16],rotation[90,0,0],animation:spinLocal,speed1 or-1 turns about its own axle. Prefer gear+spinLocal for gears over separately calculated rotated teeth. roof is a closed gabled roof: ridge runs alongY, bottom is position.Z-size.Z/2, ridge is position.Z+size.Z/2; put its bottom on top of house walls without rotation. butterfly has thin patterned wings and antennae, whale has eyes/flukes/fins, petal is a curved thin volume; use these silhouettes instead of fat spheres for wings or petals. bird includes eyes,beak,body,wings; STORYBOARD (continuous skinned animation keyframes for actions: eating, waving, walking, opening): top-level storyboard:{hold:0,loop:true for cyclic actions,frames:[2..8 {move:.6..3 seconds to interpolate to this pose,hold:0,set:[{id:existing object id,...object fields,patch:[{i:sdf part index,a:[..],b:[..],r:[..],rot:[..],color:..}]}]}]}. Every frame overrides the BASE scene, not the previous frame. Base is pose 0; a loop smoothly returns home. The same particles follow the moving skin without rebuilding or pausing. Keep object ids, primitive types, part order and counts unchanged; animate joints with sdf patch endpoints and rotations. Use native motions for spin, bob, sway and flutter, combined with keyframes for articulated actions. Legacy hold values slow the movement rather than freezing it. SDF SCULPTING (PREFERRED for animals, people, creatures, fruit, food, vehicles, furniture and any organic or smoothly connected subject): ONE object shape:sdf with parts:[up to40 {type:ellipsoid|capsule|box|torus,a:[x,y,z] centre or capsule start (LOCAL cm from the object position),b:[x,y,z] capsule end,r:[rx,ry,rz] ellipsoid radii/box half size, capsule [r1 at a,r2 at b] (tapered limbs, necks, tails, fingers), torus [major,minor],rot:[x,y,z] deg,k:smooth blend radius cm (0 sharp..60 very soft; 4..15 typical; bigger where flesh flows: neck, shoulders, haunches),cut:true carves (eye sockets, mouth, nostrils, hollows),smooth:true no fur/leaf relief (eyes, nose, claws, hooves, teeth),color:#RRGGBB per part (markings follow the part that dominates; blend radius softens colour seams)}]. All parts fuse into ONE continuous skin, so build anatomy like a sculptor: overlapping masses for ribcage, belly, hips, shoulder blades; tapered capsules for upper and lower limb segments meeting at knees/elbows; a paw/hoof ellipsoid; a head of several ellipsoids (cranium, cheeks, muzzle) plus cut eye sockets with smooth eyeballs; ears as flattened ellipsoids. Use 18..40 parts for a hero subject; size is then only a bounding hint, position is the sdf origin; detail:fur etc applies to the whole skin except smooth parts. Example quadruped torso: {type:ellipsoid,a:[0,0,0],r:[70,38,40],k:12},{type:capsule,a:[45,-22,-5],b:[50,-24,-55],r:[16,10],k:10}. Prefer this over loft/lathe/sphere assemblies. REAL MODELS: shape:model with model:<id> places a real artist-made 3D model converted to particles; its colours, leaves, bark and proportions come from the model, so color is ignored and the model keeps its true aspect inside size (size is a bounding box, give its real proportions). Native animation/motions and keyframe transforms move the model as a whole; its internal artist-made geometry remains rigid. Available ids: {MODELS}. Use a listed model whenever the request matches it (any ordinary tree/木/大きな木 -> island_tree_01), and compose everything else from primitives. Otherwise, tree is a PROCEDURAL BRANCHING tree (tapering trunk, recursive limbs and twigs, hundreds of leaf clumps with bark relief); prefer it for any broadleaf tree, set color to the foliage colour, size[200..300,200..300,260..340] for a hero tree; conifers/palms/bonsai should be composed from lathe/tube parts with detail:foliage; animals include FOUR legs,eyes,ears,tail and characteristic features. bowl is HOLLOW; water is a wave surface with specular highlights. "
 		"Objects fit x+-300,y+-200,z0..350; ground z0; viewer NEGATIVE Y, screen RIGHT is NEGATIVE X; zUP. Centered shapes occupy position+-size/2. Bird/butterfly wing span is size.Y: use bird size[75,130,38],butterfly size[55,110,22] so wings are not narrow sticks. bird/fish/whale are already upright and face+X. rotation[0,0,0] gives a readable SIDE silhouette; NEVER apply the polygon X=90 rule to these bodies, which turns them edge-on. Use small Z angles for oblique views. Other animals can rotate Z=-90 to face viewer. "
 		"Optional object: parent:'' or another id (relative position/rotation inherited; parent size is baked, not inherited),pivot:[0,0,0] LOCAL hinge cm,rotation:[x,y,z]deg+-360,roughness:.08..1,metallic:0..1,emission:0..8 ONLY actual lights,focus:true (false for terrain/background/water),"
 		"copies:1..32,layout:ring/line/grid/spiral/scatter,spacing:0..240,wobble:0.. .35,reaction:none/tilt/shake/both,animation:none/spin/bob/orbit/pulse/wave/sway/path/fly/swim/flow/flutter/stream/spinLocal/bloom,speed:-3..3,amplitude:0..150. "
@@ -520,7 +617,56 @@ FString FLightBoxStyle::Instruction(const FLightBoxStyle& Current)
 		"Do NOT make all objects emissive or white,do not flood the screen with glow/trails. Set focus:false ONLY on broad terrain/background/water. Trees that define a forest, houses in a village, or a whole scene requested to be visible MUST stay focus:true. Keep camera zoom1 with autoFrame for a complete subject; excessive zoom crops the head or flower. Use count0 when particles are irrelevant. "
 		"Two independent schools use particles behavior:flock,formation:volume,shape:fish,groups:2,count>=200; do not substitute fixed rows of copied fish. For a large collective fish use formation:fish. "
 		"When all lights are off but a readable silhouette is requested, use a slightly lighter blue background and dark objects so their outline remains visible. For sculpture lighting with no current objects, CREATE a sculpture to illuminate rather than returning empty objects. Before responding verify requested VERBS are visibly animated, every parent exists, every animal has facial detail/legs, all tubes connect, color contrast and framing are legible. "
-		"No transparent glass surface renderer exists. Do not enclose a subject in dense particles and call it clear glass: use an open wireframe made of thin torus rings and explain that it represents glass. Exact readable text is not supported; do not claim hand-built strokes spell Japanese correctly. No arbitrary code,downloaded assets,sound,new mechanics or real-world actions. No fluid solver,automatic collision avoidance or dynamic maze pathfinding: explain when these are preplanned visual animations. For unsupported actions compose the closest visible animated approximation and honestly say the limitation in note. Current scene:") + Current.ToJson();
+		"pointCloud.style:color (default) or crystal. crystal renders the scene as a 3D laser-engraved crystal: fine cool-white dots stippled by the lighting with faint inner volume. Use crystal when the user mentions crystal/glass engraving/クリスタル/ガラス/レーザー彫刻/水晶 or asks for an engraved look; with crystal set background #010309..#04070F, bloom .3...6, keyColor near white, keyIntensity 4..7 from an oblique side so light/shadow stippling reveals form. Keep the style on edits. No transparent glass block renderer exists: never enclose the subject in a dense particle block. Exact readable text is not supported; do not claim hand-built strokes spell Japanese correctly. No arbitrary code,downloaded assets,sound,new mechanics or real-world actions. No fluid solver,automatic collision avoidance or dynamic maze pathfinding: explain when these are preplanned visual animations. For unsupported actions compose the closest visible animated approximation and honestly say the limitation in note. Current scene:")).Replace(TEXT("{MODELS}"),*ModelCatalog()).Replace(TEXT("131072"),*FString::FromInt(Budget)).Replace(TEXT("{BUDGET}"),*FString::FromInt(Budget)) + Current.ToJson();
+}
+
+bool FLightBoxStyle::Pose(int32 Index,FLightBoxStyle& Out,FString* Why) const
+{
+	TSharedPtr<FJsonObject> J;if(!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(ToJson()),J)||!J.IsValid())return false;
+	J->RemoveField(TEXT("storyboard"));
+	if(Index>0){
+		if(!Story.IsValidIndex(Index-1))return false;
+		TArray<TSharedPtr<FJsonValue>> Set;if(!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Story[Index-1].Set),Set))return false;
+		TArray<TSharedPtr<FJsonValue>> Nodes=J->GetArrayField(TEXT("objects"));
+		for(const auto& V:Set){
+			const auto Change=V->AsObject();FString Id;Change->TryGetStringField(TEXT("id"),Id);
+			const int32 At=Nodes.IndexOfByPredicate([&](const TSharedPtr<FJsonValue>& X){FString Y;return X->AsObject()->TryGetStringField(TEXT("id"),Y)&&Y==Id;});
+			if(At==INDEX_NONE){if(Why)*Why=TEXT("unknown id ")+Id;return false;}
+			const auto Target=Nodes[At]->AsObject();
+			for(const auto& Field:Change->Values){
+				if(Field.Key==TEXT("id"))continue;
+				if(Field.Key==TEXT("patch")){
+					// Move individual sdf parts without restating the whole sculpture.
+					const TArray<TSharedPtr<FJsonValue>>* Patches;const TArray<TSharedPtr<FJsonValue>>* PartsArr;
+					if(!Field.Value->TryGetArray(Patches)||!Target->TryGetArrayField(TEXT("parts"),PartsArr)){if(Why)*Why=TEXT("patch needs an sdf object with parts");return false;}
+					TArray<TSharedPtr<FJsonValue>> Parts=*PartsArr;
+					for(const auto& P:*Patches){
+						if(P->Type!=EJson::Object){if(Why)*Why=TEXT("patch entries are objects");return false;}
+						double I;if(!P->AsObject()->TryGetNumberField(TEXT("i"),I)||I<0||int32(I)>=Parts.Num()){if(Why)*Why=TEXT("patch i must index an existing part");return false;}
+						auto Part=MakeShared<FJsonObject>(*Parts[int32(I)]->AsObject());for(const auto& PF:P->AsObject()->Values)if(PF.Key!=TEXT("i"))Part->SetField(PF.Key,PF.Value);
+						Parts[int32(I)]=MakeShared<FJsonValueObject>(Part);
+					}
+					Target->SetArrayField(TEXT("parts"),Parts);
+				}else Target->SetField(Field.Key,Field.Value);
+			}
+		}
+		J->SetArrayField(TEXT("objects"),Nodes);
+	}
+	FString Text,Error;FJsonSerializer::Serialize(J.ToSharedRef(),TJsonWriterFactory<TCHAR,TCondensedJsonPrintPolicy<TCHAR>>::Create(&Text));
+	if(!Parse(Text,Out,Error,Why))return false;
+	if(Index>0)Out.AssembleSeconds=Story[Index-1].Move;
+	return true;
+}
+
+int32 FLightBoxStyle::StoryTargetAt(float Time,float& Move) const
+{
+	Move=AssembleSeconds;if(Story.IsEmpty())return 0;
+	float Cycle=StoryHold;for(const auto& F:Story)Cycle+=F.Move+F.Hold;
+	if(bStoryLoop){Cycle+=Story[0].Move;Time=FMath::Fmod(Time,Cycle);}
+	float Start=StoryHold;if(Time<Start)return 0;
+	for(int32 I=0;I<Story.Num();++I){const float End=Start+Story[I].Move+Story[I].Hold;if(Time<End){Move=Story[I].Move;return I+1;}Start=End;}
+	if(!bStoryLoop){Move=Story.Last().Move;return Story.Num();}
+	Move=Story[0].Move;return 0; // flying home to the base pose before the cycle repeats
 }
 
 bool FLightBoxStyle::CompleteGenerated(const FString& Words,const FLightBoxStyle& Before,FLightBoxStyle& Next,FString& Diagnostic)

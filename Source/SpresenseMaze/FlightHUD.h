@@ -47,6 +47,8 @@ private:
 	void PillButton(FName Id, const FString& Value, float X, float Y, float Width, float Height, bool bPrimary = false);
 	void Modal(float X, float Y, float Width, float Height);
 	void FadeEdges();
+	void CyberPanel(float X, float Y, float Width, float Height, const FLinearColor& AccentColor, float Alpha = 1.f);
+	void DrawCyberMotion(AFlightPawn* Ship, AFlightCourse* Course);
 	float ShownShield = 100.f;
 	float ShownScore = 0.f;
 	float UiTime = 0.f;

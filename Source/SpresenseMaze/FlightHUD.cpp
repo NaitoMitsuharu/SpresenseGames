@@ -11,7 +11,7 @@ void AFlightHUD::DrawHUD()
 	if (!Canvas || !Ship || !Ship->GetCourse()) { return; }
 	AFlightCourse* Course = Ship->GetCourse();
 	const float Dt = FMath::Min(GetWorld()->GetDeltaSeconds(), 0.05f);
-	UiTime += Dt;
+	if (Ship->State != EFlightState::Paused) { UiTime += Dt; }
 	if (!bUiInitialised) { ShownShield = Ship->Shield; ShownScore = Course->Score.Total(); bUiInitialised = true; }
 	ShownShield = FMath::FInterpTo(ShownShield, Ship->Shield, Dt, 4.f);
 	ShownScore = FMath::FInterpTo(ShownScore, float(Course->Score.Total()), Dt, 15.f);
@@ -19,11 +19,11 @@ void AFlightHUD::DrawHUD()
 	const bool Live = Ship->State == EFlightState::Playing || Ship->State == EFlightState::Countdown;
 	if (Live)
 	{
-		DrawDamageEdges(Ship); DrawScore(Course); DrawRings(Course); DrawShield(Ship);
+		DrawCyberMotion(Ship,Course); DrawDamageEdges(Ship); DrawScore(Course); DrawRings(Course); DrawShield(Ship);
 		DrawAttitude(); DrawBoss(Course); DrawBanner(Ship); DrawReticles(Ship); DrawDodge(Ship);
 		if (Ship->State == EFlightState::Playing) { DrawThreats(Ship); }
 		const float X = W-104*S, Y = 32*S, Size = 68*S;
-		RoundRect(X,Y,Size,Size,Size*0.5f,Ink.CopyWithNewOpacity(0.55f));
+		CyberPanel(X,Y,Size,Size,Mint);
 		RoundRect(X+25*S,Y+23*S,5*S,22*S,2*S,Paper);
 		RoundRect(X+38*S,Y+23*S,5*S,22*S,2*S,Paper);
 		AddHitBox(FVector2D(X,Y),FVector2D(Size,Size),TEXT("Pause"),true);
@@ -77,7 +77,8 @@ void AFlightHUD::Dim(float Alpha)
 
 void AFlightHUD::DrawShield(AFlightPawn* Ship)
 {
-	const float X = SafeLeft(), Y = H-126*S, BW = 294*S;
+	const float X = SafeLeft()+20*S, Y = H-137*S, BW = 260*S;
+	CyberPanel(X-20*S,Y-18*S,BW+40*S,106*S,Mint);
 	const float Health = FMath::Clamp(Ship->Shield / AFlightPawn::MaxShield,0.f,1.f);
 	const FLinearColor Color = Health <= 0.25f ? Coral : Mint;
 	// A small shield outline; a continuous fill with delayed damage makes loss legible.
@@ -93,7 +94,8 @@ void AFlightHUD::DrawShield(AFlightPawn* Ship)
 
 void AFlightHUD::DrawRings(AFlightCourse* Course)
 {
-	const float X = W-320*S, Y = 36*S;
+	const float X = W-350*S, Y = 36*S;
+	CyberPanel(X-12*S,Y-8*S,212*S,122*S,Mint);
 	// Airy, split-ring symbol beside an unpadded count.
 	Arc(X+18*S,Y+28*S,13*S,12,78,Mint,2*S);
 	Arc(X+18*S,Y+28*S,13*S,102,168,Mint,2*S);
@@ -169,7 +171,8 @@ void AFlightHUD::DrawBoss(AFlightCourse* Course)
 {
 	if (!Course->bBossActive) { return; }
 	const float BW = 390*S, X=(W-BW)*0.5f,Y=115*S;
-	CenterLabel(TEXT("大型機"),W*0.5f,Y,15,Coral);
+	CyberPanel(X-24*S,Y-12*S,BW+48*S,80*S,Coral);
+	CenterLabel(TEXT("BOSS / 大型機"),W*0.5f,Y,18,Coral,true);
 	RoundRect(X,Y+29*S,BW,5*S,2.5f*S,Paper.CopyWithNewOpacity(0.15f));
 	RoundRect(X,Y+29*S,BW*Course->BossHealth01,5*S,2.5f*S,Coral);
 }
@@ -179,8 +182,8 @@ void AFlightHUD::DrawBanner(AFlightPawn* Ship)
 	if (Ship->BannerTime <= 0 || Ship->Banner.IsEmpty()) { return; }
 	const float A = FMath::Min(Ship->BannerTime/0.4f,1.f);
 	const FVector2D T = Measure(Ship->Banner,22,true);
-	const float Y=Ship->GetCourse()->bBossActive?172*S:118*S;
-	RoundRect(W*0.5f-T.X*0.5f-22*S,Y,T.X+44*S,45*S,22*S,Ink.CopyWithNewOpacity(A*0.72f));
+	const float Y=Ship->GetCourse()->bBossActive?210*S:118*S;
+	CyberPanel(W*0.5f-T.X*0.5f-22*S,Y,T.X+44*S,45*S,Coral,A);
 	CenterLabel(Ship->Banner,W*0.5f,Y+9*S,22,(Ship->Banner.Contains(TEXT("警告"))?Coral:Paper).CopyWithNewOpacity(A),true);
 }
 
@@ -201,8 +204,8 @@ void AFlightHUD::DrawAwaitNeutral(AFlightPawn* Ship)
 	const FAttitudeState& Input = GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>()->GetState();
 	const float PW=660*S,X=(W-PW)*0.5f,Y=H*0.5f-260*S;
 	Modal(X,Y,PW,520*S);
-	Label(TEXT("FLIGHT / READY"),X+42*S,Y+35*S,15,Mint,true);
-	Label(Ship->bInputLost?TEXT("持ち方をもう一度合わせよう"):TEXT("空へ、飛び出そう。"),X+42*S,Y+74*S,36,Paper,true);
+	Label(TEXT("NEON BREAKER / SYSTEM READY"),X+42*S,Y+35*S,15,Mint,true);
+	Label(Ship->bInputLost?TEXT("持ち方をもう一度合わせよう"):TEXT("光をつないで、空を裂け。"),X+42*S,Y+74*S,36,Paper,true);
 	Label(Input.bAvailable?TEXT("いまの持ち方を基準にしてスタート。"):TEXT("Spresenseか端末の姿勢入力を接続してください。"),X+42*S,Y+143*S,21,Muted);
 	const bool Keys=Input.Source==EAttitudeSource::Keyboard;
 	const FString Guide=Input.Source==EAttitudeSource::SprBox?TEXT("傾けて移動。素早く傾けて戻すとロールで無敵。"):Keys?TEXT("WASDで移動。Spaceでクイック回避。"):Ship->bGestureDodge?TEXT("傾けて移動。短く傾けて戻すと回避。"):TEXT("傾けて移動。右下のボタンで回避。");
@@ -230,7 +233,7 @@ void AFlightHUD::DrawPaused()
 	const AFlightPawn* Ship=Cast<AFlightPawn>(GetOwningPawn());
 	const float PW=660*S,X=(W-PW)*0.5f,Y=H*0.5f-305*S;
 	Modal(X,Y,PW,610*S);
-	Label(TEXT("TAKE A BREATH"),X+42*S,Y+34*S,15,Mint,true);
+	Label(TEXT("NEON BREAKER / STANDBY"),X+42*S,Y+34*S,15,Mint,true);
 	Label(TEXT("ひと休み。"),X+42*S,Y+70*S,42,Paper,true);
 	PillButton(TEXT("Resume"),TEXT("フライトを続ける"),X+42*S,Y+149*S,PW-84*S,74*S,true);
 	PillButton(TEXT("Reset"),TEXT("姿勢を合わせ直す"),X+42*S,Y+239*S,PW-84*S,64*S);
@@ -255,7 +258,7 @@ void AFlightHUD::DrawCleared(AFlightCourse* Course)
 	Dim(0.32f);
 	const float PW=760*S,X=(W-PW)*0.5f,Y=H*0.5f-320*S;
 	Modal(X,Y,PW,640*S);
-	Label(TEXT("FLIGHT COMPLETE"),X+42*S,Y+31*S,15,Mint,true);
+	Label(TEXT("NEON BREAKER / MISSION COMPLETE"),X+42*S,Y+31*S,15,Mint,true);
 	Label(TEXT("コースクリア"),X+42*S,Y+66*S,37,Paper,true);
 	Label(Course->Score.Grade(),X+40*S,Y+130*S,112,Mint,true);
 	Label(FText::AsNumber(Course->Score.Total()).ToString(),X+220*S,Y+154*S,51,Paper,true);

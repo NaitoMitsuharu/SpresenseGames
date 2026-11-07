@@ -123,12 +123,12 @@ FVector FLightBoxSimulation::Target(int32 I,int32 Count,const FLightBoxStyle& S,
 	return S.Center+V+FVector(FMath::Sin(Time*.34)*S.FormationTravel,FMath::Sin(Time*.21)*S.FormationTravel*.3,FMath::Sin(Time*.43)*S.FormationTravel*.2);
 }
 
-void FLightBoxSimulation::Impulse(const FLightBoxStyle& S)
+void FLightBoxSimulation::Impulse(const FLightBoxStyle& S, float Strength)
 {
 	if (S.Shake == TEXT("none")) { return; }
     if(Configuration!=Signature(S))Reset(S);
 	Burst = 1.f;
-	for (FLightMote& P : Motes) { P.Velocity += (P.Position-S.Center).GetSafeNormal(0.01,FVector::UpVector) * (S.Shake == TEXT("gather") ? -200 : 260); }
+	for (FLightMote& P : Motes) { P.Velocity += (P.Position-S.Center).GetSafeNormal(0.01,FVector::UpVector) * (S.Shake == TEXT("gather") ? -200 : 260) * FMath::Clamp(Strength, 0.f, 1.f); }
 }
 
 void FLightBoxSimulation::Step(float Seconds, const FVector2D& Tilt, float Twist, const FLightBoxStyle& S, const FLightBoxEnvironment& Env)

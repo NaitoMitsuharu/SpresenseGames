@@ -235,13 +235,14 @@ void AFlightCourse::BeginPlay()
 
 void FlightEnvironment::Build(AActor* Owner, USceneComponent* Root, bool bWithPlanet)
 {
-	// Alien sky: teal-violet Rayleigh, warm low sun, a hazy horizon.
+	// Dusk on the course makes cyan engines and hostile magenta readable.
+	const bool bCyber = Cast<AFlightCourse>(Owner) != nullptr;
 	UDirectionalLightComponent* Sun = NewObject<UDirectionalLightComponent>(Owner, TEXT("Sun"));
 	Sun->SetupAttachment(Root);
 	Sun->SetMobility(EComponentMobility::Movable);
 	Sun->SetWorldRotation(FRotator(-24.f, 35.f, 0.f));
-	Sun->SetIntensity(5.5f);
-	Sun->SetLightColor(FLinearColor(1.f, 0.94f, 0.84f));
+	Sun->SetIntensity(bCyber ? 4.4f : 5.5f);
+	Sun->SetLightColor(bCyber ? FLinearColor(0.70f,0.77f,1.f) : FLinearColor(1.f,0.94f,0.84f));
 	Sun->SetAtmosphereSunLight(true);
 	Sun->SetCastShadows(true);
 	Sun->SetDynamicShadowDistanceMovableLight(9000.f);
@@ -254,7 +255,7 @@ void FlightEnvironment::Build(AActor* Owner, USceneComponent* Root, bool bWithPl
 	Sky->SetRayleighScattering(FLinearColor(0.32f, 0.5f, 0.92f));
 	Sky->SetMieScatteringScale(0.012f);
 	Sky->SetMieAnisotropy(0.8f);
-	Sky->SetSkyLuminanceFactor(FLinearColor(1.15f, 1.f, 1.2f));
+	Sky->SetSkyLuminanceFactor(bCyber ? FLinearColor(0.22f,0.30f,0.65f) : FLinearColor(1.15f,1.f,1.2f));
 	Sky->SetAerialPespectiveViewDistanceScale(0.7f);
 	Sky->RegisterComponent();
 	Owner->AddInstanceComponent(Sky);
@@ -280,7 +281,7 @@ void FlightEnvironment::Build(AActor* Owner, USceneComponent* Root, bool bWithPl
 	SkyLight->SetupAttachment(Root);
 	SkyLight->SetMobility(EComponentMobility::Movable);
 	SkyLight->SetRealTimeCapture(false);
-	SkyLight->SetIntensity(1.5f);
+	SkyLight->SetIntensity(bCyber ? 0.85f : 1.5f);
 	SkyLight->RegisterComponent();
 	Owner->AddInstanceComponent(SkyLight);
 	SkyLight->RecaptureSky();
@@ -290,7 +291,7 @@ void FlightEnvironment::Build(AActor* Owner, USceneComponent* Root, bool bWithPl
 	Fog->SetWorldLocation(FVector(0.f, 0.f, 0.f));
 	Fog->SetFogDensity(0.008f);
 	Fog->SetFogHeightFalloff(0.05f);
-	Fog->SetFogInscatteringColor(FLinearColor(0.16f, 0.32f, 0.42f));
+	Fog->SetFogInscatteringColor(bCyber ? FLinearColor(0.055f,0.075f,0.20f) : FLinearColor(0.16f,0.32f,0.42f));
 	Fog->SetDirectionalInscatteringExponent(6.f);
 	Fog->SetDirectionalInscatteringColor(FLinearColor(0.55f, 0.36f, 0.22f));
 	Fog->SetStartDistance(4000.f);
@@ -306,9 +307,9 @@ void FlightEnvironment::Build(AActor* Owner, USceneComponent* Root, bool bWithPl
 	PS.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
 	PS.AutoExposureApplyPhysicalCameraExposure = false;
 	PS.bOverride_AutoExposureBias = true;
-	PS.AutoExposureBias = 0.f;
+	PS.AutoExposureBias = bCyber ? -0.45f : 0.f;
 	PS.bOverride_BloomIntensity = true;
-	PS.BloomIntensity = 0.35f;
+	PS.BloomIntensity = bCyber ? 0.75f : 0.35f;
 	PS.bOverride_VignetteIntensity = true;
 	PS.VignetteIntensity = 0.22f;
 	PS.bOverride_ColorSaturation = true;
@@ -1211,21 +1212,22 @@ void AFlightCourse::TickEffects(float Dt)
 			continue;
 		}
 		Ring.Flash = FMath::Max(Ring.Flash - Dt * 2.2f, 0.f);
-		FLinearColor C = FLinearColor(0.35f, 0.94f, 0.75f) * FMath::Lerp(1.3f, 0.4f, float(FMath::SmoothStep(8000.0, 28000.0, Gap)));
+		FLinearColor C = FlightPalette::Mint * FMath::Lerp(1.3f, 0.4f, float(FMath::SmoothStep(8000.0, 28000.0, Gap)));
 		if (Ring.bResolved && !Ring.bPassed)
 		{
 			C *= 0.08f;
 		}
 		else if (Ring.bPassed)
 		{
-			C = FMath::Lerp(C * 0.06f, FLinearColor(0.8f, 1.f, 0.93f) * 2.2f, Ring.Flash);
+			C = FMath::Lerp(C * 0.06f, FLinearColor(0.5f, 0.9f, 1.f) * 3.5f, Ring.Flash);
 		}
 		else
 		{
-			C *= 0.98f + 0.02f * FMath::Sin(WorldTime * 2.f + static_cast<float>(Ring.S) * 0.001f);
+			C *= 1.05f + 0.15f * FMath::Sin(WorldTime * 3.f + static_cast<float>(Ring.S) * 0.001f);
 		}
 		Ring.MID->SetVectorParameterValue(TEXT("Color"), C);
-		Ring.Mesh->SetWorldScale3D(FVector(1.f + 0.16f * (1.f - Ring.Flash) * (Ring.bPassed ? 1.f : 0.f)));
+		Ring.Mesh->SetWorldScale3D(FVector(1.f + 0.65f * (1.f - Ring.Flash) * (Ring.bPassed ? 1.f : 0.f)));
+		Ring.Mesh->SetWorldRotation(Path.Frame(Ring.S).Rotation() * FRotator(0.f,0.f,WorldTime*22.f).Quaternion());
 	}
 
 	if (AFlightPawn* Ship = Cast<AFlightPawn>(UGameplayStatics::GetPlayerPawn(this, 0)))

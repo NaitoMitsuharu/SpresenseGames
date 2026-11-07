@@ -18,6 +18,13 @@ public final class LightBoxVoice {
     private String event = "";
     private int generation = 0;
     private boolean active = false;
+    private volatile float rmsLevel = 0;
+    private volatile long rmsAt = 0;
+
+    /** Keep level separate from recognition events so neither can overwrite the other. */
+    public float level() {
+        return android.os.SystemClock.elapsedRealtime() - rmsAt < 250 ? rmsLevel : 0;
+    }
 
     public LightBoxVoice(Activity activity) { this.activity = activity; }
 
@@ -40,7 +47,7 @@ public final class LightBoxVoice {
         if (recognizer != null) {
             recognizer.cancel(); recognizer.destroy(); recognizer = null;
         }
-        active = false;
+        active = false; rmsLevel = 0; rmsAt = 0;
     }
 
     public void start() {
@@ -68,9 +75,14 @@ public final class LightBoxVoice {
                     }
                     @Override public void onReadyForSpeech(Bundle params) { }
                     @Override public void onBeginningOfSpeech() { }
-                    @Override public void onRmsChanged(float rmsdB) { }
+                    @Override public void onRmsChanged(float rmsdB) {
+                        if (!current() || Float.isNaN(rmsdB) || Float.isInfinite(rmsdB)) { return; }
+                        // Recognition services report dB, commonly around 0 at rest and 10 in speech.
+                        rmsLevel = Math.max(0, Math.min(1, (rmsdB - 1.5f) / 10.f));
+                        rmsAt = android.os.SystemClock.elapsedRealtime();
+                    }
                     @Override public void onBufferReceived(byte[] buffer) { }
-                    @Override public void onEndOfSpeech() { }
+                    @Override public void onEndOfSpeech() { if (current()) { rmsLevel = 0; rmsAt = 0; } }
                     @Override public void onEvent(int type, Bundle params) { }
                     @Override public void onPartialResults(Bundle results) {
                         if (current()) { publish("partial", words(results)); }
@@ -80,7 +92,7 @@ public final class LightBoxVoice {
                         String text = words(results);
                         publish(text.isEmpty() ? "error" : "result", text.isEmpty() ? "声を聞き取れませんでした。もう一度お試しください" : text);
                         // Ignore callbacks from this completed recognizer until UE disposes it.
-                        active = false;
+                        active = false; rmsLevel = 0; rmsAt = 0;
                     }
                     @Override public void onError(int code) {
                         if (!current()) { return; }
@@ -92,7 +104,7 @@ public final class LightBoxVoice {
                         } else if (code == SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED || code == SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE) {
                             message = "日本語の音声認識を設定してください";
                         }
-                        publish("error", message); active = false;
+                        publish("error", message); active = false; rmsLevel = 0; rmsAt = 0;
                     }
                 });
                 Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);

@@ -77,9 +77,31 @@
             }
         }});
     }
+    /** Hide the system bars again whenever they are showing; a swipe still reveals them for a moment. */
+    public void AndroidThunkJava_LightBoxKeepImmersive() {
+        runOnUiThread(new Runnable() { public void run() {
+            android.view.View decor = getWindow().getDecorView();
+            android.view.WindowInsets insets = decor.getRootWindowInsets();
+            if (insets == null || !hasWindowFocus()) { return; }
+            if (!insets.isVisible(android.view.WindowInsets.Type.navigationBars()) && !insets.isVisible(android.view.WindowInsets.Type.statusBars())) { return; }
+            android.view.WindowInsetsController controller = getWindow().getInsetsController();
+            if (controller == null) { return; }
+            controller.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            controller.hide(android.view.WindowInsets.Type.systemBars());
+        }});
+    }
     public int AndroidThunkJava_LightBoxRightInset() {
         android.view.WindowInsets insets = getWindow().getDecorView().getRootWindowInsets();
         return insets == null ? 0 : insets.getInsets(android.view.WindowInsets.Type.navigationBars() | android.view.WindowInsets.Type.displayCutout()).right;
+    }
+    /** Display rotation (Surface.ROTATION_*): tells which screen edge the microphone is on. */
+    public int AndroidThunkJava_LightBoxRotation() {
+        android.view.Display display = getWindowManager().getDefaultDisplay();
+        return display == null ? 1 : display.getRotation();
+    }
+    public int AndroidThunkJava_LightBoxLeftInset() {
+        android.view.WindowInsets insets = getWindow().getDecorView().getRootWindowInsets();
+        return insets == null ? 0 : insets.getInsets(android.view.WindowInsets.Type.navigationBars() | android.view.WindowInsets.Type.displayCutout()).left;
     }
     private com.lati.lightbox.LightBoxVoice lightBoxVoice;
     public void AndroidThunkJava_LightBoxStartVoice() {
@@ -88,6 +110,9 @@
     }
     public void AndroidThunkJava_LightBoxStopVoice() {
         if (lightBoxVoice != null) { lightBoxVoice.stop(); }
+    }
+    public float AndroidThunkJava_LightBoxVoiceLevel() {
+        return lightBoxVoice == null ? 0 : lightBoxVoice.level();
     }
     public String AndroidThunkJava_LightBoxPollVoice() {
         return lightBoxVoice == null ? "" : lightBoxVoice.poll();

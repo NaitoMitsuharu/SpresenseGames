@@ -268,7 +268,7 @@ HUD は Canvas 直描きで、ボタンはタッチ対応です。プレイ中�
 
 ## Android試用版のインストール
 
-[差分移動・進捗表示・画像レビューを含む「ひかりのアトリエ」試用版](https://github.com/NaitoMitsuharu/spresesneMaze/releases/tag/v0.5.0-preview.3) から
+[差分移動・進捗表示・画像レビューを含む「ひかりのアトリエ」試用版](https://github.com/NaitoMitsuharu/SpresenseGames/releases/tag/v0.5.0-preview.3) から
 `SpresenseMaze-arm64.apk` を取得してください。Android 14以上のarm64端末向けで、
 ゲームデータはAPK内に含まれるため、別のOBBファイルは不要です。
 APKを端末へコピーして開き、ファイルを開いたアプリからのインストールを許可すると導入できます。
@@ -302,6 +302,7 @@ PCはインストールに使えますが、準備後の展示では不要です
 
 - 対象端末は **Xperia 1 VII** です。接続実機はXQ-FS54／Android 16、2340×1080で、Spresenseの箱とUSB接続して使用します。APKの最低要件はAndroid 14以上・arm64です。
 - Spresenseの箱を使う場合は、SDK対応ファームウェアを書き込んだ箱と、SDK配布物の **SPR-BOX Service APK**（`jp.co.sony.sprbox.service`）が必要です。Serviceをインストールし、USBデータケーブルで箱と端末を接続してUSB許可を与えます。
+- **16KBページサイズの端末**（一部のAndroid 16機種）では、SPR-BOXの高精度姿勢推定ライブラリ（`libinertialmotionlib2.so`、配布元提供の4KB版）を読み込めません。この場合もアプリは落ちず、端末内蔵IMUで動きます。SPR-BOXで操作するには、16KB対応版のライブラリが必要です。ほかのネイティブライブラリは16KB対応済みです。
 - SPR-BOX未接続でも端末内蔵IMUで試せます。「ひかりのアトリエ」の **☰ → 姿勢** で持ち方を合わせます。
 - 日本語のAndroid音声認識サービスを有効にします。初回のマイク許可後は、もう一度マイクを押してください。サービスを用意できない端末では文字入力を使えます。
 
@@ -325,7 +326,7 @@ PCはインストールに使えますが、準備後の展示では不要です
 コピーされる1行は次のとおりです。何度実行しても、足りない手順だけを行います。
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/NaitoMitsuharu/spresesneMaze/master/Tools/OpenClaw/setup-lightbox.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/NaitoMitsuharu/SpresenseGames/master/Tools/OpenClaw/setup-lightbox.sh)"
 ```
 
 検証した構成はNode.js 24.22.2／OpenClaw 2026.10.10、モデルは`github-copilot/gpt-6-luna`です。別のモデルを使うときは`openclaw --profile lightbox models list`で確認し、`openclaw --profile lightbox models set <モデルID>`で設定します。

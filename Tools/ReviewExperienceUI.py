@@ -27,7 +27,19 @@ if not args.quick:
         ('LightBox_World', 'LightBoxAutoShot', '03_lightbox_menu.png', ('-LightBoxReviewPanel=menu',)),
         ('LightBox_World', 'LightBoxAutoShot', '03_lightbox_examples.png', ('-LightBoxReviewPanel=examples',)),
         ('LightBox_World', 'LightBoxAutoShot', '03_lightbox_words.png', ('-LightBoxReviewPanel=words',)),
+        ('LightBox_World', 'LightBoxAutoShot', '03_lightbox_keyboard.png', ('-LightBoxReviewPanel=keyboard',)),
+        ('LightBox_World', 'LightBoxAutoShot', '03_lightbox_sensors.png', ('-LightBoxReviewPanel=sensors',)),
+        ('LightBox_World', 'LightBoxAutoShot', '03_sensor_breath.png', ('-LightBoxReviewSensor=breath',)),
+        ('LightBox_World', 'LightBoxAutoShot', '03_sensor_clap.png', ('-LightBoxReviewSensor=clap',)),
+        ('LightBox_World', 'LightBoxAutoShot', '03_sensor_dark.png', ('-LightBoxReviewSensor=dark',)),
+        ('LightBox_World', 'LightBoxAutoShot', '03_sensor_bright.png', ('-LightBoxReviewSensor=bright',)),
+        ('LightBox_World', 'LightBoxAutoShot', '03_sensor_warmth.png', ('-LightBoxReviewSensor=warmth',)),
+        ('LightBox_World', 'LightBoxAutoShot', '03_sensor_hand.png', ('-LightBoxReviewSensor=hand',)),
+        ('LightBox_World', 'LightBoxAutoShot', '03_sensor_magnet.png', ('-LightBoxReviewSensor=magnet',)),
         ('LightBox_World', 'LightBoxAutoShot', '03_lightbox_settings.png', ('-LightBoxReviewPanel=settings',)),
+        ('LightBox_World', 'LightBoxAutoShot', '03_lightbox_auth.png', ('-LightBoxReviewPanel=auth',)),
+        ('LightBox_World', 'LightBoxAutoShot', '03_lightbox_budget.png', ('-LightBoxReviewPanel=budget',)),
+        ('LightBox_World', 'LightBoxAutoShot', '03_lightbox_journal.png', ('-LightBoxReviewPanel=journal',)),
     ]
 if args.only:
     jobs = [job for job in jobs if Path(job[2]).stem in args.only]

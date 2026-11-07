@@ -9,6 +9,7 @@
 class AFlightCourse;
 class UCameraComponent;
 class UInstancedStaticMeshComponent;
+class UStaticMeshComponent;
 class UMaterialInstanceDynamic;
 class UPointLightComponent;
 class UAudioComponent;
@@ -75,17 +76,19 @@ public:
 	int32 CheckpointIndex = 0;
 	bool bInputLost = false;
 	float NearSurface = 0.f;
-	static constexpr float DodgeDuration = 0.26f;
+	static constexpr float DodgeDuration = 0.42f;
 	static constexpr float DodgeRecharge = 1.6f;
 	float DodgeTime = 0.f, DodgeCooldown = 0.f;
 	int32 DodgeDirection = 1;
 	float DodgePulse() const { return DodgeTime > 0 ? FMath::Sin(PI * DodgeTime / DodgeLength) : 0.f; }
-	/** Length of the dodge in progress: a sidestep, or a full barrel roll in Spresense mode. */
+	/** Length of the dodge in progress. Every dodge is a full roll toward its direction. */
 	float DodgeLength = DodgeDuration;
 	static constexpr float RollDuration = 0.62f;
-	/** Spresense mode replaces the sidestep with a barrel roll: invulnerable, guns silent, costs stamina. */
+	/** Spresense-mode roll: longer, guns silent, costs stamina (the quick dodge uses a cooldown instead). */
 	bool bBarrelRoll = false;
 	bool IsRolling() const { return bBarrelRoll && DodgeTime > 0; }
+	/** Any dodge in progress: the airframe turns a full 360 and the dodge shield is up. */
+	bool IsDodging() const { return DodgeTime > 0; }
 	FlightHandling::FRollStamina RollStamina;
 	/** Brief HUD flash when a roll was asked for without enough stamina. */
 	float RollDenied = 0.f;
@@ -133,6 +136,8 @@ public:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UCameraComponent> Camera;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UPointLightComponent> EngineLight;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UInstancedStaticMeshComponent> Trail;
+	/** Glowing bubble shown around the ship for the length of a dodge roll. */
+	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> DodgeShield;
 
 private:
 	void UpdateInput(float Dt, bool bSteer);
@@ -186,6 +191,8 @@ private:
 	FVector LastTipR = FVector::ZeroVector;
 	bool bHaveLastTips = false;
 	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> TrailMID;
+	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> DodgeShieldMID;
+	void UpdateDodgeShield();
 	UPROPERTY() TObjectPtr<UAudioComponent> WindAudio;
 	UPROPERTY() TObjectPtr<USoundWaveProcedural> WindWave;
 	TArray<uint8> WindBuffer;

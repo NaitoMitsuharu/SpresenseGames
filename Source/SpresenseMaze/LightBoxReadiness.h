@@ -50,7 +50,9 @@ class SPRESENSEMAZE_API FLightBoxReadiness
 {
 public:
 	static constexpr double DoctorTimeout = 12.0;
-	static constexpr double ServiceTimeout = 60.0;
+	// The first start on a new phone configures OpenClaw before the Gateway listens,
+	// which took longer than 60 s on a fresh Termux.
+	static constexpr double ServiceTimeout = 150.0;
 	static constexpr double KeyTimeout = 75.0;
 	static constexpr double ProbeInterval = 1.0;
 

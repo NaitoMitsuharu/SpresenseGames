@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "LightBoxSdf.h"
 #include "LightBoxSensors.h"
 
 /** Independent, composable animation channel. Period is in seconds; phase in cycles. */
@@ -48,6 +49,13 @@ struct FLightBoxObject
     FLinearColor PatternColor=FLinearColor::White, BellyColor=FLinearColor::White;
     float PatternScale=12;
     bool bBelly=false;
+    /** Surface micro-structure applied while sampling particles: fur, foliage, bark, feather, grass. */
+    FString Detail=TEXT("none");
+    /** shape:"model": id of a bundled real 3D model converted to particles (LightBoxModels catalog). */
+    FString Model;
+    /** shape:"sdf": smoothly blended signed-distance parts in local cm (LightBoxSdf). */
+    TArray<FLightBoxSdfPart> SdfParts;
+    float DetailLength=6; // cm
     bool bAttached=false; // Require contact with the parent surface, unlike orbiting children.
 	FString Parent;
 	FString Anchor=TEXT("center"), ParentAnchor=TEXT("center");
@@ -61,6 +69,13 @@ struct FLightBoxObject
 	TArray<FVector> Curve; // Local-space centimetres, for tubes and ribbons.
 	TArray<FLightBoxMotion> Motions;
 	bool IsDeforming() const;
+};
+
+/** One keyframe of a continuous particle-skin clip. Legacy hold time extends the movement. */
+struct FLightBoxStoryFrame
+{
+	float Hold=1.5f, Move=1.5f; // seconds
+	FString Set; // compact JSON array of {id,...object fields, patch:[{i,...sdf part fields}]} overrides of the BASE scene
 };
 
 /** A bounded scene description. Remote responses can only change these values. */
@@ -125,8 +140,18 @@ struct FLightBoxStyle
 	bool bPointCloud = true;
 	bool bPointFloor = false;
 	int32 PointCount = DefaultPointCount;
+	/** color: lit coloured grains. crystal: fine laser-engraving dots, stippled by light, with inner glow. */
+	FString PointStyle = TEXT("color");
 	float AssembleSeconds = 5, AssembleArc = 65, AssembleTwist = 1.25f, AssembleStagger = .35f;
 
+	/** Storyboard: the base scene is pose 0; frames are further poses (overrides of the base). */
+	TArray<FLightBoxStoryFrame> Story;
+	float StoryHold=1.5f;
+	bool bStoryLoop=true;
+	/** Resolves pose 0..Story.Num() into a complete validated scene (no storyboard). */
+	bool Pose(int32 Index,FLightBoxStyle& Out,FString* Why=nullptr) const;
+	/** Pose the particles should be heading to at Time, and the transition length into it. */
+	int32 StoryTargetAt(float Time,float& Move) const;
 	static FLightBoxStyle Preset(int32 Index);
 	static FLightBoxStyle Example(int32 Index);
 	static FLightBoxStyle Exhibit(int32 Index);
@@ -137,7 +162,8 @@ struct FLightBoxStyle
     FString CameraContentJson() const;
 	static bool Parse(const FString& Json, FLightBoxStyle& Out, FString& Error, FString* Diagnostic = nullptr);
 	static bool ParseCompletion(const FString& Json, FLightBoxStyle& Out, FString& Error, FString* Diagnostic = nullptr);
-	static FString Instruction(const FLightBoxStyle& Current);
+	/** Budget: this phone's measured particle default/maximum, written into the AI's rules. */
+	static FString Instruction(const FLightBoxStyle& Current,int32 Budget=DefaultPointCount);
 	static bool CompleteGenerated(const FString& Words,const FLightBoxStyle& Before,FLightBoxStyle& Next,FString& Diagnostic);
 	static bool ValidateIntent(const FString& Words, const FLightBoxStyle& Scene, FString& Diagnostic);
 };

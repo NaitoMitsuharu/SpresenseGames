@@ -6,7 +6,9 @@ Spresenseやスマートフォンの傾きで遊ぶ、Android向けの3つの体
 
 ## 1. インストール
 
-[**APKをダウンロード**](https://github.com/NaitoMitsuharu/spresesneMaze/releases/download/v0.5.0-preview.5/SpresenseMaze-arm64.apk)して、Android端末で開きます。Android 14以上・arm64向けです。別のゲームデータは不要です。
+[**APKをダウンロード**](https://github.com/NaitoMitsuharu/SpresenseGames/releases/download/v0.5.0-preview.6/SpresenseMaze-arm64.apk)して、Android端末で開きます。Android 14以上・arm64向けです。別のゲームデータは不要です。
+
+preview.6 は、丸みのある明るい迷路とサイバー調のフライトUIを含む更新版です。以前のAPKを入れると以前のUIに戻るため、上のリンクから更新してください。[画面と変更内容](Docs/ToyCyberUI.md)
 
 PCから更新する場合は、記録を残したまま次のコマンドを実行できます。
 

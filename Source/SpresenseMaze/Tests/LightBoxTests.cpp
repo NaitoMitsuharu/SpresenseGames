@@ -682,6 +682,8 @@ bool FLightBoxSensorsTest::RunTest(const FString&)
 	float D,B;FLightBoxSensorReader::LightLevels(300,300,D,B);TestTrue(TEXT("The room level is neutral"),D==0&&B==0);
 	FLightBoxSensorReader::LightLevels(20,300,D,B);TestTrue(TEXT("Covering the sensor is dark"),D>.9f&&B==0);
 	FLightBoxSensorReader::LightLevels(5000,300,D,B);TestTrue(TEXT("A torch is bright"),B>.9f&&D==0);
+	FLightBoxSensorReader::LightLevels(150,300,D,B);TestTrue(TEXT("A passing shadow (2x darker) is ignored"),D==0);
+	FLightBoxSensorReader::LightLevels(600,300,D,B);TestTrue(TEXT("A lamp across the room (2x) is ignored"),B==0);
 	TestEqual(TEXT("Turning the phone in the Earth's field is not a magnet"),FLightBoxSensorReader::MagnetStrength(60,45),0.f);
 	TestTrue(TEXT("A nearby magnet is"),FLightBoxSensorReader::MagnetStrength(500,45)>.9f);
 	return true;
@@ -716,4 +718,27 @@ bool FLightBoxSensorRulesTest::RunTest(const FString&)
 	TestEqual(TEXT("Light sensitivity scales darkness"),F.Darkness,1.f);
 	return true;
 }
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLightBoxHorseReplyTest,"SpresenseMaze.LightBox.RunningHorseReply",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FLightBoxHorseReplyTest::RunTest(const FString&)
+{
+    for (int32 I = 0; I < 2; ++I)
+    {
+        FString Content;
+        const FString Path = FPaths::ProjectDir() / FString::Printf(TEXT("Source/SpresenseMaze/Tests/Fixtures/RunningHorse-%d.json"), I);
+        if (!TestTrue(TEXT("Real failed horse reply fixture exists"), FFileHelper::LoadFileToString(Content, *Path))) { return false; }
+        auto Message = MakeShared<FJsonObject>(); Message->SetStringField(TEXT("content"), Content);
+        auto Choice = MakeShared<FJsonObject>(); Choice->SetStringField(TEXT("finish_reason"), TEXT("stop")); Choice->SetObjectField(TEXT("message"), Message);
+        auto Envelope = MakeShared<FJsonObject>(); Envelope->SetArrayField(TEXT("choices"), {MakeShared<FJsonValueObject>(Choice)});
+        FString Json; FJsonSerializer::Serialize(Envelope, TJsonWriterFactory<>::Create(&Json));
+        FLightBoxStyle Scene; FString Error, Diagnostic;
+        if (!TestTrue(FString::Printf(TEXT("Horse reply %d: %s / %s"), I, *Error, *Diagnostic), FLightBoxStyle::ParseCompletion(Json, Scene, Error, &Diagnostic)))
+        { AddError(Error + TEXT(" / ") + Diagnostic); continue; }
+        if (I == 0) { TestTrue(TEXT("Articulated horse keeps all animation frames"), Scene.Story.Num() >= 4); }
+        else { TestTrue(TEXT("The retry retains moving legs"), Scene.Objects.ContainsByPredicate([](const auto& O){return !O.Motions.IsEmpty();})); }
+        TestTrue(TEXT("Running intent remains valid"), FLightBoxStyle::ValidateIntent(TEXT("走ってる馬"), Scene, Diagnostic));
+        FLightBoxStyle RoundTrip; TestTrue(TEXT("Normalized scene can be saved and restored strictly"), FLightBoxStyle::Parse(Scene.ToJson(), RoundTrip, Error));
+    }
+    return true;
+}
+
 #endif

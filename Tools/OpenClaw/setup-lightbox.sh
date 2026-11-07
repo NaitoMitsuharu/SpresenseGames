@@ -2,14 +2,14 @@
 # One-time setup for Hikari Atelier, run inside Termux. Spresense Games copies
 # this line to the clipboard and opens Termux; the user pastes it and presses Enter:
 #
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/NaitoMitsuharu/spresesneMaze/master/Tools/OpenClaw/setup-lightbox.sh)"
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/NaitoMitsuharu/SpresenseGames/master/Tools/OpenClaw/setup-lightbox.sh)"
 #
 # Safe to run again: every step checks first and only does what is missing.
 set -euo pipefail
 umask 077
 
 REF="${LIGHTBOX_REF:-master}"
-BASE="https://raw.githubusercontent.com/NaitoMitsuharu/spresesneMaze/$REF/Tools/OpenClaw"
+BASE="https://raw.githubusercontent.com/NaitoMitsuharu/SpresenseGames/$REF/Tools/OpenClaw"
 DIR="$HOME/lightbox"
 OPENCLAW_VERSION="${LIGHTBOX_OPENCLAW_VERSION:-2026.10.10}"
 MODEL="${LIGHTBOX_MODEL:-github-copilot/gpt-6-luna}"
@@ -20,7 +20,7 @@ step() { printf '\n[%s] %s\n' "$1" "$2"; }
 # Never stop at a pager (":" prompt) or a package question while installing.
 export DEBIAN_FRONTEND=noninteractive PAGER=cat APT_PAGER=cat LESS=FRX
 
-step 1/5 "必要なツールを確認しています"
+step 1/6 "必要なツールを確認しています"
 # A freshly installed Termux ships old libraries. Installing nodejs-lts alone then
 # leaves a node that cannot start ("CANNOT LINK EXECUTABLE ... _ZNSt6__ndk1...").
 # So when node is missing or broken, bring every package up to date first.
@@ -48,7 +48,7 @@ if ! command -v openclaw >/dev/null || [[ ! -f "$OPENCLAW_MARK" ]]; then
 fi
 printf 'node %s / openclaw %s\n' "$(node --version)" "$(openclaw --version 2>/dev/null | head -n1)"
 
-step 2/5 "ひかりのアトリエ用のファイルを取得しています"
+step 2/6 "ひかりのアトリエ用のファイルを取得しています"
 mkdir -p "$DIR"
 # LIGHTBOX_SOURCE_DIR: copy from a local folder instead (testing unreleased changes).
 for file in start-lightbox.sh pair-lightbox.sh setup-lightbox.sh lightbox-token.cjs lightbox-observer.cjs lightbox-pricing.json; do
@@ -61,7 +61,7 @@ for file in start-lightbox.sh pair-lightbox.sh setup-lightbox.sh lightbox-token.
 done
 chmod 700 "$DIR"/*.sh
 
-step 3/5 "アプリからの起動を許可しています"
+step 3/6 "アプリからの起動を許可しています"
 PROPS="$HOME/.termux/termux.properties"
 mkdir -p "$HOME/.termux"
 touch "$PROPS"
@@ -72,7 +72,7 @@ else
 fi
 if command -v termux-reload-settings >/dev/null; then termux-reload-settings || true; fi
 
-step 4/5 "Copilotへのログインを確認しています"
+step 4/6 "Copilotへのログインを確認しています"
 MARK="$DIR/.copilot-ready"
 if [[ -f "$MARK" ]]; then
     printf 'ログイン済みです（やり直す場合は %s を削除して再実行）\n' "$MARK"
@@ -88,7 +88,11 @@ else
     touch "$MARK"
 fi
 
-step 5/5 "完了しました"
+step 5/6 "演出サービスの初期設定をしています（数分かかることがあります）"
+# Doing this here keeps the app's first Gateway start within its wait time.
+LIGHTBOX_AUTO_PAIR=0 bash "$DIR/start-lightbox.sh" --configure-only
+
+step 6/6 "完了しました"
 printf 'Spresense Gamesに戻ります。アプリが演出サービスの起動と認証キーの設定を自動で行います。\n'
 printf 'このTermuxは閉じずにそのままにしてください。\n'
 am start -n "$APP" >/dev/null 2>&1 || printf 'Spresense Gamesを開いてください。\n'

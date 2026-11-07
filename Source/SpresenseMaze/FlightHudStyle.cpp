@@ -12,9 +12,9 @@
 
 const FLinearColor AFlightHUD::Paper(0.95f, 0.98f, 1.f);
 const FLinearColor AFlightHUD::Muted(0.70f, 0.77f, 0.81f);
-const FLinearColor AFlightHUD::Mint(0.35f, 0.94f, 0.75f);
-const FLinearColor AFlightHUD::Coral(1.f, 0.32f, 0.38f);
-const FLinearColor AFlightHUD::Ink(0.018f, 0.028f, 0.04f, 0.94f);
+const FLinearColor AFlightHUD::Mint(0.08f, 0.88f, 1.f);
+const FLinearColor AFlightHUD::Coral(1.f, 0.12f, 0.48f);
+const FLinearColor AFlightHUD::Ink(0.006f, 0.014f, 0.038f, 0.96f);
 
 namespace
 {
@@ -80,9 +80,7 @@ void AFlightHUD::RoundRect(float X, float Y, float Width, float Height, float Ra
 
 void AFlightHUD::Modal(float X, float Y, float Width, float Height)
 {
-	RoundRect(X, Y+7*S, Width, Height, 28*S, FLinearColor(0,0,0,0.16f));
-	RoundRect(X, Y, Width, Height, 28*S, Paper.CopyWithNewOpacity(0.12f));
-	RoundRect(X+S, Y+S, Width-2*S, Height-2*S, 27*S, Ink);
+	CyberPanel(X,Y,Width,Height,Mint);
 }
 
 void AFlightHUD::PillButton(FName Id, const FString& Value, float X, float Y, float Width, float Height, bool bPrimary)
@@ -93,10 +91,11 @@ void AFlightHUD::PillButton(FName Id, const FString& Value, float X, float Y, fl
 	const bool Hover = MouseX >= X && MouseX <= X+Width && MouseY >= Y && MouseY <= Y+Height;
 	const bool Pressed = Hover && PC && PC->IsInputKeyDown(EKeys::LeftMouseButton);
 	const FLinearColor Fill = bPrimary ? (Pressed ? Mint : Paper) : Paper.CopyWithNewOpacity(Hover ? 0.16f : 0.075f);
-	RoundRect(X, Y, Width, Height, Height * 0.5f, Fill);
+	CyberPanel(X,Y,Width,Height,bPrimary?Mint:Muted);
+	if (bPrimary) { DrawRect(Mint.CopyWithNewOpacity(Pressed?0.65f:Hover?0.32f:0.17f),X+2*S,Y+2*S,Width-20*S,Height-4*S); }
 	const float Size = Height > 80*S ? 26.f : 22.f;
 	const FVector2D TextExtent = Measure(Value, Size, true);
-	Label(Value, X+(Width-TextExtent.X)*0.5f, Y+(Height-TextExtent.Y)*0.5f, Size, bPrimary ? Ink.CopyWithNewOpacity(1) : Paper, true);
+	Label(Value, X+(Width-TextExtent.X)*0.5f, Y+(Height-TextExtent.Y)*0.5f, Size, bPrimary ? Mint : Paper, true);
 	AddHitBox(FVector2D(X,Y), FVector2D(Width,Height), Id, true);
 }
 

@@ -1,5 +1,7 @@
 #include "LightBoxGeometry.h"
 #include "LightBoxMotion.h"
+#include "LightBoxModels.h"
+#include "LightBoxSdf.h"
 
 namespace
 {
@@ -87,7 +89,19 @@ FLightBoxMesh FLightBoxMesh::Build(const FLightBoxObject& O,float Time)
 		},Color);
 	};
 	if(O.Shape==TEXT("group")) return Unit;
-    if(O.Shape==TEXT("loft")&&O.Sections.Num()>=3) {
+	if(O.Shape==TEXT("sdf")) {
+		// One continuous LLM-authored surface: parts melt together with their blend radius (local cm).
+		const auto Sdf=LightBoxSdf::Mesh(O.SdfParts,O.Color);
+		Unit.Vertices=Sdf->Vertices;Unit.Normals=Sdf->Normals;Unit.Colors=Sdf->Colors;Unit.Triangles=Sdf->Triangles;Unit.UVs.Init(FVector2D::ZeroVector,Unit.Vertices.Num());
+	}
+	else if(O.Shape==TEXT("model")) {
+		// Real models are sampled point by point (LightBoxPoints); expose only their fitted box for framing.
+		FLightBoxMesh Box;const auto Cloud=LightBoxModels::Load(O.Model);if(!Cloud)return Box;
+		const FVector Half=FVector(Cloud->Extent())*.5*LightBoxModels::FitScale(*Cloud,O.Size);
+		for(int32 I=0;I<8;++I){Box.Vertices.Add(Half*FVector(I&1?1:-1,I&2?1:-1,I&4?1:-1));Box.Normals.Add(FVector::UpVector);Box.Colors.Add(FLinearColor::White);Box.UVs.Add(FVector2D::ZeroVector);}
+		return Box;
+	}
+    else if(O.Shape==TEXT("loft")&&O.Sections.Num()>=3) {
         Surface(32,64,[&](double U,double V){
             const double X=FMath::Lerp(O.Sections[0].X,O.Sections.Last().X,V);int32 I=0;
             while(I+2<O.Sections.Num()&&O.Sections[I+1].X<X)++I;
@@ -166,11 +180,52 @@ FLightBoxMesh FLightBoxMesh::Build(const FLightBoxObject& O,float Time)
 		Ball(FVector(-.32,0,.01),FVector(.28,.23,.10),FLinearColor(.75,.82,.9));
 	}
 	else if(O.Shape==TEXT("tree")) {
-		Tube({FVector(0,0,-.5),FVector(.018,-.01,0),FVector(-.02,.025,.38)},.048,FLinearColor(.42,.22,.10),10);
-		for(int32 I=0;I<7;++I) {const double A=I*2.39996,Z=-.02+(I%3)*.12;const FVector P(FMath::Cos(A)*.25,FMath::Sin(A)*.25,Z+.10);
-			Tube({FVector(0,0,-.1),P*.75,P},.016,FLinearColor(.42,.24,.11),5);
-			Ball(P,FVector(.48,.48,.42),FLinearColor(.60+(I%2)*.16,.85,.57+(I%3)*.07),12);
-		} Ball(FVector(0,0,.32),FVector(.48,.46,.38),FLinearColor(.72,.95,.65),16);
+		// Procedural branching: a short tapering trunk splits recursively into curved limbs and fine twigs.
+		// Small leaf clusters sit along the outer twigs; the crown is self-shadowed toward its core and the
+		// whole tree is fitted to its box. Vertex alpha .5 marks foliage for particle detail.
+		uint32 Counter=GetTypeHash(O.Id)*2654435761u+1;
+		auto Rand=[&](){uint32 X=(Counter+=0x9E3779B9u);X^=X>>16;X*=2246822519u;X^=X>>13;X*=3266489917u;X^=X>>16;return double(X&0xffffff)/16777216.;};
+		auto Tint=[&](const FLinearColor& Want){return FLinearColor(FMath::Min(8.f,Want.R/FMath::Max(.04f,O.Color.R)),FMath::Min(8.f,Want.G/FMath::Max(.04f,O.Color.G)),FMath::Min(8.f,Want.B/FMath::Max(.04f,O.Color.B)),1);};
+		const FLinearColor Bark=Tint(FLinearColor(.28,.20,.14));
+		struct FLobe{int32 First,Last;FVector Centre;};TArray<FLobe> Lobes;
+		auto Leaves=[&](const FVector& At,double Radius){
+			const FVector Lobe=FVector(1.25,1.25,.85)*Radius;const double Shade=.8+Rand()*.4;
+			const FLinearColor Green(Shade*(.9+Rand()*.2),Shade,Shade*(.85+Rand()*.25),.5f);const int32 First=Unit.Vertices.Num();
+			Surface(4,3,[=](double U,double V){const double A=U*2*PI,B=V*PI;return At+FVector(FMath::Sin(B)*FMath::Cos(A),FMath::Sin(B)*FMath::Sin(A),FMath::Cos(B))*Lobe*.5;},Green);
+			for(int32 I=First;I<Unit.Vertices.Num();++I)Unit.Normals[I]=(Unit.Vertices[I]-At).GetSafeNormal();
+			Lobes.Add({First,Unit.Vertices.Num(),At});
+		};
+		TFunction<void(FVector,FVector,double,double,int32)> Branch=[&](FVector Start,FVector Dir,double Length,double Radius,int32 Depth)
+		{
+			const FVector Bend=FVector(Rand()*2-1,Rand()*2-1,Rand()*.4)*.3;
+			const FVector End=Start+(Dir+Bend*.3).GetSafeNormal()*Length,Mid=(Start+End)*.5+Bend*Length*.2;
+			const double EndRadius=Radius*.62;
+			auto Center=[&](double T){return Start*(1-T)*(1-T)+Mid*2*T*(1-T)+End*T*T;};
+			const int32 First=Unit.Vertices.Num(),W=Depth>=3?7:4,H=Depth>=3?5:2;
+			Surface(W,H,[&](double U,double V){
+				const FVector D=(Center(FMath::Min(1.,V+.02))-Center(FMath::Max(0.,V-.02))).GetSafeNormal(.0001,FVector::UpVector);
+				const FVector N=FVector::CrossProduct(D,FMath::Abs(D.Z)>.9?FVector::ForwardVector:FVector::UpVector).GetSafeNormal(),B=FVector::CrossProduct(D,N);
+				return Center(V)+(N*FMath::Cos(U*2*PI)+B*FMath::Sin(U*2*PI))*FMath::Lerp(Radius,EndRadius,V);},Bark);
+			for(int32 Y=0;Y<=H;++Y)for(int32 X=0;X<=W;++X){const int32 I=First+Y*(W+1)+X;Unit.Normals[I]=(Unit.Vertices[I]-Center(double(Y)/H)).GetSafeNormal();}
+			if(Depth<=1)for(int32 K=0,N=Depth==0?3:1;K<N;++K)Leaves(Center(Depth==0?.5+K*.25:.8)+FVector(Rand()*2-1,Rand()*2-1,Rand()*1.2-.3)*Length*.35,.035+Rand()*.03);
+			if(Depth==0)return;
+			const int32 Children=Depth>=4?3:2;const double Spin=Rand()*2*PI;
+			for(int32 C=0;C<Children;++C){
+				const double Azimuth=Spin+C*2*PI/Children+(Rand()-.5)*.9,Spread=.75+Rand()*.5;
+				const FVector Side=FVector(FMath::Cos(Azimuth),FMath::Sin(Azimuth),0);
+				const FVector Next=(Dir*(1.15-Spread*.55)+Side*Spread+FVector(0,0,.18)).GetSafeNormal();
+				Branch(Center(.7+Rand()*.3),Next,Length*(.7+Rand()*.14),EndRadius*(.85+Rand()*.15),Depth-1);
+			}
+		};
+		Branch(FVector(0,0,-.5),FVector(0,0,1),.30,.05,5);
+		// Self-shadowing: leaves deep inside or under the crown are darker than its sunlit shell.
+		FVector Crown=FVector::ZeroVector;for(const auto& L:Lobes)Crown+=L.Centre;Crown/=FMath::Max(1,Lobes.Num());double Reach=.001;for(const auto& L:Lobes)Reach=FMath::Max(Reach,FVector::Dist(L.Centre,Crown));
+		for(const auto& L:Lobes){const double Shell=FVector::Dist(L.Centre,Crown)/Reach,Top=FMath::Clamp((L.Centre.Z-Crown.Z)/Reach*.5+.5,0.,1.);
+			const float Light=float(.42+.48*Shell+.22*Top);for(int32 I=L.First;I<L.Last;++I){const float A=Unit.Colors[I].A;Unit.Colors[I]*=Light;Unit.Colors[I].A=A;}}
+		// Fit the tree to its declared box so framing and size behave like other shapes.
+		FBox Box(ForceInit);for(const auto& V:Unit.Vertices)Box+=V;const FVector Extent=Box.GetSize().ComponentMax(FVector(.001)),Scale=FVector(1)/Extent;
+		const FVector Centre(Box.GetCenter().X,Box.GetCenter().Y,Box.Min.Z+Extent.Z*.5);
+		for(int32 I=0;I<Unit.Vertices.Num();++I){Unit.Vertices[I]=(Unit.Vertices[I]-Centre)*Scale;Unit.Normals[I]=(Unit.Normals[I]/Scale).GetSafeNormal();}
 	}
 	else if(O.Shape==TEXT("elephant")||O.Shape==TEXT("giraffe")||O.Shape==TEXT("lion")) {
 		const bool G=O.Shape==TEXT("giraffe"),E=O.Shape==TEXT("elephant");
@@ -251,7 +306,7 @@ FLightBoxMesh FLightBoxMesh::Build(const FLightBoxObject& O,float Time)
 			for(int32 I=0;I<N;++I){const int32 J=(I+1)%N;const int32 A=Vertex(FVector(Outline[I],-.5)),B=Vertex(FVector(Outline[J],-.5)),C=Vertex(FVector(Outline[I],.5)),D=Vertex(FVector(Outline[J],.5));Tri(A,B,C);Tri(B,D,C);}
 		}
 	}
-	FLightBoxMesh Result;FRandomStream Random(GetTypeHash(O.Id));const bool CurveUnits=O.Shape==TEXT("tube")||O.Shape==TEXT("ribbon");
+	FLightBoxMesh Result;FRandomStream Random(GetTypeHash(O.Id));const bool CurveUnits=O.Shape==TEXT("tube")||O.Shape==TEXT("ribbon")||O.Shape==TEXT("sdf");
 	for(int32 Copy=0;Copy<O.Copies;++Copy) {
 		const double U=double(Copy)/FMath::Max(1,O.Copies),A=U*2*PI;FVector Offset(0);
 		if(O.Copies>1) {
@@ -275,10 +330,19 @@ FLightBoxMesh FLightBoxMesh::Build(const FLightBoxObject& O,float Time)
 	}
 	Result.Normals.Init(FVector::ZeroVector,Result.Vertices.Num());
 	for(int32 I=0;I<Result.Triangles.Num();I+=3) {const int32 A=Result.Triangles[I],B=Result.Triangles[I+1],C=Result.Triangles[I+2];const FVector N=FVector::CrossProduct(Result.Vertices[B]-Result.Vertices[A],Result.Vertices[C]-Result.Vertices[A]);Result.Normals[A]+=N;Result.Normals[B]+=N;Result.Normals[C]+=N;}
+	{
+		// Winding-derived normals of some parametric surfaces (loft) face inward, which lit bodies from the
+		// wrong side. Flip them when most point toward the shape's centre.
+		FVector Centre=FVector::ZeroVector;for(const auto& V:Result.Vertices)Centre+=V;Centre/=FMath::Max(1,Result.Vertices.Num());
+		int32 In=0,Out=0;for(int32 I=0;I<Result.Normals.Num();++I)if(Unit.Normals[I%Unit.Normals.Num()].IsNearlyZero()){const double D=FVector::DotProduct(Result.Normals[I],Result.Vertices[I]-Centre);In+=D<0;Out+=D>0;}
+		if(In>Out*1.5)for(int32 I=0;I<Result.Normals.Num();++I)if(Unit.Normals[I%Unit.Normals.Num()].IsNearlyZero())Result.Normals[I]*=-1;
+	}
 	for(int32 I=0;I<Result.Normals.Num();++I) {
 		const FVector Explicit=Unit.Normals[I%Unit.Normals.Num()];
 		if(!Explicit.IsNearlyZero()&&!O.Motions.ContainsByPredicate([](const auto& M){return M.Type==TEXT("bend");})) Result.Normals[I]=Explicit/(CurveUnits?FVector(1):O.Size);
-		Result.Normals[I]=Result.Normals[I].GetSafeNormal(.0001,FVector::UpVector);
+		// Explicit normals are divided by the size in cm, so their squared length can be ~1e-5; a loose
+		// tolerance replaced every large ball's normals with Up and lit it flat.
+		Result.Normals[I]=Result.Normals[I].GetSafeNormal(1e-20,FVector::UpVector);
 	}
 	// UE front faces use clockwise winding. Keep the outward shading normals above;
 	// otherwise a two-sided lit material flips them and lights the insides of every shape.

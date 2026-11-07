@@ -3,6 +3,7 @@
 #include "AttitudeInputSubsystem.h"
 #include "Camera/CameraComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/AudioComponent.h"
 #include "Engine/StaticMesh.h"
@@ -61,6 +62,15 @@ AFlightPawn::AFlightPawn()
 	Trail->SetCastShadow(false);
 	Trail->SetMobility(EComponentMobility::Movable);
 
+	DodgeShield = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DodgeShield"));
+	DodgeShield->SetupAttachment(ShipPivot);
+	DodgeShield->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	DodgeShield->SetCastShadow(false);
+	DodgeShield->SetHiddenInGame(true);
+	// Engine sphere is 100 units across: an ellipsoid hugging the ~830-unit wingspan.
+	DodgeShield->SetRelativeLocation(FVector(-60.f, 0.f, 0.f));
+	DodgeShield->SetRelativeScale3D(FVector(10.5f, 10.f, 5.2f));
+
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 }
 
@@ -94,6 +104,12 @@ void AFlightPawn::BeginPlay()
 	}
 	TrailMID = FlightMaterials::Additive(this, FlightPalette::Mint * 0.9f);
 	Trail->SetMaterial(0, TrailMID);
+	if (UStaticMesh* Sphere = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere")))
+	{
+		DodgeShield->SetStaticMesh(Sphere);
+	}
+	DodgeShieldMID = FlightMaterials::Additive(this, FLinearColor::Black);
+	DodgeShield->SetMaterial(0, DodgeShieldMID);
 	TrailSegs.SetNum(120);
 	for (int32 i = 0; i < TrailSegs.Num(); ++i)
 	{
@@ -160,8 +176,8 @@ FVector AFlightPawn::GetCameraLocation() const
 
 bool AFlightPawn::IsInvulnerable() const
 {
-	// A barrel roll is invulnerable for its whole length; a sidestep after its first frames.
-	return (bBarrelRoll ? DodgeTime > 0.f : DodgeTime > 0.035f) || GetWorld()->GetTimeSeconds() < InvulnerableUntil;
+	// The dodge shield covers the whole roll.
+	return IsDodging() || GetWorld()->GetTimeSeconds() < InvulnerableUntil;
 }
 
 void AFlightPawn::ShowBanner(const FString& Text, float Seconds)
@@ -343,9 +359,10 @@ void AFlightPawn::UpdateInput(float Dt, bool bSteer)
 	const float TargetPitch = FMath::Clamp(PitchSign * PitchDeg, -NosePitchLimitDeg, NosePitchLimitDeg);
 	const float TargetYaw = bSplitAim ? 0.f : FMath::Clamp(YawDeg, -YawLimitDeg, YawLimitDeg);
 	const float Response = 20.f;
-	if (IsRolling())
+	if (IsDodging())
 	{
-		// A full barrel roll on top of the current bank; UpdateDodge unwinds the extra turn.
+		// Every dodge is a full roll toward its direction on top of the current bank;
+		// UpdateDodge unwinds the extra turn.
 		const float Progress = 1.f - DodgeTime / DodgeLength;
 		ShipRoll = BaseRoll + DodgeDirection * 360.f * float(FlightHandling::DodgeEase(Progress));
 	}
@@ -456,6 +473,20 @@ void AFlightPawn::UpdateShip(float Dt)
 			FMath::Lerp(Base, Hit, HitFlash) * (2.1f + 4.f * HealFlash) * Blink);
 	}
 	EngineLight->SetIntensity(9000.f * Flicker);
+	UpdateDodgeShield();
+}
+
+void AFlightPawn::UpdateDodgeShield()
+{
+	const bool bUp = IsDodging() && State != EFlightState::Destroyed;
+	DodgeShield->SetHiddenInGame(!bUp);
+	if (!bUp || !DodgeShieldMID) { return; }
+	// Flashes on, holds through the roll, and fades over the last fifth; a light shimmer keeps it alive.
+	const float Left = DodgeTime / DodgeLength;
+	const float Envelope = FMath::Min(1.f, Left / 0.2f) * (1.f + 0.6f * FMath::Max(0.f, 1.f - (1.f - Left) / 0.15f));
+	const float T = GetWorld()->GetTimeSeconds();
+	const float Shimmer = 0.88f + 0.12f * FMath::Sin(T * 38.f);
+	DodgeShieldMID->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.35f, 0.95f, 1.f) * (0.22f * Envelope * Shimmer));
 }
 
 void AFlightPawn::UpdateCamera(float Dt, bool bSnap)

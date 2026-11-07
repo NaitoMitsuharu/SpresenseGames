@@ -1,5 +1,7 @@
 #include "LightBoxGame.h"
+#include "LightBoxAmbience.h"
 #include "LightBoxControls.h"
+#include "LightBoxPaint.h"
 
 #include "AttitudeInputSubsystem.h"
 #include "CanvasItem.h"
@@ -21,6 +23,12 @@
 #include "Widgets/Layout/SConstraintCanvas.h"
 #include "Widgets/Layout/SScrollBox.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
+#include "Widgets/Layout/SDPIScaler.h"
+#include "Widgets/Views/SListView.h"
+#include "Brushes/SlateNoResource.h"
+#include "Dom/JsonObject.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/SViewport.h"
 #include "Widgets/SBoxPanel.h"
@@ -50,10 +58,17 @@ void ALightBoxHUD::EnsureControls()
     KeyboardGlass(true);
     Controls=SNew(SLightBoxControls).HUD(TWeakObjectPtr<ALightBoxHUD>(this));
     GetWorld()->GetGameViewport()->AddViewportWidgetContent(Controls.ToSharedRef(),40);
+    // Sensor effects sit between the scene and the controls, edge to edge.
+    Ambience=SNew(SLightBoxAmbience).Controller(GetOwningPlayerController());
+    GetWorld()->GetGameViewport()->AddViewportWidgetContent(Ambience.ToSharedRef(),35);
     if(auto* PC=GetOwningPlayerController()){PC->SetInputMode(FInputModeGameAndUI().SetHideCursorDuringCapture(false).SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock));PC->bShowMouseCursor=true;}
 }
 bool ALightBoxHUD::HasDialog()const{return Dialog.IsValid()||(Controls.IsValid()&&Controls->IsInteracting());}
 void ALightBoxHUD::OpenMenu(){EnsureControls();if(Controls.IsValid())Controls->OpenMenu();}
+#if !UE_BUILD_SHIPPING
+void ALightBoxHUD::ReviewSensors(){EnsureControls();if(Controls.IsValid())Controls->ReviewSensors();}
+void ALightBoxHUD::ReviewKeyboard(){EnsureControls();if(Controls.IsValid())Controls->ReviewKeyboard();}
+#endif
 void ALightBoxHUD::AttachDialog(TSharedPtr<SWidget> Focus)
 {
     Dialog=LightBoxUI::AnimateDialog(TWeakObjectPtr<ALightBoxHUD>(this),Dialog.ToSharedRef());
@@ -67,44 +82,6 @@ void ALightBoxHUD::DrawHUD()
 	Super::DrawHUD(); if (!Canvas) { return; }
 	EnsureControls();
 	UpdateSetupDialog();
-	DrawSensorChips();
-}
-
-void ALightBoxHUD::DrawSensorChips()
-{
-	const ALightBoxPawn* Pawn = Cast<ALightBoxPawn>(GetOwningPawn());
-	if (!Pawn || Dialog.IsValid()) { return; }
-	const FLightBoxSensorReading& R = Pawn->GetSensorReading();
-	if (R.bClap) { ClapShown = 0.8f; }
-	ClapShown = FMath::Max(0.f, ClapShown - GetWorld()->GetDeltaSeconds());
-	struct FChip { const TCHAR* Label; float Level; FLinearColor Color; };
-	const FChip Chips[] = {
-		{ TEXT("息"), R.Breath, FLinearColor(0.55f,0.9f,1.f) },
-		{ TEXT("拍手"), ClapShown/0.8f, FLinearColor(1.f,1.f,1.f) },
-		{ TEXT("ぬくもり"), R.Warmth, FLinearColor(1.f,0.62f,0.3f) },
-		{ TEXT("暗がり"), R.Darkness, FLinearColor(0.62f,0.58f,1.f) },
-		{ TEXT("まぶしい"), R.Brightness, FLinearColor(1.f,0.95f,0.6f) },
-		{ TEXT("手"), R.Near, FLinearColor(0.55f,1.f,0.8f) },
-		{ TEXT("磁石"), R.Magnet, FLinearColor(1.f,0.45f,0.6f) },
-	};
-	// Only what is reacting right now, centred just above the scene's bottom edge.
-	const float Size = 17.f, Pad = 12*S, GapX = 10*S, ChipH = 32*S;
-	float Total = 0; int32 Count = 0;
-	for (const FChip& C : Chips) { if (C.Level > 0.06f) { Total += TextSize(C.Label, Size).X + Pad*2 + 14*S; ++Count; } }
-	if (!Count) { return; }
-	Total += GapX * (Count - 1);
-	float X = (W - Total) * 0.5f;
-	const float Y = H * 0.72f;
-	for (const FChip& C : Chips)
-	{
-		if (C.Level <= 0.06f) { continue; }
-		const float CW = TextSize(C.Label, Size).X + Pad*2 + 14*S, A = FMath::Clamp(C.Level, 0.f, 1.f);
-		ExperienceUI::RoundRect(Canvas, X, Y, CW, ChipH, ChipH*0.5f, FLinearColor(0.03f,0.06f,0.09f,0.35f+0.3f*A));
-		ExperienceUI::RoundRect(Canvas, X+ChipH*0.3f, Y+ChipH-3*S, (CW-ChipH*0.6f)*A, 3*S, 1.5f*S, C.Color.CopyWithNewOpacity(0.85f));
-		Dot(X+Pad+4*S, Y+ChipH*0.5f, 4*S, C.Color.CopyWithNewOpacity(0.5f+0.5f*A));
-		Text(C.Label, FLinearColor(0.95f,0.98f,1.f,0.7f+0.3f*A), X+Pad+14*S, Y+ChipH*0.5f-Size*0.62f*S, Size, false);
-		X += CW + GapX;
-	}
 }
 
 void ALightBoxHUD::NotifyHitBoxClick(FName Name)
@@ -120,7 +97,9 @@ void ALightBoxHUD::NotifyHitBoxClick(FName Name)
 	else if (Name == TEXT("Neutral")) { GetGameInstance()->GetSubsystem<UAttitudeInputSubsystem>()->ResetNeutral(); }
 	else if (Name == TEXT("Orbit")) { if(auto* P=Cast<ALightBoxPawn>(GetOwningPlayerController()->GetPawn()))P->ToggleCameraOrbit(); }
 	else if (Name == TEXT("ViewReset")) { if(auto* P=Cast<ALightBoxPawn>(GetOwningPlayerController()->GetPawn()))P->ResetCameraView(); }
-	else if (Name == TEXT("Settings")) { OpenSettings(); }
+	else if (Name == TEXT("Settings") || Name == TEXT("Auth")) { OpenSettings(0); }
+	else if (Name == TEXT("Model")) { OpenSettings(1); }
+	else if (Name == TEXT("Budget")) { OpenSettings(2); }
 	else if (Name == TEXT("Words")) { OpenWords(); }
 	else if (Name == TEXT("Examples")) { OpenExamples(); }
 	else if (Name == TEXT("Journal")) { OpenJournal(); }
@@ -215,8 +194,8 @@ void ALightBoxHUD::OpenSetup()
 	const auto Host = GetWorld()->GetGameViewport()->GetGameLayerManager();
 	const float Ratio = Host.IsValid() && H > 0 ? Host->GetViewportWidgetHostGeometry().GetLocalSize().Y / H : 1.f, J = S * Ratio;
 	ULightBoxDirector* D = GetGameInstance()->GetSubsystem<ULightBoxDirector>();
-	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", FMath::RoundToInt(22 * J));
-	const FSlateFontInfo Small = FCoreStyle::GetDefaultFontStyle("Regular", FMath::RoundToInt(19 * J));
+	const FSlateFontInfo Font = LightBoxPaint::Font( FMath::RoundToInt(22 * J));
+	const FSlateFontInfo Small = LightBoxPaint::Font( FMath::RoundToInt(19 * J));
 	const float Width = FMath::Min(W * Ratio * 0.85f, 860 * J);
 	const TCHAR* Steps[] = { TEXT("Termuxアプリ"), TEXT("コマンド実行の許可"), TEXT("Termuxの初回セットアップ"), TEXT("演出サービスと認証キー") };
 	TSharedRef<SVerticalBox> Checklist = SNew(SVerticalBox);
@@ -239,7 +218,7 @@ void ALightBoxHUD::OpenSetup()
 	[
 		SNew(SBox).WidthOverride(Width)
 		[
-			SNew(SBorder).Padding(28 * J).BorderImage(ExperienceUI::ModalBrush()).BorderBackgroundColor(ExperienceUI::Ink.CopyWithNewOpacity(.82f))
+			SNew(SLightBoxSheet).Padding(28 * J)
 			[
 				SNew(SVerticalBox)
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 12 * J)
@@ -289,7 +268,8 @@ void ALightBoxHUD::EndPlay(const EEndPlayReason::Type Reason)
 {
 	CloseDialog();
 	if(Controls.IsValid()&&GetWorld()&&GetWorld()->GetGameViewport())GetWorld()->GetGameViewport()->RemoveViewportWidgetContent(Controls.ToSharedRef());
-	Controls.Reset();KeyboardGlass(false);Super::EndPlay(Reason);
+	if(Ambience.IsValid()&&GetWorld()&&GetWorld()->GetGameViewport())GetWorld()->GetGameViewport()->RemoveViewportWidgetContent(Ambience.ToSharedRef());
+	Ambience.Reset();Controls.Reset();KeyboardGlass(false);Super::EndPlay(Reason);
 }
 
 void ALightBoxHUD::OpenWords()
@@ -303,7 +283,7 @@ void ALightBoxHUD::OpenExamples()
 	const auto LayersHost=GetWorld()->GetGameViewport()->GetGameLayerManager();
 	const float Ratio=LayersHost.IsValid()&&H>0?LayersHost->GetViewportWidgetHostGeometry().GetLocalSize().Y/H:1;
 	const float J=S*Ratio;
-	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", FMath::RoundToInt(23 * J));
+	const FSlateFontInfo Font = LightBoxPaint::Font( FMath::RoundToInt(23 * J));
 	TSharedRef<SUniformGridPanel> List=SNew(SUniformGridPanel).SlotPadding(FMargin(6*J));
 
 	for (int32 I = 0; I < 13; ++I)
@@ -327,7 +307,7 @@ void ALightBoxHUD::OpenExamples()
 	+ SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0,0,0,.18f)).OnMouseButtonDown_Lambda([Weak=TWeakObjectPtr<ALightBoxHUD>(this)](const FGeometry&,const FPointerEvent&){if(Weak.IsValid())Weak->CloseDialog();return FReply::Handled();})]
 	+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
 	[SNew(SBox).WidthOverride(FMath::Min(W * Ratio * .88f, 1600 * J)).HeightOverride(H * Ratio * .84f)
-	[SNew(SBorder).Padding(28 * J).BorderImage(ExperienceUI::ModalBrush()).BorderBackgroundColor(ExperienceUI::Ink.CopyWithNewOpacity(.78f))
+	[SNew(SLightBoxSheet).Padding(28 * J)
 	[SNew(SVerticalBox)
 	+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 10 * J)[SNew(STextBlock).Font(Font).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("景色の見本")))]
 
@@ -339,135 +319,163 @@ void ALightBoxHUD::OpenExamples()
 	AttachDialog();
 }
 
-void ALightBoxHUD::OpenJournal()
+namespace
 {
-	CloseDialog(); auto* D=GetGameInstance()->GetSubsystem<ULightBoxDirector>();
-	// The widget host is below the game-layer DPI scaler; the SViewport is above it.
-	const auto LayerManager=GetWorld()->GetGameViewport()->GetGameLayerManager();
-	const float HostHeight=LayerManager.IsValid()?LayerManager->GetViewportWidgetHostGeometry().GetLocalSize().Y:0.f;
-	const float Ratio=H>0&&HostHeight>0?HostHeight/H:1.f;
-	const float J=S*Ratio;
-	const FSlateFontInfo Font=FCoreStyle::GetDefaultFontStyle("Regular",FMath::RoundToInt(20*J));
-	const FSlateFontInfo Small=FCoreStyle::GetDefaultFontStyle("Regular",FMath::RoundToInt(16*J));
-	const float PanelW=FMath::Min(W*.84f*Ratio,1120*J),Wrap=PanelW-64*J;
-	TSharedRef<SVerticalBox> List=SNew(SVerticalBox);
-	const auto& Records=D->GetJournal().Records;
-	for(int32 I=Records.Num()-1;I>=FMath::Max(0,Records.Num()-40);--I)
-	{
-		const FLightBoxRecord& R=Records[I]; FString Stamp=R.Utc; FDateTime Utc;
-		if(FDateTime::ParseIso8601(*R.Utc,Utc)) Stamp=(Utc+FTimespan::FromHours(9)).ToString(TEXT("%m/%d %H:%M:%S"));
-		const FString Cost=R.Credits>=0?FString::Printf(TEXT("推定 %.4f cr"),R.Credits):TEXT("クレジット未取得");
-		const FString Tokens=R.Total>=0?FString::Printf(TEXT("%.0f tokens（入力 %.0f / 出力 %.0f / キャッシュ読取 %.0f・書込 %.0f）"),R.Total,R.Input,R.Output,R.CacheRead,R.CacheWrite):TEXT("トークン内訳は未取得");
-		TSharedRef<SVerticalBox> Row=SNew(SVerticalBox);
-		Row->AddSlot().AutoHeight()[SNew(STextBlock).Font(Small).ColorAndOpacity(Mint).Text(FText::FromString(Stamp+TEXT("  /  ")+R.Result+(R.bRepair?TEXT("  /  自動修正"):TEXT(""))))];
-		Row->AddSlot().AutoHeight().Padding(0,7*J,0,4*J)[SNew(STextBlock).Font(Font).WrapTextAt(Wrap-30*J).Text(FText::FromString(R.Words))];
-		Row->AddSlot().AutoHeight()[SNew(STextBlock).Font(Small).WrapTextAt(Wrap-30*J).ColorAndOpacity(ExperienceUI::Muted).Text(FText::FromString(R.Difference.IsEmpty()?TEXT("変更前の景色は未記録"):R.Difference))];
-		Row->AddSlot().AutoHeight().Padding(0,6*J,0,0)[SNew(STextBlock).Font(Small).WrapTextAt(Wrap-30*J).Text(FText::FromString(Cost+TEXT("  /  ")+Tokens))];
-		if(!R.Model.IsEmpty()) Row->AddSlot().AutoHeight()[SNew(STextBlock).Font(Small).ColorAndOpacity(ExperienceUI::Muted).Text(FText::FromString(R.Model+TEXT("  単価確認 ")+R.PricingDate))];
-		FLightBoxStyle Test; FString Error;
-		if(FLightBoxStyle::Parse(R.After,Test,Error))
-		{
-			Row->AddSlot().AutoHeight().Padding(0,8*J,0,0)
-			[SNew(SButton).ButtonStyle(LightBoxUI::ButtonStyle()).ContentPadding(8*J)
-			.OnClicked_Lambda([Weak=TWeakObjectPtr<ALightBoxHUD>(this),Id=R.Id]() { if(Weak.IsValid()) { Weak->CloseDialog(); Weak->GetGameInstance()->GetSubsystem<ULightBoxDirector>()->RestoreRecord(Id); } return FReply::Handled(); })
-			[SNew(STextBlock).Font(Small).Text(FText::FromString(TEXT("この景色を呼び出す（追加消費なし）")))]];
-		}
-		List->AddSlot().AutoHeight().Padding(0,0,0,12*J)[SNew(SBorder).BorderImage(ExperienceUI::ModalBrush()).BorderBackgroundColor(FLinearColor(.035f,.065f,.08f)).Padding(14*J)[Row]];
-	}
-	Dialog=SNew(SOverlay)
-	+SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0,0,0,.18f)).OnMouseButtonDown_Lambda([Weak=TWeakObjectPtr<ALightBoxHUD>(this)](const FGeometry&,const FPointerEvent&){if(Weak.IsValid())Weak->CloseDialog();return FReply::Handled();})]
-	+SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
-	[SNew(SBox).WidthOverride(PanelW).HeightOverride(H*.84f*Ratio)
-	[SNew(SBorder).Padding(28*J).BorderImage(ExperienceUI::ModalBrush()).BorderBackgroundColor(ExperienceUI::Ink.CopyWithNewOpacity(.78f))
-	[SNew(SVerticalBox)
-	+SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(Font).Text(FText::FromString(TEXT("景色の記録・AI利用量"))).ColorAndOpacity(Ink)]
-	+SVerticalBox::Slot().AutoHeight().Padding(0,10*J,0,5*J)[SNew(STextBlock).Font(Font).ColorAndOpacity(Mint).Text_Lambda([D](){return FText::FromString(D->GetJournal().Summary());})]
-	+SVerticalBox::Slot().AutoHeight().Padding(0,0,0,12*J)[SNew(STextBlock).Font(Small).WrapTextAt(Wrap).ColorAndOpacity(ExperienceUI::Muted)
-	.Text(FText::FromString(TEXT("公表単価による概算で、確定請求額・アカウント残高ではありません。\n開発検証・自動修正・適用失敗を含む最大300回の記録分。未取得は0にしません。")))]
-	+SVerticalBox::Slot().FillHeight(1)[SNew(SScrollBox)+SScrollBox::Slot()[List]]
-	+SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(Small).WrapTextAt(Wrap).ColorAndOpacity(ExperienceUI::Muted).Text_Lambda([D](){return FText::FromString(D->JournalStatus);})]
-	+SVerticalBox::Slot().AutoHeight().Padding(0,12*J,0,0)
-	[SNew(SHorizontalBox)
-	+SHorizontalBox::Slot().FillWidth(1).Padding(0,0,12*J,0)[SNew(SButton).ButtonStyle(LightBoxUI::ButtonStyle()).HAlign(HAlign_Center).ContentPadding(10*J)
-	.OnClicked_Lambda([Weak=TWeakObjectPtr<ALightBoxHUD>(this)](){ if(Weak.IsValid()) { Weak->GetGameInstance()->GetSubsystem<ULightBoxDirector>()->SyncJournal(); Weak->CloseDialog(); } return FReply::Handled(); })[SNew(STextBlock).Font(Font).Text(FText::FromString(TEXT("更新して閉じる")))]]
-	+SHorizontalBox::Slot().FillWidth(1)[SNew(SButton).ButtonStyle(LightBoxUI::ButtonStyle(true)).HAlign(HAlign_Center).ContentPadding(10*J)
-	.OnClicked_Lambda([Weak=TWeakObjectPtr<ALightBoxHUD>(this)](){if(Weak.IsValid()) Weak->CloseDialog();return FReply::Handled();})[SNew(SBox).WidthOverride(24*J).HeightOverride(24*J)[LightBoxUI::Icon(TEXT("close"))]]]]]]];
-	AttachDialog();
+const FTableViewStyle* AtelierHistoryStyle()
+{
+    static const FTableViewStyle Style=FTableViewStyle().SetBackgroundBrush(FSlateNoResource());
+    return &Style;
+}
+const FTableRowStyle* AtelierHistoryRowStyle()
+{
+    static const FTableRowStyle Style=FTableRowStyle(FCoreStyle::Get().GetWidgetStyle<FTableRowStyle>("TableView.Row"))
+        .SetEvenRowBackgroundBrush(FSlateNoResource()).SetOddRowBackgroundBrush(FSlateNoResource())
+        .SetEvenRowBackgroundHoveredBrush(FSlateNoResource()).SetOddRowBackgroundHoveredBrush(FSlateNoResource());
+    return &Style;
+}
+struct FAtelierHistoryItem
+{
+    FString Id, Title, Asked, Stamp;
+};
+
+/** Logical dimensions match the menu; one DPI scale applies to text, icons, glass and hit areas. */
+TSharedRef<SWidget> AtelierDialog(TWeakObjectPtr<ALightBoxHUD> Weak,const FString& Title,float Scale,float Width,float Height,TSharedRef<SWidget> Body,TSharedRef<SWidget> Footer)
+{
+    return SNew(SOverlay)
+        +SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0,0,0,.30f))
+            .OnMouseButtonDown_Lambda([Weak](const FGeometry&,const FPointerEvent&){if(Weak.IsValid())Weak->CloseDialog();return FReply::Handled();})]
+        +SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
+        [SNew(SDPIScaler).DPIScale(Scale)
+            [SNew(SBox).WidthOverride(Width).HeightOverride(Height)
+                [SNew(SLightBoxSheet).Padding(24)
+                    [SNew(SVerticalBox)
+                        +SVerticalBox::Slot().AutoHeight().Padding(2,0,0,16)[LightBoxUI::DialogHeader(Title,1,[Weak](){if(Weak.IsValid())Weak->CloseDialog();})]
+                        +SVerticalBox::Slot().FillHeight(1)[Body]
+                        +SVerticalBox::Slot().AutoHeight().Padding(0,16,0,0)[Footer]
+                    ]]]];
+}
+TSharedRef<SWidget> DialogDone(TWeakObjectPtr<ALightBoxHUD> Weak)
+{
+    return SNew(SBox).HeightOverride(78)
+        [SNew(SButton).ButtonStyle(LightBoxUI::MenuStyle()).ContentPadding(16).HAlign(HAlign_Center)
+            .OnClicked_Lambda([Weak](){if(Weak.IsValid())Weak->CloseDialog();return FReply::Handled();})
+            [SNew(STextBlock).Font(LightBoxPaint::Font(22)).Text(FText::FromString(TEXT("閉じる")))]];
+}
 }
 
-void ALightBoxHUD::OpenSettings()
+void ALightBoxHUD::OpenJournal()
 {
-	CloseDialog();
-	const auto Host=GetWorld()->GetGameViewport()->GetGameLayerManager();
-	const float Ratio=Host.IsValid()&&H>0?Host->GetViewportWidgetHostGeometry().GetLocalSize().Y/H:1.f,J=S*Ratio;
-	ULightBoxDirector* D = GetGameInstance()->GetSubsystem<ULightBoxDirector>();
-	TSharedPtr<SEditableTextBox> Url, Token;
-	TSharedPtr<STextBlock> Message;
-	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Regular", FMath::RoundToInt(22 * J));
-	Url = SNew(SEditableTextBox).Style(LightBoxUI::FieldStyle()).Font(Font).Text(FText::FromString(D->GetEndpoint()));
-	Token = SNew(SEditableTextBox).Style(LightBoxUI::FieldStyle()).Font(Font).IsPassword(true).HintText(FText::FromString(D->EnsureCredential()?TEXT("設定済み（変更するときだけ入力）"):TEXT("Termuxに表示された認証キー")));
-	Message = SNew(STextBlock).Font(Font).WrapTextAt(FMath::Min(W * Ratio * 0.85f, 800 * J) - 56 * J).ColorAndOpacity(Mint)
-		.Text(FText::FromString(TEXT("")));
-	Dialog = SNew(SOverlay)
-	+ SOverlay::Slot()[SNew(SBorder).BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush")).BorderBackgroundColor(FLinearColor(0,0,0,.18f)).OnMouseButtonDown_Lambda([Weak=TWeakObjectPtr<ALightBoxHUD>(this)](const FGeometry&,const FPointerEvent&){if(Weak.IsValid())Weak->CloseDialog();return FReply::Handled();})]
-	+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
-	[
-		SNew(SBox).WidthOverride(FMath::Min(W * Ratio * 0.85f, 800 * J))
-		[
-			SNew(SBorder).Padding(28 * J).BorderImage(ExperienceUI::ModalBrush()).BorderBackgroundColor(ExperienceUI::Ink.CopyWithNewOpacity(.78f))
-			[
-				SNew(SVerticalBox)
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 14 * J)
-				[SNew(STextBlock).Font(Font).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("接続設定")))]
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 6 * J)
-				[SNew(STextBlock).Font(Font).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("接続先")))]
-				+ SVerticalBox::Slot().AutoHeight()
-				[Url.ToSharedRef()]
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 14 * J, 0, 6 * J)
-				[SNew(STextBlock).Font(Font).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("認証キー")))]
-				+ SVerticalBox::Slot().AutoHeight()
-				[Token.ToSharedRef()]
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 14 * J, 0, 0)
-				[
-					// Re-runs the open-time check (start Gateway, fetch key, guide setup).
-					SNew(SButton).ButtonStyle(LightBoxUI::ButtonStyle()).HAlign(HAlign_Center).ContentPadding(12 * J)
-					.OnClicked_Lambda([Weak = TWeakObjectPtr<ALightBoxHUD>(this)]()
-					{
-						if (Weak.IsValid())
-						{
-							ALightBoxHUD* HUD = Weak.Get();
-							HUD->DismissedNeed = ELightBoxSetupNeed::None; HUD->bDismissedFailure = false;
-							HUD->CloseDialog();
-							HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>()->BeginReadiness();
-						}
-						return FReply::Handled();
-					})
-					[SNew(STextBlock).Font(Font).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("接続を自動で準備する")))]
-				]
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 12 * J)
-				[Message.ToSharedRef()]
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 12 * J, 0, 0)
-				[
-					SNew(SHorizontalBox)
-					+ SHorizontalBox::Slot().FillWidth(1).Padding(0, 0, 12 * J, 0)
-					[SNew(SButton).ButtonStyle(LightBoxUI::ButtonStyle()).HAlign(HAlign_Center).ContentPadding(12 * J)
-					.OnClicked_Lambda([Weak = TWeakObjectPtr<ALightBoxHUD>(this)]() { if (Weak.IsValid()) { Weak->CloseDialog(); } return FReply::Handled(); })
-					[SNew(SBox).WidthOverride(24*J).HeightOverride(24*J)[LightBoxUI::Icon(TEXT("close"))]]]
-					+ SHorizontalBox::Slot().FillWidth(1)
-					[SNew(SButton).ButtonStyle(LightBoxUI::ButtonStyle(true)).HAlign(HAlign_Center).ContentPadding(12 * J)
-					.OnClicked_Lambda([Weak = TWeakObjectPtr<ALightBoxHUD>(this), Url, Token, Message]()
-					{
-						if (Weak.IsValid())
-						{
-							FString Error;
-							if (Weak->GetGameInstance()->GetSubsystem<ULightBoxDirector>()->Configure(Url->GetText().ToString(), Token->GetText().ToString(), Error)) { Token->SetText(FText::GetEmpty()); Weak->CloseDialog(); }
-							else { Message->SetText(FText::FromString(Error)); }
-						}
-						return FReply::Handled();
-					})[SNew(SBox).WidthOverride(24*J).HeightOverride(24*J)[LightBoxUI::Icon(TEXT("check"))]]]
-				]
-			]
-		]
-	];
-	AttachDialog();
+    CloseDialog();auto* D=GetGameInstance()->GetSubsystem<ULightBoxDirector>();
+    const auto Host=GetWorld()->GetGameViewport()->GetGameLayerManager();
+    const float Ratio=Host.IsValid()&&H>0?Host->GetViewportWidgetHostGeometry().GetLocalSize().Y/H:1.f;
+    const float J=FMath::Max(.3f,S*Ratio),PanelW=FMath::Min(W*Ratio*.9f/J,920.f),PanelH=FMath::Min(H*Ratio*.90f/J,960.f);
+    const TWeakObjectPtr<ALightBoxHUD> Weak(this);
+    auto Items=MakeShared<TArray<TSharedPtr<FAtelierHistoryItem>>>();
+    const auto& Records=D->GetJournal().Records;
+    for(int32 I=Records.Num()-1;I>=0&&Items->Num()<40;--I)
+    {
+        const auto& R=Records[I];if(R.After.IsEmpty())continue;
+        // Opening a history list must not rebuild every saved sculpture. Restoration validates it fully.
+        TSharedPtr<FJsonObject> Scene;FString Title;
+        if(!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(R.After),Scene)||!Scene.IsValid()||!Scene->TryGetStringField(TEXT("title"),Title))continue;
+        auto Item=MakeShared<FAtelierHistoryItem>();Item->Id=R.Id;Item->Title=Title.IsEmpty()?TEXT("無題の景色"):Title;
+        FDateTime Utc;Item->Stamp=FDateTime::ParseIso8601(*R.Utc,Utc)?(Utc+FTimespan::FromHours(9)).ToString(TEXT("%m/%d %H:%M")):R.Utc;
+        Item->Asked=R.Words.TrimStartAndEnd();
+        if(Item->Asked.StartsWith(TEXT("元のお願い"))){int32 A=Item->Asked.Find(TEXT("「")),B=Item->Asked.Find(TEXT("」"));Item->Asked=TEXT("クオリティ調整")+(A>=0&&B>A?TEXT("「")+Item->Asked.Mid(A+1,B-A-1)+TEXT("」"):FString());}
+        if(Item->Asked.Len()>44)Item->Asked=Item->Asked.Left(43)+TEXT("…");
+        Items->Add(Item);
+    }
+    TSharedRef<SWidget> Body=SNew(STextBlock).Font(LightBoxPaint::Font(21)).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("まだ景色の履歴はありません")));
+    if(!Items->IsEmpty())
+    {
+        Body=SNew(SListView<TSharedPtr<FAtelierHistoryItem>>).ListViewStyle(AtelierHistoryStyle()).ListItemsSource(&Items.Get()).SelectionMode(ESelectionMode::None).ItemHeight(148).AllowOverscroll(EAllowOverscroll::No)
+            .OnGenerateRow_Lambda([Weak,Items,PanelW](TSharedPtr<FAtelierHistoryItem> Item,const TSharedRef<STableViewBase>& ListOwner)
+            {
+                return SNew(STableRow<TSharedPtr<FAtelierHistoryItem>>,ListOwner).Style(AtelierHistoryRowStyle()).Padding(FMargin(0,0,0,10))
+                    [SNew(SBox).MinDesiredHeight(148)
+                        [SNew(SButton).ButtonStyle(LightBoxUI::MenuStyle()).TouchMethod(EButtonTouchMethod::PreciseTap).ContentPadding(FMargin(20,16)).HAlign(HAlign_Fill)
+                            .OnClicked_Lambda([Weak,Id=Item->Id](){if(Weak.IsValid()){Weak->CloseDialog();Weak->GetGameInstance()->GetSubsystem<ULightBoxDirector>()->RestoreRecord(Id);}return FReply::Handled();})
+                            [SNew(SHorizontalBox)
+                                +SHorizontalBox::Slot().FillWidth(1).VAlign(VAlign_Center)
+                                [SNew(SVerticalBox)
+                                    +SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(LightBoxPaint::Spaced(23,30)).ColorAndOpacity(Ink).OverflowPolicy(ETextOverflowPolicy::Ellipsis).Text(FText::FromString(Item->Title))]
+                                    +SVerticalBox::Slot().AutoHeight().Padding(0,5,0,0)[SNew(STextBlock).Font(LightBoxPaint::Font(19)).WrapTextAt(PanelW-240).ColorAndOpacity(Ink.CopyWithNewOpacity(.8f)).Text(FText::FromString(Item->Asked))]
+                                    +SVerticalBox::Slot().AutoHeight().Padding(0,5,0,0)[SNew(STextBlock).Font(LightBoxPaint::Font(17)).ColorAndOpacity(Ink.CopyWithNewOpacity(.65f)).Text(FText::FromString(Item->Stamp))]
+                                ]
+                                +SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(20,0,0,0)
+                                [SNew(STextBlock).Font(LightBoxPaint::Font(20)).ColorAndOpacity(Mint).Text(FText::FromString(TEXT("呼び出す ›")))]
+                            ]]];
+            });
+    }
+    auto Footer=SNew(SVerticalBox)
+        +SVerticalBox::Slot().AutoHeight().Padding(4,0,4,12)[SNew(STextBlock).Font(LightBoxPaint::Font(18)).ColorAndOpacity(Ink.CopyWithNewOpacity(.7f)).AutoWrapText(true).Text_Lambda([D](){return FText::FromString(TEXT("AI利用量（概算）　")+D->GetJournal().Summary());})]
+        +SVerticalBox::Slot().AutoHeight()[DialogDone(Weak)];
+    Dialog=AtelierDialog(Weak,TEXT("履歴"),J,PanelW,PanelH,Body,Footer);AttachDialog();
+}
+
+void ALightBoxHUD::OpenSettings(int32 Section)
+{
+    CloseDialog();Section=FMath::Clamp(Section,0,2);
+    const auto Host=GetWorld()->GetGameViewport()->GetGameLayerManager();
+    const float Ratio=Host.IsValid()&&H>0?Host->GetViewportWidgetHostGeometry().GetLocalSize().Y/H:1.f,J=FMath::Max(.3f,S*Ratio);
+    const float Width=FMath::Min(W*Ratio*.9f/J,Section==0?800.f:680.f),Height=FMath::Min(H*Ratio*.90f/J,Section==1?760.f:700.f);
+    auto* D=GetGameInstance()->GetSubsystem<ULightBoxDirector>();const TWeakObjectPtr<ALightBoxHUD> Weak(this);
+    const auto Font=LightBoxPaint::Font(22),Small=LightBoxPaint::Font(19);
+    auto Body=SNew(SVerticalBox);TSharedRef<SWidget> Footer=DialogDone(Weak);TSharedPtr<SEditableTextBox> Url;
+    static const TCHAR* Titles[]={TEXT("接続設定"),TEXT("AIモデル"),TEXT("粒子上限")};
+    if(Section==1)
+    {
+        Body->AddSlot().AutoHeight().Padding(4,0,4,16)[SNew(STextBlock).Font(Small).ColorAndOpacity(Ink.CopyWithNewOpacity(.8f)).AutoWrapText(true).Text(FText::FromString(TEXT("景色づくりに使うAIを選びます")))];
+        for(const auto& Choice:ULightBoxDirector::ModelChoices())
+        {
+            const FString Id=Choice.Id,Name=Choice.Label;auto IsOn=[Weak,Id](){return Weak.IsValid()&&Weak->GetGameInstance()->GetSubsystem<ULightBoxDirector>()->GetModel()==Id;};
+            Body->AddSlot().AutoHeight().Padding(0,0,0,10)
+                [SNew(SBorder).BorderImage_Lambda([IsOn](){return LightBoxUI::CardBrush(IsOn());}).Padding(0)
+                    [SNew(SBox).HeightOverride(78)
+                        [SNew(SButton).ButtonStyle(LightBoxUI::MenuStyle()).TouchMethod(EButtonTouchMethod::PreciseTap).ContentPadding(FMargin(20,12)).HAlign(HAlign_Fill)
+                            .OnClicked_Lambda([Weak,Id](){if(Weak.IsValid())Weak->GetGameInstance()->GetSubsystem<ULightBoxDirector>()->SetModel(Id);return FReply::Handled();})
+                            [SNew(SHorizontalBox)
+                                +SHorizontalBox::Slot().FillWidth(1).VAlign(VAlign_Center)[SNew(STextBlock).Font(Font).ColorAndOpacity_Lambda([IsOn](){return IsOn()?Mint:Ink;}).Text(FText::FromString(Name))]
+                                +SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[SNew(SBox).WidthOverride(28).HeightOverride(28).Visibility_Lambda([IsOn](){return IsOn()?EVisibility::HitTestInvisible:EVisibility::Hidden;})[LightBoxUI::Icon(TEXT("check"))]]
+                            ]]]];
+        }
+    }
+    else if(Section==2)
+    {
+        Body->AddSlot().AutoHeight().Padding(0,0,0,18)
+            [SNew(SBorder).BorderImage(LightBoxUI::CardBrush(true)).Padding(24)
+                [SNew(SVerticalBox)
+                    +SVerticalBox::Slot().AutoHeight()[SNew(STextBlock).Font(Small).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("この端末の粒子上限")))]
+                    +SVerticalBox::Slot().AutoHeight().Padding(0,12,0,0)[SNew(STextBlock).Font(LightBoxPaint::Spaced(36,30)).ColorAndOpacity(Mint).Text_Lambda([D](){return FText::FromString(FText::AsNumber(D->PointBudget).ToString()+TEXT(" 粒"));})]
+                ]];
+        Body->AddSlot().AutoHeight().Padding(4,0,4,14)[SNew(STextBlock).Font(Small).ColorAndOpacity(Ink).AutoWrapText(true).LineHeightPercentage(1.15f).Text(FText::FromString(TEXT("この端末で自動測定しています。\n目標の滑らかさ：30〜45 fps")))];
+        Body->AddSlot().AutoHeight().Padding(4,0,4,8)[SNew(STextBlock).Font(Small).ColorAndOpacity(Ink.CopyWithNewOpacity(.72f)).AutoWrapText(true).LineHeightPercentage(1.2f).Text_Lambda([D](){return FText::FromString(D->BudgetDetail);})];
+        Footer=SNew(SBox).HeightOverride(82)
+            [SNew(SButton).ButtonStyle(LightBoxUI::MenuStyle(true)).ContentPadding(16).HAlign(HAlign_Center)
+                .OnClicked_Lambda([Weak](){if(Weak.IsValid()){Weak->GetGameInstance()->GetSubsystem<ULightBoxDirector>()->bCalibrationRequested=true;Weak->CloseDialog();}return FReply::Handled();})
+                [SNew(STextBlock).Font(Font).Text(FText::FromString(TEXT("性能を測り直す")))]];
+    }
+    else
+    {
+        auto Message=SNew(STextBlock).Font(Small).AutoWrapText(true).ColorAndOpacity(Mint);
+        Url=SNew(SEditableTextBox).Style(LightBoxUI::FieldStyle()).Font(Font).Text(FText::FromString(D->GetEndpoint()));
+        auto Token=SNew(SEditableTextBox).Style(LightBoxUI::FieldStyle()).Font(Font).IsPassword(true).HintText(FText::FromString(D->EnsureCredential()?TEXT("設定済み（変更時のみ入力）"):TEXT("Termuxに表示された認証キー")));
+        Body->AddSlot().AutoHeight().Padding(4,0,4,18)[SNew(STextBlock).Font(Small).ColorAndOpacity(Ink.CopyWithNewOpacity(.8f)).AutoWrapText(true).Text(FText::FromString(TEXT("景色づくりのサービスに接続します。認証キーは伏せて表示します。")))];
+        Body->AddSlot().AutoHeight().Padding(4,0,0,8)[SNew(STextBlock).Font(Small).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("接続先")))];
+        Body->AddSlot().AutoHeight()[SNew(SBox).MinDesiredHeight(72)[Url.ToSharedRef()]];
+        Body->AddSlot().AutoHeight().Padding(4,20,0,8)[SNew(STextBlock).Font(Small).ColorAndOpacity(Ink).Text(FText::FromString(TEXT("認証キー")))];
+        Body->AddSlot().AutoHeight()[SNew(SBox).MinDesiredHeight(72)[Token]];
+        Body->AddSlot().AutoHeight().Padding(4,12,4,0)[Message];
+        Footer=SNew(SHorizontalBox)
+            +SHorizontalBox::Slot().FillWidth(1).Padding(0,0,6,0)
+            [SNew(SBox).HeightOverride(82)[SNew(SButton).ButtonStyle(LightBoxUI::MenuStyle()).HAlign(HAlign_Center).ContentPadding(14)
+                .OnClicked_Lambda([Weak](){if(Weak.IsValid()){auto* HUD=Weak.Get();HUD->DismissedNeed=ELightBoxSetupNeed::None;HUD->bDismissedFailure=false;HUD->CloseDialog();HUD->GetGameInstance()->GetSubsystem<ULightBoxDirector>()->BeginReadiness();}return FReply::Handled();})
+                [SNew(STextBlock).Font(Font).Text(FText::FromString(TEXT("自動で準備する")))]]]
+            +SHorizontalBox::Slot().FillWidth(1).Padding(6,0,0,0)
+            [SNew(SBox).HeightOverride(82)[SNew(SButton).ButtonStyle(LightBoxUI::MenuStyle(true)).HAlign(HAlign_Center).ContentPadding(14)
+                .OnClicked_Lambda([Weak,Url,Token,Message](){if(Weak.IsValid()){FString Error;if(Weak->GetGameInstance()->GetSubsystem<ULightBoxDirector>()->Configure(Url->GetText().ToString(),Token->GetText().ToString(),Error)){Token->SetText(FText::GetEmpty());Weak->CloseDialog();}else Message->SetText(FText::FromString(Error));}return FReply::Handled();})
+                [SNew(STextBlock).Font(Font).Text(FText::FromString(TEXT("保存する")))]]];
+    }
+    auto Scroll=SNew(SScrollBox).Style(LightBoxUI::ScrollStyle()).AllowOverscroll(EAllowOverscroll::No).ScrollBarThickness(FVector2D(5,5))+SScrollBox::Slot()[Body];
+    Dialog=AtelierDialog(Weak,Titles[Section],J,Width,Height,Scroll,Footer);AttachDialog();
 }

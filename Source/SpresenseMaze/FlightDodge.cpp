@@ -61,12 +61,9 @@ void AFlightPawn::UpdateDodge(float Dt)
 	if (DodgeTime == 0)
 	{
 		if (FMath::Abs(CommandX) < 0.18f) { Vel.X *= 0.5; }
-		if (bBarrelRoll)
-		{
-			// The airframe finished a full turn: drop the extra 360 so it never unwinds backwards.
-			ShipRoll = FMath::UnwindDegrees(ShipRoll);
-			bBarrelRoll = false;
-		}
+		// Every dodge ends a full turn: drop the extra 360 so it never unwinds backwards.
+		ShipRoll = FMath::UnwindDegrees(ShipRoll);
+		bBarrelRoll = false;
 	}
 }
 

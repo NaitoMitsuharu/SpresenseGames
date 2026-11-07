@@ -6,4 +6,5 @@ AMazeGameMode::AMazeGameMode()
 {
 	DefaultPawnClass = AMazeBallPawn::StaticClass();
 	HUDClass = AMazeHUD::StaticClass();
+	PlayerControllerClass = AMazePlayerController::StaticClass();
 }

@@ -1,7 +1,6 @@
 """Generate the Spresense Games launcher icon.
 
-One picture for the three games: a maze path (cyan) starts at the ball (white),
-turns into the flight game's jet (orange) and ends in Light Box motes.
+A six-core circuit board and game controller, drawn from editable source.
 
     python Tools/CreateAppIcon.py
 
@@ -34,53 +33,40 @@ def p(x, y):
 
 
 def draw_icon() -> Image.Image:
-    img = Image.new("RGB", (N, N), NAVY)
+    img = Image.new("RGB", (N, N), NAVY_EDGE)
     d = ImageDraw.Draw(img)
-    d.rectangle([0, 0, N, 72 * K], fill=NAVY_EDGE)
-    d.rectangle([0, N - 72 * K, N, N], fill=NAVY_EDGE)
+    for y in range(N):
+        t=y/(N-1)
+        d.line([(0,y),(N,y)],fill=(int(12+6*t),int(23+8*t),int(44+12*t)))
 
-    # Light Box motes: soft glow first, then crisp cores.
-    motes = [(760, 196, 26, MINT), (858, 300, 18, CYAN), (676, 120, 14, WHITE),
-             (880, 168, 12, ORANGE), (612, 236, 10, MINT), (800, 392, 12, WHITE),
-             (930, 410, 9, CYAN), (720, 330, 8, ORANGE)]
+    # Six cores and pin headers evoke the Spresense board; large controls read at launcher size.
     glow = Image.new("RGB", (N, N), (0, 0, 0))
-    g = ImageDraw.Draw(glow)
-    for x, y, r, c in motes:
-        g.ellipse([*p(x - r * 2.6, y - r * 2.6), *p(x + r * 2.6, y + r * 2.6)], fill=tuple(v // 2 for v in c))
-    glow = glow.filter(ImageFilter.GaussianBlur(28 * K))
-    img = ImageChops.add(img, glow)
-    d = ImageDraw.Draw(img)
-    for x, y, r, c in motes:
-        d.ellipse([*p(x - r, y - r), *p(x + r, y + r)], fill=c)
+    g=ImageDraw.Draw(glow)
+    g.rounded_rectangle([*p(150,190),*p(874,814)],radius=100*K,outline=(35,150,135),width=24*K)
+    img=ImageChops.add(img,glow.filter(ImageFilter.GaussianBlur(36*K)))
+    d=ImageDraw.Draw(img)
+    d.rounded_rectangle([*p(150,190),*p(874,814)],radius=100*K,fill=(22,73,76),outline=(107,227,205),width=12*K)
+    for x in range(230,821,94):
+        d.rounded_rectangle([*p(x-15,172),*p(x+15,212)],radius=7*K,fill=(200,227,210))
+        d.rounded_rectangle([*p(x-15,792),*p(x+15,832)],radius=7*K,fill=(200,227,210))
+    for row in range(2):
+        for col in range(3):
+            x,y=335+col*132,266+row*94
+            d.rounded_rectangle([*p(x,y),*p(x+90,y+62)],radius=12*K,fill=(16,35,50),outline=(98,182,174),width=5*K)
+    for x in (210,814):
+        d.line([p(x,305),p(x,680)],fill=(64,148,145),width=7*K)
+        d.ellipse([*p(x-12,295),*p(x+12,319)],fill=MINT)
 
-    # Maze path: rounded corners, thick stroke.
-    path = [(272, 736), (272, 504), (504, 504), (504, 300), (600, 300)]
-    w = 80 * K
-    for a, b in zip(path, path[1:]):
-        d.line([p(*a), p(*b)], fill=CYAN, width=w)
-    for q in path[1:-1]:
-        d.ellipse([*p(q[0] - 40, q[1] - 40), *p(q[0] + 40, q[1] + 40)], fill=CYAN)
-
-    # Jet at the end of the path, nose pointing up-right.
-    cx, cy, s = 660, 268, 1.0
-    ang = math.radians(-35)
-
-    def jet(pts):
-        out = []
-        for x, y in pts:
-            rx = x * math.cos(ang) - y * math.sin(ang)
-            ry = x * math.sin(ang) + y * math.cos(ang)
-            out.append(p(cx + rx * s, cy + ry * s))
-        return out
-
-    body = [(150, 0), (60, -26), (-20, -30), (-40, -150), (-90, -150), (-80, -30),
-            (-120, -28), (-150, -80), (-180, -80), (-170, 0),
-            (-180, 80), (-150, 80), (-120, 28), (-80, 30), (-90, 150), (-40, 150), (-20, 30), (60, 26)]
-    d.polygon(jet(body), fill=ORANGE)
-
-    # Ball at the start of the maze.
-    d.ellipse([*p(272 - 120, 736 - 120), *p(272 + 120, 736 + 120)], fill=WHITE)
-
+    # Soft controller silhouette, with separated grips and a clear D-pad / four-button pattern.
+    d.rounded_rectangle([*p(225,448),*p(799,710)],radius=115*K,fill=WHITE)
+    d.ellipse([*p(214,542),*p(420,758)],fill=WHITE)
+    d.ellipse([*p(604,542),*p(810,758)],fill=WHITE)
+    d.rounded_rectangle([*p(287,540),*p(405,578)],radius=9*K,fill=NAVY)
+    d.rounded_rectangle([*p(327,500),*p(365,618)],radius=9*K,fill=NAVY)
+    for x,y,c in [(682,515,(72,171,158)),(725,558,(102,146,225)),(682,601,(160,113,204)),(639,558,(72,171,158))]:
+        d.ellipse([*p(x-22,y-22),*p(x+22,y+22)],fill=c)
+    for x in (487,537):
+        d.rounded_rectangle([*p(x-13,586),*p(x+13,598)],radius=6*K,fill=(115,144,159))
     return img.resize((1024, 1024), Image.LANCZOS)
 
 

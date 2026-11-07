@@ -92,7 +92,14 @@ import jp.co.sony.sprbox.service.IUsbDeviceExt;
 		public void onSpresenseConnected() {
 			sprboxSpresenseConnected = true;
 			if (sprboxImuController != null) {
-				sprboxImuController.start();
+				try {
+					sprboxImuController.start();
+				} catch (Throwable t) {
+					// libinertialmotionlib2.so is a 4 KB-aligned prebuilt and cannot load on
+					// 16 KB page-size devices. Without SPR-BOX samples the game falls back to
+					// the phone's own IMU instead of crashing on this callback thread.
+					android.util.Log.e("SprBoxBridge", "IMU-Adv start failed; using device IMU", t);
+				}
 			}
 		}
 		@Override

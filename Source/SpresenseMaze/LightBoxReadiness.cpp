@@ -6,7 +6,7 @@ FString FLightBoxReadiness::SetupCommand()
 {
 	// One line the user pastes into Termux once. `bash -c "$(curl ...)"` keeps the
 	// terminal as stdin so the script can ask questions (Copilot login).
-	return TEXT("bash -c \"$(curl -fsSL https://raw.githubusercontent.com/NaitoMitsuharu/spresesneMaze/master/Tools/OpenClaw/setup-lightbox.sh)\"");
+	return TEXT("bash -c \"$(curl -fsSL https://raw.githubusercontent.com/NaitoMitsuharu/SpresenseGames/master/Tools/OpenClaw/setup-lightbox.sh)\"");
 }
 
 void FLightBoxReadiness::Begin(double Now, bool bHasKey)
@@ -126,7 +126,7 @@ void FLightBoxReadiness::Tick(double Now, bool bHasKey)
 	case ELightBoxReadyStep::WaitService:
 		if (Elapsed > ServiceTimeout)
 		{
-			NeedSetup(ELightBoxSetupNeed::CheckTermux, TEXT("演出サービスが起動しませんでした。Termuxの画面の案内を確認してください（初回はCopilotへのログインが必要です）"), Now);
+			NeedSetup(ELightBoxSetupNeed::CheckTermux, TEXT("演出サービスが起動しませんでした。Termuxで cd ~/lightbox && bash start-lightbox.sh を実行して表示を確認してください（記録は ~/lightbox/gateway.log、初回はCopilotへのログインが必要です）"), Now);
 		}
 		break;
 	case ELightBoxReadyStep::FetchKey:

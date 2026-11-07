@@ -21,7 +21,7 @@ public class SpresenseMaze : ModuleRules
 			"SprBoxBridge"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "HTTP", "Json", "RenderCore", "RHI" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "HTTP", "Json", "RenderCore", "RHI", "MeshDescription", "StaticMeshDescription" });
 		if (Target.Platform == UnrealTargetPlatform.Android)
 		{
 			PrivateDependencyModuleNames.Add("Launch");

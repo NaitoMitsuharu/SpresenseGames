@@ -5,30 +5,29 @@
 
 void AFlightHUD::DrawScore(AFlightCourse* Course)
 {
-	const float X=SafeLeft(),Y=33*S;
-	Label(TEXT("SCORE"),X,Y,15,Muted,true);
-	Label(FText::AsNumber(FMath::RoundToInt(ShownScore)).ToString(),X,Y+24*S,48,Paper,true);
+	const float X=SafeLeft()+24*S,Y=44*S;
+	CyberPanel(X-24*S,Y-14*S,340*S,Course->Score.Combo>=2?242*S:174*S,Mint);
+	Label(TEXT("NEON BREAKER / SCORE"),X,Y,14,Muted,true);
+	const float Kick=Course->RingPulse*3.f;
+	Label(FText::AsNumber(FMath::RoundToInt(ShownScore)).ToString(),X,Y+23*S,48+Kick,Paper,true);
 	if (Course->NoticeTime>0)
 	{
 		const float A=FMath::Min(Course->NoticeTime*3,1.f);
-		Label(Course->ScoreNotice,X,Y+88*S+(1-A)*8*S,21,Mint.CopyWithNewOpacity(A));
+		Label(Course->ScoreNotice,X,Y+92*S+(1-A)*8*S,20,Mint.CopyWithNewOpacity(A));
 	}
 	if (Course->Score.Combo>=2)
 	{
-		const FString Combo=FString::Printf(TEXT("%d COMBO"),Course->Score.Combo);
-		const float PW=254*S,YB=H-190*S,XB=(W-PW)*0.5f;
-		RoundRect(XB,YB,PW,86*S,22*S,Ink.CopyWithNewOpacity(0.68f));
-		Label(Combo,XB+22*S,YB+15*S,22,Paper,true);
-		Label(FString::Printf(TEXT("×%.1f"),Course->Score.Multiplier()),XB+175*S,YB+14*S,25,Mint,true);
-		RoundRect(XB+22*S,YB+65*S,PW-44*S,3*S,1.5f*S,Paper.CopyWithNewOpacity(0.12f));
-		RoundRect(XB+22*S,YB+65*S,(PW-44*S)*Course->Score.ComboTime/6,3*S,1.5f*S,Mint);
+		Label(FString::Printf(TEXT("%d CHAIN"),Course->Score.Combo),X,Y+145*S,25,Paper,true);
+		Label(FString::Printf(TEXT("×%.1f"),Course->Score.Multiplier()),X+215*S,Y+145*S,25,Coral,true);
+		RoundRect(X,Y+198*S,284*S,4*S,2*S,Paper.CopyWithNewOpacity(0.12f));
+		RoundRect(X,Y+198*S,284*S*Course->Score.ComboTime/6,4*S,2*S,Mint);
 	}
 	if (Course->IncomingTime>0)
 	{
 		const float Size=20,A=FMath::Min(Course->IncomingTime*2,1.f);
 		const FVector2D T=Measure(Course->IncomingFormation,Size);
 		const float CX=W*0.5f,YB=170*S;
-		RoundRect(CX-T.X*0.5f-23*S,YB,T.X+46*S,42*S,21*S,Ink.CopyWithNewOpacity(A*0.65f));
+		CyberPanel(CX-T.X*0.5f-23*S,YB,T.X+46*S,42*S,Coral,A);
 		CenterLabel(Course->IncomingFormation,CX,YB+9*S,Size,Paper.CopyWithNewOpacity(A));
 	}
 }
@@ -69,7 +68,7 @@ void AFlightHUD::DrawDodge(AFlightPawn* Ship)
 		const float BW=Size*2+Gap, BY=Y+Size-12*S, Fill=Ship->RollStamina.Value/FlightHandling::FRollStamina::Max;
 		const bool CanRoll=Ship->RollStamina.CanSpend();
 		const FLinearColor Bar=Ship->RollDenied>0?Coral:(CanRoll?Mint:Muted);
-		CenterLabel(Ship->IsRolling()?TEXT("ロール中・無敵"):CanRoll?TEXT("傾けて戻すとロール"):TEXT("スタミナ回復中"),X+BW*0.5f,BY-34*S,16,Ship->IsRolling()?Mint:(CanRoll?Paper:Muted));
+		CenterLabel(Ship->IsRolling()?TEXT("ロール中・シールド"):CanRoll?TEXT("傾けて戻すとロール"):TEXT("スタミナ回復中"),X+BW*0.5f,BY-34*S,16,Ship->IsRolling()?Mint:(CanRoll?Paper:Muted));
 		RoundRect(X,BY,BW,8*S,4*S,Paper.CopyWithNewOpacity(0.16f));
 		RoundRect(X,BY,BW*Fill,8*S,4*S,Bar);
 		const float Mark=X+BW*FlightHandling::FRollStamina::Cost/FlightHandling::FRollStamina::Max;

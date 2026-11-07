@@ -39,9 +39,12 @@ public final class LightBoxTermux {
     private static final String DOCTOR =
             "test -f ~/lightbox/start-lightbox.sh && test -f ~/lightbox/lightbox-token.cjs || exit 10; "
             + "command -v node >/dev/null && command -v openclaw >/dev/null || exit 11; exit 0";
-    // Gateway session: start-lightbox.sh exits early when the Gateway already runs.
+    // Gateway: start-lightbox.sh exits early when the Gateway already runs. It runs as a
+    // background command because Termux starts a terminal session's process only once
+    // that session is shown, which never happens while this app stays in front.
+    // Output goes to a log file so the Gateway's stream is not buffered by Termux.
     private static final String START =
-            "cd ~/lightbox && LIGHTBOX_AUTO_PAIR=0 exec bash start-lightbox.sh";
+            "cd ~/lightbox && LIGHTBOX_AUTO_PAIR=0 exec bash start-lightbox.sh > gateway.log 2>&1";
     // Read-only: waits for start-lightbox.sh to save the key, never creates one.
     private static final String READ_TOKEN =
             "cd ~/lightbox || exit 10; for i in $(seq 60); do node lightbox-token.cjs --read && exit 0; sleep 1; done; exit 3";
@@ -71,7 +74,7 @@ public final class LightBoxTermux {
 
     public boolean doctor() { return run(DOCTOR, true, "doctor"); }
 
-    public boolean startService() { return run(START, false, null); }
+    public boolean startService() { return run(START, true, null); }
 
     public boolean fetchToken() { return run(READ_TOKEN, true, "token"); }
 

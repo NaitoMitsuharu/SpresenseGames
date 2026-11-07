@@ -5,6 +5,10 @@ set -euo pipefail
 umask 077
 command -v node >/dev/null
 command -v openclaw >/dev/null
+# Sessions the app opens through Termux RUN_COMMAND can lack termux-exec, so the
+# CLI's "#!/usr/bin/env node" line fails with "bad interpreter". Run it through node.
+OPENCLAW_BIN="$(command -v openclaw)"
+openclaw() { node "$OPENCLAW_BIN" "$@"; }
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 # The app's start button may be pressed while the Gateway already runs.
@@ -16,16 +20,28 @@ if node -e 'const s=require("node:net").connect(18789,"127.0.0.1");s.on("connect
     exit 0
 fi
 
-openclaw --profile lightbox config set gateway.mode local
-openclaw --profile lightbox config set gateway.bind loopback
-openclaw --profile lightbox config set gateway.port 18789
-openclaw --profile lightbox config set gateway.auth.mode token
-openclaw --profile lightbox config set gateway.http.endpoints.chatCompletions.enabled true
-# Scene JSON and optional screenshot review; filesystem/browser/shell tools are not required.
-openclaw --profile lightbox config set tools.deny '["*"]' --strict-json
+# validate checks token auth against this variable.
 OPENCLAW_GATEWAY_TOKEN="$(node "$SCRIPT_DIR/lightbox-token.cjs")"
 export OPENCLAW_GATEWAY_TOKEN
-openclaw --profile lightbox config validate
+# Each openclaw call starts Node and takes seconds on a phone, and the app waits for
+# the Gateway. Write the settings once; bump CONFIG_VERSION when they change.
+CONFIG_VERSION=1
+CONFIG_MARK="$SCRIPT_DIR/.gateway-config-v$CONFIG_VERSION"
+if [[ ! -f "$CONFIG_MARK" ]]; then
+    openclaw --profile lightbox config set gateway.mode local
+    openclaw --profile lightbox config set gateway.bind loopback
+    openclaw --profile lightbox config set gateway.port 18789
+    openclaw --profile lightbox config set gateway.auth.mode token
+    openclaw --profile lightbox config set gateway.http.endpoints.chatCompletions.enabled true
+    # Scene JSON and optional screenshot review; filesystem/browser/shell tools are not required.
+    openclaw --profile lightbox config set tools.deny '["*"]' --strict-json
+    openclaw --profile lightbox config validate
+    touch "$CONFIG_MARK"
+fi
+# setup-lightbox.sh configures ahead of time so the app's first start is quick.
+if [[ "${1:-}" == "--configure-only" ]]; then
+    exit 0
+fi
 printf '\nひかりのアトリエ → 設定\n接続先: http://127.0.0.1:18789\n認証キー: %s\n\n' "$OPENCLAW_GATEWAY_TOKEN"
 printf 'この画面を閉じずに、ひかりのアトリエへ戻ってください。\n'
 # Hand the key to the app; it is stored only when the app has none yet.

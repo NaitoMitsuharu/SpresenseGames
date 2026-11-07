@@ -59,6 +59,9 @@ private:
 	void DrawJumpFeedback();
 	void DrawMessages(AMazeGenerator* Maze);
 	void DrawTouchController();
+	void DrawToyMenu();
+	bool bMenuOpen = false;
+	bool bMapOpen = false;
 
 	TWeakObjectPtr<AMazeGenerator> CachedMaze;
 	bool bReviewSetup = false;

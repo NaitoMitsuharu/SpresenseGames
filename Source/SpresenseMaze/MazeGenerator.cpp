@@ -1,4 +1,7 @@
 ﻿#include "MazeGenerator.h"
+#include "MazeToyGeometry.h"
+#include "FlightModels.h"
+#include "ProceduralMeshComponent.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/LightComponent.h"
@@ -8,6 +11,7 @@
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "HAL/PlatformTime.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -149,9 +153,15 @@ AMazeGenerator::AMazeGenerator()
 	Walls = MakeISM(this, TEXT("Walls"));
 	Walls->SetupAttachment(RootComponent);
 	Walls->SetCastShadow(true);
+	RoundedWalls = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("RoundedWalls"));
+	RoundedWalls->SetupAttachment(RootComponent);
+	RoundedWalls->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	RoundedWalls->SetCastShadow(true);
+	Walls->SetVisibility(false);
 	WallTrim = MakeISM(this, TEXT("WallTrim"));
 	WallTrim->SetupAttachment(RootComponent);
-	WallTrim->SetCastShadow(true);
+	WallTrim->SetCastShadow(false);
+	WallTrim->SetVisibility(false);
 	WallTrim->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Hurdles = MakeISM(this, TEXT("Hurdles"));
 	Hurdles->SetupAttachment(RootComponent);
@@ -526,7 +536,7 @@ void AMazeGenerator::Tick(float DeltaSeconds)
 	}
 
 	const float T = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
-	const float Pulse = 0.5f + 0.5f * FMath::Sin(T * 4.f);
+	const float Pulse = 0.5f + 0.5f * FMath::Sin(T * 3.f);
 
 	if (GoalBeacon)
 	{
@@ -539,7 +549,7 @@ void AMazeGenerator::Tick(float DeltaSeconds)
 	}
 	if (GoalMID)
 	{
-		GoalMID->SetVectorParameterValue(TEXT("Color"), AccentColor * (0.65f + 0.35f * Pulse));
+		GoalMID->SetVectorParameterValue(TEXT("Color"), AccentColor * (0.22f + 0.12f * Pulse));
 	}
 
 	if (HasActorBegunPlay())
@@ -550,6 +560,11 @@ void AMazeGenerator::Tick(float DeltaSeconds)
 		if (AMazeBallPawn* Ball = Cast<AMazeBallPawn>(UGameplayStatics::GetPlayerPawn(this, 0)))
 		{
 			Ball->SetControlEnabled(Flow == EMazeFlow::Playing && !bTransitioning);
+			int32 Cols=0; for (const FString& Row:MazeLayout) { Cols=FMath::Max(Cols,Row.Len()); }
+			const FVector Center=GetActorTransform().TransformPosition(FVector(Cols*CellSize*0.5f,MazeLayout.Num()*CellSize*0.5f,0));
+			const FVector Toward=(Center-Ball->GetActorLocation())*0.35f;
+			const FVector Offset(FMath::Clamp(Toward.X,-450.0,450.0),FMath::Clamp(Toward.Y,-450.0,450.0),0);
+			Ball->SpringArm->TargetOffset=FMath::VInterpTo(Ball->SpringArm->TargetOffset,Offset,DeltaSeconds,2.f);
 		}
 	}
 }
@@ -1012,6 +1027,11 @@ void AMazeGenerator::HandleBreakableWallHit(UPrimitiveComponent* HitComp, AActor
 
 FString AMazeGenerator::GetStageName() const
 {
+	if (!bTutorialMode && CurrentStage>=0 && CurrentStage<6)
+	{
+		const TCHAR* Names[]={TEXT("はじまりの にわ"),TEXT("こもれびの みち"),TEXT("からくり こうぼう"),TEXT("こおりの おしろ"),TEXT("どうの ぼうけん"),TEXT("さいごの とびら")};
+		return Names[CurrentStage];
+	}
 	const TArray<FMazeStageLayout>& List = ActiveStages();
 	if (List.IsValidIndex(CurrentStage) && !List[CurrentStage].StageName.IsEmpty())
 	{
@@ -1064,129 +1084,32 @@ void AMazeGenerator::ApplyTheme()
 	float WallRoughness = 0.16f;
 	float FloorRoughness = 0.32f;
 
-	// Six zones of one precision-instrument family. Neutral surfaces shift in
-	// temperature, while the three functional colours never change meaning.
-	switch (Theme)
-	{
-	case EMazeDesignTheme::NordicGallery:
-		FloorBaseColor = FLinearColor(0.014f, 0.013f, 0.011f);
-		FloorPanelColor = FLinearColor(0.105f, 0.09f, 0.07f);
-		WallColor = FLinearColor(0.028f, 0.024f, 0.02f);
-		WallCapColor = FLinearColor(0.058f, 0.05f, 0.041f);
-		AccentColor = FLinearColor(1.f, 0.58f, 0.12f);
-		HazardColor = FLinearColor(0.95f, 0.22f, 0.16f);
-		TransportColor = FLinearColor(0.05f, 0.68f, 0.75f);
-		WallCapInset = 14.f;
-		NeutralFloorInset = 0.f;
-		WallCapThickness = 9.f;
-		SunTint = FLinearColor(1.f, 0.86f, 0.7f);
-		MudColor = FLinearColor(0.30f, 0.20f, 0.11f);
-		DoorColor = FLinearColor(0.38f, 0.24f, 0.1f);
-		GlowScale = 0.82f;
-		WallRoughness = 0.17f;
-		FloorRoughness = 0.31f;
-		break;
-
-	case EMazeDesignTheme::NeonCircuit:
-		FloorBaseColor = FLinearColor(0.003f, 0.005f, 0.011f);
-		FloorPanelColor = FLinearColor(0.035f, 0.046f, 0.08f);
-		WallColor = FLinearColor(0.011f, 0.009f, 0.024f);
-		WallCapColor = FLinearColor(0.043f, 0.023f, 0.075f);
-		AccentColor = FLinearColor(1.f, 0.44f, 0.03f);
-		HazardColor = FLinearColor(1.f, 0.05f, 0.22f);
-		TransportColor = FLinearColor(0.f, 0.85f, 1.f);
-		WallCapInset = 10.f;
-		NeutralFloorInset = 0.f;
-		WallCapThickness = 7.f;
-		SunTint = FLinearColor(0.48f, 0.58f, 1.f);
-		IceColor = FLinearColor(0.25f, 0.65f, 1.f);
-		MudColor = FLinearColor(0.10f, 0.04f, 0.13f);
-		DoorColor = FLinearColor(0.18f, 0.035f, 0.3f);
-		GlowScale = 1.12f;
-		WallRoughness = 0.12f;
-		FloorRoughness = 0.24f;
-		break;
-
-	case EMazeDesignTheme::AquaResearch:
-		FloorBaseColor = FLinearColor(0.004f, 0.015f, 0.021f);
-		FloorPanelColor = FLinearColor(0.043f, 0.095f, 0.105f);
-		WallColor = FLinearColor(0.011f, 0.027f, 0.032f);
-		WallCapColor = FLinearColor(0.032f, 0.068f, 0.074f);
-		AccentColor = FLinearColor(1.f, 0.62f, 0.16f);
-		HazardColor = FLinearColor(1.f, 0.24f, 0.2f);
-		TransportColor = FLinearColor(0.02f, 0.82f, 0.95f);
-		WallCapInset = 13.f;
-		NeutralFloorInset = 0.f;
-		WallCapThickness = 8.f;
-		SunTint = FLinearColor(0.64f, 0.86f, 1.f);
-		IceColor = FLinearColor(0.12f, 0.28f, 0.35f);
-		MudColor = FLinearColor(0.11f, 0.22f, 0.2f);
-		DoorColor = FLinearColor(0.06f, 0.32f, 0.3f);
-		GlowScale = 0.95f;
-		WallRoughness = 0.12f;
-		FloorRoughness = 0.25f;
-		break;
-
-	case EMazeDesignTheme::SolarIndustrial:
-		FloorBaseColor = FLinearColor(0.011f, 0.007f, 0.004f);
-		FloorPanelColor = FLinearColor(0.1f, 0.052f, 0.021f);
-		WallColor = FLinearColor(0.032f, 0.016f, 0.007f);
-		WallCapColor = FLinearColor(0.07f, 0.032f, 0.011f);
-		AccentColor = FLinearColor(1.f, 0.64f, 0.04f);
-		HazardColor = FLinearColor(1.f, 0.12f, 0.04f);
-		TransportColor = FLinearColor(0.08f, 0.62f, 1.f);
-		WallCapInset = 10.f;
-		NeutralFloorInset = 0.f;
-		WallCapThickness = 6.f;
-		SunTint = FLinearColor(1.f, 0.62f, 0.34f);
-		IceColor = FLinearColor(0.3f, 0.68f, 1.f);
-		MudColor = FLinearColor(0.26f, 0.09f, 0.025f);
-		DoorColor = FLinearColor(0.42f, 0.15f, 0.025f);
-		GlowScale = 0.98f;
-		WallRoughness = 0.18f;
-		FloorRoughness = 0.3f;
-		break;
-
-	case EMazeDesignTheme::MonochromeMuseum:
-		FloorBaseColor = FLinearColor(0.011f, 0.014f, 0.018f);
-		FloorPanelColor = FLinearColor(0.115f, 0.13f, 0.155f);
-		WallColor = FLinearColor(0.023f, 0.028f, 0.037f);
-		WallCapColor = FLinearColor(0.06f, 0.07f, 0.085f);
-		AccentColor = FLinearColor(1.f, 0.72f, 0.02f);
-		HazardColor = FLinearColor(0.96f, 0.12f, 0.16f);
-		TransportColor = FLinearColor(0.02f, 0.55f, 1.f);
-		WallCapInset = 16.f;
-		NeutralFloorInset = 0.f;
-		WallCapThickness = 10.f;
-		SunTint = FLinearColor(0.88f, 0.94f, 1.f);
-		IceColor = FLinearColor(0.16f, 0.25f, 0.38f);
-		MudColor = FLinearColor(0.19f, 0.19f, 0.19f);
-		DoorColor = FLinearColor(0.08f, 0.085f, 0.09f);
-		GlowScale = 0.82f;
-		WallRoughness = 0.1f;
-		FloorRoughness = 0.24f;
-		break;
-
-	default: // Modern Kinetic Lab
-		FloorBaseColor = FLinearColor(0.007f, 0.011f, 0.017f);
-		FloorPanelColor = FLinearColor(0.08f, 0.1f, 0.13f);
-		WallColor = FLinearColor(0.018f, 0.026f, 0.038f);
-		WallCapColor = FLinearColor(0.045f, 0.058f, 0.075f);
-		AccentColor = FLinearColor(1.f, 0.56f, 0.09f);
-		HazardColor = FLinearColor(1.f, 0.2f, 0.15f);
-		TransportColor = FLinearColor(0.04f, 0.7f, 1.f);
-		WallCapInset = 13.f;
-		NeutralFloorInset = 0.f;
-		WallCapThickness = 8.f;
-		break;
-	}
+	// Real enamel, pale timber and metal: six toy-box colourways, with stable
+	// amber interaction / coral danger / blue movement cues in every stage.
+	const FLinearColor Enamel[] = {
+		{0.28f,0.58f,0.37f}, {0.64f,0.40f,0.19f}, {0.40f,0.36f,0.66f},
+		{0.20f,0.55f,0.67f}, {0.69f,0.36f,0.17f}, {0.41f,0.56f,0.64f}
+	};
+	WallColor = Enamel[FMath::Clamp(static_cast<int32>(Theme), 0, 5)];
+	WallCapColor = FMath::Lerp(WallColor, FLinearColor(0.78f,0.87f,0.65f), 0.28f);
+	FloorPanelColor = FLinearColor(0.78f,0.72f,0.53f);
+	FloorBaseColor = FLinearColor(0.52f,0.31f,0.13f);
+	AccentColor = FLinearColor(1.f,0.58f,0.08f);
+	HazardColor = FLinearColor(0.95f,0.12f,0.10f);
+	TransportColor = FLinearColor(0.05f,0.65f,1.f);
+	WallCapInset = 14.f; WallCapThickness = 8.f; NeutralFloorInset = 0.f;
+	SunTint = FLinearColor(1.f,0.94f,0.80f);
+	IceColor = FLinearColor(0.36f,0.75f,0.94f);
+	MudColor = FLinearColor(0.26f,0.12f,0.035f);
+	DoorColor = FLinearColor(0.75f,0.38f,0.045f);
+	WallRoughness = 0.23f; FloorRoughness = 0.43f; GlowScale = 0.42f;
 
 	// The authored tile material contains procedural noise. Even on merged meshes
 	// that noise reads as stone blocks on a phone. BasicShapeMaterial is a plain,
 	// texture-free PBR surface with Color and Roughness parameters, which gives
 	// every theme a clean continuous finish and a controlled specular highlight.
 	UMaterialInterface* BaseMat = LoadObject<UMaterialInterface>(nullptr,
-		TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+		TEXT("/Game/Materials/M_ToyEnamel.M_ToyEnamel"));
 	if (!BaseMat)
 	{
 		BaseMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_MazeTile.M_MazeTile"));
@@ -1210,7 +1133,8 @@ void AMazeGenerator::ApplyTheme()
 	EnsureMID(WallMID, Walls, BaseMat);
 	EnsureMID(TrimMID, WallTrim, BaseMat);
 	EnsureMID(FloorMID, FloorTiles, BaseMat);
-	EnsureMID(FloorAltMID, FloorTilesAlt, BaseMat);
+	UMaterialInterface* Wood = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_ToyWood.M_ToyWood"));
+	EnsureMID(FloorAltMID, FloorTilesAlt, Wood ? Wood : BaseMat);
 	EnsureMID(HurdleMID, Hurdles, BaseMat);
 	EnsureMID(PitMID, HolePits, BaseMat);
 	EnsureMID(MudMID, MudTiles, BaseMat);
@@ -1255,11 +1179,11 @@ void AMazeGenerator::ApplyTheme()
 	SetSurfaceColor(TrimMID, WallCapColor);
 	SetSurfaceColor(FloorMID, FloorPanelColor);
 	SetSurfaceColor(FloorAltMID, FloorBaseColor);
-	SetSurfaceColor(HurdleMID, WallColor * 1.35f);
+	SetSurfaceColor(HurdleMID, DoorColor);
 	SetSurfaceColor(PitMID, FLinearColor(0.005f, 0.005f, 0.008f));
 	SetSurfaceColor(MudMID, MudColor);
 	SetSurfaceColor(IceMID, IceColor);
-	SetSurfaceColor(CrumbleMID, FLinearColor(0.055f, 0.20f, 0.28f));
+	SetSurfaceColor(CrumbleMID, FLinearColor(0.16f, 0.46f, 0.62f));
 	SetSurfaceColor(BreakableMID, FLinearColor(0.42f, 0.21f, 0.055f));
 	SetSurfaceColor(MudDetailMID, MudColor * 0.38f);
 	SetSurfaceColor(DoorMID, DoorColor);
@@ -1269,7 +1193,7 @@ void AMazeGenerator::ApplyTheme()
 	WallMID->SetScalarParameterValue(TEXT("Roughness"), WallRoughness);
 	TrimMID->SetScalarParameterValue(TEXT("Roughness"), 0.11f);
 	TrimMID->SetScalarParameterValue(TEXT("Metallic"), 0.72f);
-	WallMID->SetScalarParameterValue(TEXT("Metallic"), 0.28f);
+	WallMID->SetScalarParameterValue(TEXT("Metallic"), 0.02f);
 	HurdleMID->SetScalarParameterValue(TEXT("Roughness"), WallRoughness + 0.04f);
 	DoorMID->SetScalarParameterValue(TEXT("Roughness"), WallRoughness + 0.03f);
 	FloorMID->SetScalarParameterValue(TEXT("Roughness"), FloorRoughness);
@@ -1322,6 +1246,11 @@ void AMazeGenerator::ApplyStage(int32 StageIndex)
 
 void AMazeGenerator::Rebuild()
 {
+	// Placed actors may still have the previous visibility values serialized.
+	Walls->SetVisibility(false);
+	Walls->SetCastShadow(false);
+	WallTrim->SetVisibility(false);
+	RoundedWalls->ClearAllMeshSections();
 	for (UInstancedStaticMeshComponent* ISM : { Walls.Get(), WallTrim.Get(), Hurdles.Get(), FloorTiles.Get(),
 		FloorTilesAlt.Get(), HolePits.Get(), IceTiles.Get(), MudTiles.Get(), IceDetails.Get(), MudDetails.Get(), BoostTiles.Get(),
 		PadArrows.Get(), CrumbleTiles.Get(), GlassCracks.Get(), GlassShards.Get(), BreakableWalls.Get(),
@@ -1408,6 +1337,11 @@ void AMazeGenerator::Rebuild()
 	TileBox(FloorTilesAlt,
 		FVector(NumCols * CellSize * 0.5f, NumRows * CellSize * 0.5f, -58.f),
 		NumCols * CellSize + 96.f, NumRows * CellSize + 96.f, 96.f);
+	for (const float Side : {-1.f, 1.f})
+	{
+		TileBox(FloorTilesAlt, FVector(NumCols*CellSize*0.5f, NumRows*CellSize*0.5f + Side*(NumRows*CellSize*0.5f+24.f), 20.f), NumCols*CellSize+96.f, 48.f, 110.f);
+		TileBox(FloorTilesAlt, FVector(NumCols*CellSize*0.5f + Side*(NumCols*CellSize*0.5f+24.f), NumRows*CellSize*0.5f, 20.f), 48.f, NumRows*CellSize, 110.f);
+	}
 	// Open corner brackets mark an interaction area without recreating the cell grid.
 	auto AddCornerMarkers = [&](UInstancedStaticMeshComponent* ISM, const FVector& CellCenter,
 		float Outer, float Length, float Thick, float Z)
@@ -1444,6 +1378,7 @@ void AMazeGenerator::Rebuild()
 
 	// Merge rectangular groups of wall cells. This removes the repeated block
 	// silhouette while preserving the exact same collision footprint.
+	FFlightMesh EnamelShell;
 	TArray<uint8> WallUsed;
 	WallUsed.Init(0, NumRows * NumCols);
 	for (int32 Row = 0; Row < NumRows; ++Row)
@@ -1495,22 +1430,15 @@ void AMazeGenerator::Rebuild()
 			const float SizeY = Height * CellSize;
 			const FVector Center((Col + Width * 0.5f) * CellSize,
 				(Row + Height * 0.5f) * CellSize, 0.f);
-			// Three shallow inset tiers form a machined chamfer. They preserve the
-			// continuous footprint but remove the hard toy-block silhouette.
-			constexpr int32 BevelSteps = 3;
-			const float BevelHeight = FMath::Max(WallCapThickness, 6.f);
-			const float BodyHeight = WallHeight - BevelHeight * BevelSteps;
-			TileBox(Walls, Center + FVector(0.f, 0.f, BodyHeight * 0.5f), SizeX, SizeY, BodyHeight);
-			for (int32 Step = 0; Step < BevelSteps; ++Step)
-			{
-				const float Alpha = static_cast<float>(Step + 1) / static_cast<float>(BevelSteps);
-				const float Inset = FMath::Min(WallCapInset * Alpha, FMath::Min(SizeX, SizeY) * 0.2f);
-				TileBox(WallTrim,
-					Center + FVector(0.f, 0.f, BodyHeight + BevelHeight * (Step + 0.5f)),
-					SizeX - Inset * 2.f, SizeY - Inset * 2.f, BevelHeight);
-			}
+			// Keep the established collision top; replace the stepped visual with a
+			// continuous rounded shell and smooth normals, rather than stacked slabs.
+			const float CollisionHeight=WallHeight-3.f*FMath::Max(WallCapThickness,6.f);
+			TileBox(Walls,Center+FVector(0,0,CollisionHeight*0.5f),SizeX,SizeY,CollisionHeight);
+			MazeToyGeometry::RoundedBox(EnamelShell,Center+FVector(0,0,WallHeight*0.5f),FVector(SizeX,SizeY,WallHeight)*0.5f,32.f);
 		}
 	}
+
+	EnamelShell.Upload(RoundedWalls,0,WallMID);
 
 	// Greedily merge floor cells in both axes. Co-planar row strips can still show
 	// hairline seams after mobile TAA/upscaling; larger rectangles remove those

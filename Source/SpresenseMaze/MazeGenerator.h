@@ -7,6 +7,7 @@
 class UInstancedStaticMeshComponent;
 class UStaticMeshComponent;
 class UPointLightComponent;
+class UProceduralMeshComponent;
 class UMaterialInstanceDynamic;
 class UMazeSaveGame;
 
@@ -221,6 +222,8 @@ public:
 
 	// ---- Components ----
 	UPROPERTY(VisibleAnywhere, Category = "Maze") TObjectPtr<UInstancedStaticMeshComponent> Walls;
+	/** Visual enamel shell; the existing hidden wall instances retain collision. */
+	UPROPERTY(VisibleAnywhere, Category = "Maze") TObjectPtr<UProceduralMeshComponent> RoundedWalls;
 	UPROPERTY(VisibleAnywhere, Category = "Maze") TObjectPtr<UInstancedStaticMeshComponent> WallTrim;      // reserved legacy component
 	UPROPERTY(VisibleAnywhere, Category = "Maze") TObjectPtr<UInstancedStaticMeshComponent> Hurdles;
 	UPROPERTY(VisibleAnywhere, Category = "Maze") TObjectPtr<UInstancedStaticMeshComponent> FloorTiles;

@@ -1,4 +1,5 @@
 ﻿#include "LightBoxDirector.h"
+#include "LightBoxPointData.h"
 
 #include "Dom/JsonObject.h"
 #include "HttpModule.h"
@@ -6,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Misc/App.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
@@ -84,6 +86,8 @@ void ULightBoxDirector::Initialize(FSubsystemCollectionBase& Collection)
 	if (const ULightBoxSaveGame* Save = Cast<ULightBoxSaveGame>(UGameplayStatics::LoadGameFromSlot(LightBoxSaveSlot, 0)))
 	{
 		if (ValidateEndpoint(Save->Endpoint)) { Endpoint = Save->Endpoint; }
+		if (ModelChoices().ContainsByPredicate([&](const FModelChoice& C){return Save->Model==C.Id;})) { Model = Save->Model; }
+		if (Save->PointBudget >= 256) { PointBudget = FMath::Min(Save->PointBudget, LightBoxPoints::Maximum); BudgetBuild = Save->BudgetBuild; BudgetDetail = Save->BudgetDetail; }
 		FLightBoxStyle Saved; FString Error;
 		if (FLightBoxStyle::Parse(Save->Scene, Saved, Error)) { SavedScene = Save->Scene; bHasSavedScene = true; }
 	}
@@ -91,6 +95,14 @@ void ULightBoxDirector::Initialize(FSubsystemCollectionBase& Collection)
 	// Local test endpoint only; never put authentication secrets in command lines.
 	FString Override;
 	if (FParse::Value(FCommandLine::Get(), TEXT("LightBoxEndpoint="), Override) && ValidateEndpoint(Override)) { Endpoint = Override; }
+	// Model comparison: <dir>/bench.json = {prompts:[...], models:["default" | provider/model, ...]}. Leaves the user's journal untouched.
+	FString BenchDir,BenchJson;TSharedPtr<FJsonObject> BenchSpec;
+	if(FParse::Value(FCommandLine::Get(),TEXT("LightBoxBench="),BenchDir)&&FFileHelper::LoadFileToString(BenchJson,*(BenchDir/TEXT("bench.json")))
+		&&FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(BenchJson),BenchSpec)&&BenchSpec.IsValid()){
+		Bench=MakeUnique<FBench>();Bench->Dir=BenchDir;BenchSpec->TryGetStringArrayField(TEXT("prompts"),Bench->Prompts);BenchSpec->TryGetStringArrayField(TEXT("models"),Bench->Models);
+		if(Bench->Prompts.IsEmpty()||Bench->Models.IsEmpty())Bench.Reset();
+		else{bJournalEnabled=false;Journal.bPersistent=false;AutoRefinePasses=0;}
+	}
 #endif
 	BearerToken=LoadCredential(Endpoint);
 }
@@ -178,13 +190,13 @@ void ULightBoxDirector::StopVoice()
 #if PLATFORM_ANDROID
 	VoiceCall("AndroidThunkJava_LightBoxStopVoice");
 #endif
-	bListening = false;
+	bListening = false; VoiceLevel = 0;
 }
 
 void ULightBoxDirector::Cancel()
 {
     if(ReviewScreenshotHandle.IsValid()){UGameViewportClient::OnScreenshotCaptured().Remove(ReviewScreenshotHandle);ReviewScreenshotHandle.Reset();}
-    bCapturingReview=false;ReviewImage.Reset();
+    bCapturingReview=false;ReviewImage.Reset();PendingRefines=0;
 	if(!ActiveRequestId.IsEmpty())
 	{
 		if(bJournalEnabled) Journal.Finish(ActiveRequestId,FString(),FString(),TEXT("取り消し（消費量は取得待ち）"),0);
@@ -203,7 +215,7 @@ void ULightBoxDirector::StartVoice()
 	if (bListening) { StopVoice(); Status = TEXT("聞き取りを取り消しました"); return; }
 #if PLATFORM_ANDROID
 	VoiceDraft.Reset();
-	bListening = true; VoiceStarted = FPlatformTime::Seconds(); Heard.Reset();
+	VoiceLevel = 0; bListening = true; VoiceStarted = FPlatformTime::Seconds(); Heard.Reset();
     OperationStarted=VoiceStarted;
 	Status = TEXT("どう変えたいか、話しかけてください");
 	VoiceCall("AndroidThunkJava_LightBoxStartVoice");
@@ -222,6 +234,11 @@ void ULightBoxDirector::PollVoice()
 	PollJournal();
 	TickReadiness();
     if(bCapturingReview&&FPlatformTime::Seconds()-ReviewCaptureAt>8){Cancel();Status=TEXT("画面を取得できませんでした。もう一度お試しください");}
+    // Automatic image review: once the particles have formed, the AI looks at its own result and corrects it.
+    if(PendingRefines>0&&!bThinking&&!bListening&&FPlatformTime::Seconds()>=RefineAt)RefineScene(true);
+#if !UE_BUILD_SHIPPING
+    TickBench();
+#endif
 #if PLATFORM_ANDROID
 	if (!bListening) { return; }
 	if (FPlatformTime::Seconds() - VoiceStarted > 15.0)
@@ -230,6 +247,8 @@ void ULightBoxDirector::PollVoice()
 	}
 	JNIEnv* Env = FAndroidApplication::GetJavaEnv();
 	if (!Env) { return; }
+	static jmethodID Level = FJavaWrapper::FindMethod(Env, FJavaWrapper::GameActivityClassID, "AndroidThunkJava_LightBoxVoiceLevel", "()F", false);
+    if (Level) { const float Raw = Env->CallFloatMethod(FJavaWrapper::GameActivityThis, Level); VoiceLevel = FMath::IsFinite(Raw) ? FMath::Clamp(Raw, 0.f, 1.f) : 0.f; }
 	static jmethodID Poll = FJavaWrapper::FindMethod(Env, FJavaWrapper::GameActivityClassID, "AndroidThunkJava_LightBoxPollVoice", "()Ljava/lang/String;", false);
 	jstring Result = static_cast<jstring>(FJavaWrapper::CallObjectMethod(Env, FJavaWrapper::GameActivityThis, Poll));
 	if (!Result) { return; }
@@ -255,7 +274,7 @@ void ULightBoxDirector::Submit(const FString& Words)
 	const FString Prompt = Words.TrimStartAndEnd();
 	if (Prompt == TEXT("元に戻して") || Prompt == TEXT("ひとつ前に戻して")) { Undo(); return; }
 	if (Prompt.IsEmpty() || Prompt.Len() > 500) { Status = TEXT("お願いは1〜500文字で入力してください"); return; }
-	Cancel(); Heard = Prompt;
+	Cancel(); Heard = Prompt; RefineWords = Prompt;
 	if (!EnsureCredential()) { Status = TEXT("接続設定で認証キーを入力してください"); return; }
 	bThinking = true;OperationStarted=FPlatformTime::Seconds(); Status = TEXT("AIが景色を設計中");
 	RequestScene(Prompt);
@@ -266,7 +285,8 @@ void ULightBoxDirector::RequestScene(const FString& Prompt, const FString& Previ
 	bThinking = true;
 	const FString RequestId=FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphens).ToLower();
 	const double Started=FPlatformTime::Seconds(); ActiveRequestId=RequestId;
-    if(Attempt==0)UsageGroup=RequestId;
+    if(Attempt==0&&!bKeepUsageGroup)UsageGroup=RequestId;
+    bKeepUsageGroup=false;const bool bReview=!ReviewImage.IsEmpty();
 	if(bJournalEnabled) Journal.Begin(RequestId,Prompt,Style.ToJson(),Attempt>0,UsageGroup);
 	if(bJournalEnabled && Attempt==0)
 	{
@@ -292,7 +312,7 @@ void ULightBoxDirector::RequestScene(const FString& Prompt, const FString& Previ
             auto Url=MakeShared<FJsonObject>();Url->SetStringField(TEXT("url"),ReviewImage);Url->SetStringField(TEXT("detail"),TEXT("high"));
             auto Picture=MakeShared<FJsonObject>();Picture->SetStringField(TEXT("type"),TEXT("image_url"));Picture->SetObjectField(TEXT("image_url"),Url);
             Message->SetArrayField(TEXT("content"),{MakeShared<FJsonValueObject>(Words),MakeShared<FJsonValueObject>(Picture)});
-        }else Message->SetStringField(TEXT("content"), I == 0 ? FLightBoxStyle::Instruction(Style) : Prompt);
+        }else Message->SetStringField(TEXT("content"), I == 0 ? FLightBoxStyle::Instruction(Style,PointBudget) : Prompt);
 		Messages.Add(MakeShared<FJsonValueObject>(Message));
 	}
 	if (Attempt > 0)
@@ -313,9 +333,12 @@ void ULightBoxDirector::RequestScene(const FString& Prompt, const FString& Previ
 	Pending->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
 	Pending->SetHeader(TEXT("Authorization"), TEXT("Bearer ") + BearerToken);
 	Pending->SetHeader(TEXT("x-openclaw-session-key"),TEXT("agent:main:lightbox:")+RequestId);
-	Pending->SetContentAsString(Json); Pending->SetTimeout(150.f); Pending->SetActivityTimeout(145.f);
+	// Larger models need longer for a complete scene JSON.
+	if(!Model.IsEmpty())Pending->SetHeader(TEXT("x-openclaw-model"),Model);
+	Pending->SetContentAsString(Json); Pending->SetTimeout(Model.IsEmpty()?150.f:300.f); Pending->SetActivityTimeout(Model.IsEmpty()?145.f:295.f);
+	if(Attempt==0){UsageLog.Reset();bLastApplied=false;}
 	Pending->OnProcessRequestComplete().BindWeakLambda(this,
-		[this, RequestGeneration, Prompt, Attempt, RequestId, Started](FHttpRequestPtr, FHttpResponsePtr Response, bool bSuccess)
+		[this, RequestGeneration, Prompt, Attempt, RequestId, Started, bReview](FHttpRequestPtr, FHttpResponsePtr Response, bool bSuccess)
 		{
 			if (Generation != RequestGeneration) { return; }
 			Pending.Reset(); bThinking = false;
@@ -326,6 +349,13 @@ void ULightBoxDirector::RequestScene(const FString& Prompt, const FString& Previ
 			};
 			if (!bSuccess || !Response.IsValid()) { Status = TEXT("演出サービスにつながりません。接続を確認してください"); Log(TEXT("通信失敗（消費量は未確定）")); return; }
 			const int32 Code = Response->GetResponseCode();
+			{ // Keep token usage per response so models can be compared on cost.
+				TSharedPtr<FJsonObject> Envelope;const TSharedPtr<FJsonObject>* Usage=nullptr;
+				if(Code==200&&FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Response->GetContentAsString()),Envelope)&&Envelope.IsValid()&&Envelope->TryGetObjectField(TEXT("usage"),Usage)){
+					auto Entry=MakeShared<FJsonObject>(**Usage);Entry->SetStringField(TEXT("requestedModel"),Model.IsEmpty()?TEXT("default"):Model);
+					FString Reported;if(Envelope->TryGetStringField(TEXT("model"),Reported))Entry->SetStringField(TEXT("reportedModel"),Reported);
+					Entry->SetNumberField(TEXT("attempt"),Attempt);Entry->SetStringField(TEXT("requestId"),RequestId);Entry->SetNumberField(TEXT("seconds"),FPlatformTime::Seconds()-Started);UsageLog.Add(MakeShared<FJsonValueObject>(Entry));}
+			}
 			if (Code != 200)
 			{
 				if (Code == 401 || Code == 403) { Status = TEXT("認証キーや利用権限を確認してください"); }
@@ -353,7 +383,11 @@ void ULightBoxDirector::RequestScene(const FString& Prompt, const FString& Previ
 				}
 				Status = Error.IsEmpty()?TEXT("お願いした動作を構成できませんでした。もう一度お試しください"):Error; Log(TEXT("検証失敗・変更なし")); return;
 			}
-			ApplyScene(Next);
+			// A review polishes form only: it never switches the display style or the backdrop.
+			if(bReview){Next.PointStyle=Style.PointStyle;Next.Background=Style.Background;}
+			ApplyScene(Next);bLastApplied=true;
+			// A new request schedules its automatic review after the particles finish forming (+ settle time).
+			if(!bReview&&AutoRefinePasses>0&&!RefineWords.IsEmpty()){PendingRefines=AutoRefinePasses;RefinePass=0;RefineAt=FPlatformTime::Seconds()+Next.AssembleSeconds+1.5;}
 			Log(TEXT("反映済み"),Next.ToJson()); CaptureId=RequestId; CaptureAt=FPlatformTime::Seconds()+1.2;
 		});
 	if (!Pending->ProcessRequest()) { Pending.Reset(); bThinking = false; ActiveRequestId.Reset(); if(bJournalEnabled) Journal.Finish(RequestId,FString(),FString(),TEXT("送信できませんでした"),0); Status = TEXT("接続を開始できませんでした"); }
@@ -408,6 +442,7 @@ void ULightBoxDirector::PollJournal()
 
 void ULightBoxDirector::RestoreRecord(const FString& Id)
 {
+	PendingRefines=0; // a manual scene change replaces the scheduled automatic review
 	const auto* R=Journal.Find(Id); if(!R) return;
 	FLightBoxStyle Next; FString Error;
 	if(!FLightBoxStyle::Parse(R->After,Next,Error)) { Status=TEXT("この返答は景色として呼び出せません"); return; }
@@ -435,6 +470,7 @@ void ULightBoxDirector::SelectExample(int32 Index)
 
 bool ULightBoxDirector::Undo()
 {
+	PendingRefines=0; // a manual scene change replaces the scheduled automatic review
 	if (!Past.Num()) { Status = TEXT("戻せる景色はまだありません"); return false; }
 	FLightBoxStyle Previous; FString Error;
 	if (!FLightBoxStyle::Parse(Past.Last(), Previous, Error)) { return false; }
@@ -445,6 +481,7 @@ bool ULightBoxDirector::Undo()
 
 bool ULightBoxDirector::Redo()
 {
+	PendingRefines=0; // a manual scene change replaces the scheduled automatic review
 	if (!Future.Num()) { Status = TEXT("やり直せる景色はまだありません"); return false; }
 	FLightBoxStyle Next; FString Error;
 	if (!FLightBoxStyle::Parse(Future.Last(), Next, Error)) { return false; }
@@ -456,21 +493,99 @@ bool ULightBoxDirector::Redo()
 void ULightBoxDirector::Persist()
 {
 	ULightBoxSaveGame* Save = Cast<ULightBoxSaveGame>(UGameplayStatics::CreateSaveGameObject(ULightBoxSaveGame::StaticClass()));
-	Save->Scene = SavedScene; Save->Endpoint = Endpoint;
+	FillSave(Save); Save->Scene = SavedScene;
 	UGameplayStatics::SaveGameToSlot(Save, LightBoxSaveSlot, 0);
 }
 
 bool ULightBoxDirector::SaveScene()
 {
 	ULightBoxSaveGame* Save = Cast<ULightBoxSaveGame>(UGameplayStatics::CreateSaveGameObject(ULightBoxSaveGame::StaticClass()));
-	Save->Scene = Style.ToJson(); Save->Endpoint = Endpoint;
+	FillSave(Save); Save->Scene = Style.ToJson();
 	if (!UGameplayStatics::SaveGameToSlot(Save, LightBoxSaveSlot, 0)) { Status = TEXT("保存できませんでした"); return false; }
 	SavedScene = Save->Scene; bHasSavedScene = true; Status = TEXT("この景色を保存しました"); return true;
 }
 
 bool ULightBoxDirector::RestoreScene()
 {
+	PendingRefines=0; // a manual scene change replaces the scheduled automatic review
 	FLightBoxStyle Next; FString Error;
 	if (!bHasSavedScene || !FLightBoxStyle::Parse(SavedScene, Next, Error)) { Status = TEXT("保存した景色はまだありません"); return false; }
 	Cancel(); ApplyScene(Next); Heard.Reset(); Status = TEXT("保存した景色に戻しました"); return true;
+}
+
+TConstArrayView<ULightBoxDirector::FModelChoice> ULightBoxDirector::ModelChoices()
+{
+    // Relative cost measured on the 10-prompt comparison of 2026-11-07 (Luna = 1). Ids are OpenClaw provider/model refs.
+    static const FModelChoice Choices[]={
+        {TEXT(""),TEXT("Luna")},
+        {TEXT("github-copilot/gpt-6.1-terra"),TEXT("Terra")},
+        {TEXT("github-copilot/gpt-6.1-sol"),TEXT("Sol")},
+        {TEXT("github-copilot/claude-sonnet-5.5"),TEXT("Claude Sonnet")},
+        {TEXT("github-copilot/claude-opus-5.5"),TEXT("Claude Opus")},
+    };
+    return MakeArrayView(Choices);
+}
+
+FString ULightBoxDirector::ModelLabel() const
+{
+    for(const auto& C:ModelChoices())if(Model==C.Id)return C.Label;
+    return Model;
+}
+
+bool ULightBoxDirector::SetModel(const FString& Id)
+{
+    if(!ModelChoices().ContainsByPredicate([&](const FModelChoice& C){return Id==C.Id;}))return false;
+    Model=Id;Persist();Status=TEXT("AIモデル：")+ModelLabel();return true;
+}
+
+#if !UE_BUILD_SHIPPING
+void ULightBoxDirector::TickBench()
+{
+    // Development-only model comparison: every prompt with every model, rendered and captured on the phone.
+    if(!Bench.IsValid()||bThinking||GetReadiness().IsBusy())return;
+    auto& B=*Bench;const double Now=FPlatformTime::Seconds();const int32 Total=B.Prompts.Num()*B.Models.Num();
+    auto Name=[&](int32 Case){return FString::Printf(TEXT("%02d_%02d"),Case/B.Prompts.Num(),Case%B.Prompts.Num());};
+    if(B.Case>=0&&B.bWaiting){
+        // The request finished: record it, then capture the formed scene at four moments.
+        B.bWaiting=false;auto R=MakeShared<FJsonObject>();
+        R->SetStringField(TEXT("model"),B.Models[B.Case/B.Prompts.Num()]);R->SetStringField(TEXT("prompt"),B.Prompts[B.Case%B.Prompts.Num()]);
+        R->SetBoolField(TEXT("applied"),bLastApplied);R->SetStringField(TEXT("status"),Status);R->SetNumberField(TEXT("seconds"),Now-B.Started);
+        R->SetArrayField(TEXT("usage"),UsageLog);if(bLastApplied)R->SetStringField(TEXT("scene"),Style.ToJson());
+        FString Text;FJsonSerializer::Serialize(R,TJsonWriterFactory<>::Create(&Text));FFileHelper::SaveStringToFile(Text,*(B.Dir/Name(B.Case)+TEXT(".json")),FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+        B.Shot=bLastApplied?0:4;B.At=Now+Style.AssembleSeconds+3;
+    }
+    if(B.Case>=0&&B.Shot<4){
+        if(Now<B.At)return;
+        FScreenshotRequest::RequestScreenshot(B.Dir/FString::Printf(TEXT("%s_t%d.png"),*Name(B.Case),B.Shot),false,false);++B.Shot;B.At=Now+1.6;return;
+    }
+    if(B.Case>=0&&Now<B.At)return;
+    if(++B.Case>=Total){
+        // The usage observer knows the backend model and exact cache read/write tokens per request id.
+        const FString Dir=B.Dir;Bench.Reset();Status=TEXT("比較が完了しました");
+        auto History=FHttpModule::Get().CreateRequest();History->SetVerb(TEXT("GET"));History->SetURL(TEXT("http://127.0.0.1:18791/v1/history"));History->SetTimeout(15);
+        History->SetHeader(TEXT("Authorization"),TEXT("Bearer ")+BearerToken);
+        History->OnProcessRequestComplete().BindLambda([Dir](FHttpRequestPtr,FHttpResponsePtr R,bool Ok){
+            if(Ok&&R.IsValid()&&R->GetResponseCode()==200)FFileHelper::SaveStringToFile(R->GetContentAsString(),*(Dir/TEXT("history.json")),FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+            FFileHelper::SaveStringToFile(TEXT("{\"done\":true}"),*(Dir/TEXT("done.json")));});
+        History->ProcessRequest();return;
+    }
+    if(!EnsureCredential()){--B.Case;return;}
+    Model=B.Models[B.Case/B.Prompts.Num()]==TEXT("default")?FString():B.Models[B.Case/B.Prompts.Num()];
+    B.Started=Now;B.bWaiting=true;Submit(B.Prompts[B.Case%B.Prompts.Num()]);
+}
+#endif
+
+void ULightBoxDirector::FillSave(ULightBoxSaveGame* Save) const
+{
+    Save->Endpoint=Endpoint;Save->Model=Model;Save->PointBudget=PointBudget;Save->BudgetBuild=BudgetBuild;Save->BudgetDetail=BudgetDetail;
+}
+
+FString ULightBoxDirector::CurrentBuild(){return FString(FApp::GetBuildDate())+TEXT(" ")+FApp::GetBuildVersion();}
+
+bool ULightBoxDirector::NeedsCalibration() const{return bCalibrationRequested||BudgetBuild!=CurrentBuild();}
+
+void ULightBoxDirector::SetPointBudget(int32 Budget,const FString& Detail)
+{
+    PointBudget=FMath::Clamp(Budget,256,LightBoxPoints::Maximum);BudgetDetail=Detail;BudgetBuild=CurrentBuild();bCalibrationRequested=false;
+    Persist();Status=FString::Printf(TEXT("この端末の粒子数を %s 粒にしました"),*FText::AsNumber(PointBudget).ToString());
 }

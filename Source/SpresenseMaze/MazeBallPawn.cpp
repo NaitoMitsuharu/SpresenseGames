@@ -100,6 +100,17 @@ void AMazeBallPawn::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Apply at runtime too: legacy placed pawns retain serialized camera defaults.
+	SpringArm->SetRelativeRotation(FRotator(-74.f, 0.f, 0.f));
+	SpringArm->TargetArmLength = 3250.f;
+	Camera->SetFieldOfView(58.f);
+	FPostProcessSettings& ToyPost=Camera->PostProcessSettings;
+	ToyPost.bOverride_AutoExposureMethod=true; ToyPost.AutoExposureMethod=AEM_Manual;
+	ToyPost.bOverride_AutoExposureApplyPhysicalCameraExposure=true; ToyPost.AutoExposureApplyPhysicalCameraExposure=false;
+	ToyPost.bOverride_AutoExposureBias=true; ToyPost.AutoExposureBias=-0.25f;
+	ToyPost.bOverride_BloomIntensity=true; ToyPost.BloomIntensity=0.12f;
+	Camera->bOverrideAspectRatioAxisConstraint = true;
+	Camera->SetAspectRatioAxisConstraint(AspectRatio_MaintainYFOV);
 	StartTransform = GetActorTransform();
 	LastGroundedLocation = StartTransform.GetLocation();
 
@@ -142,7 +153,7 @@ void AMazeBallPawn::BeginPlay()
 	// a reused sports-ball asset.
 	{
 		UMaterialInterface* BallMat = LoadObject<UMaterialInterface>(nullptr,
-			TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+			TEXT("/Game/Materials/M_ToyEnamel.M_ToyEnamel"));
 		if (!BallMat)
 		{
 			BallMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Materials/M_MazeTile.M_MazeTile"));
@@ -154,7 +165,7 @@ void AMazeBallPawn::BeginPlay()
 		if (BallMat)
 		{
 			UMaterialInstanceDynamic* BodyMID = UMaterialInstanceDynamic::Create(BallMat, this);
-			const FLinearColor Pearl(0.48f, 0.57f, 0.68f);
+			const FLinearColor Pearl(0.08f, 0.52f, 0.90f);
 			BodyMID->SetVectorParameterValue(TEXT("Color"), Pearl);
 			BodyMID->SetVectorParameterValue(TEXT("BaseColor"), Pearl);
 			BodyMID->SetScalarParameterValue(TEXT("Roughness"), 0.1f);

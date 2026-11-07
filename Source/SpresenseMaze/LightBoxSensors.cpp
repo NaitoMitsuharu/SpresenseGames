@@ -2,6 +2,7 @@
 
 #include "GameFramework/PlayerController.h"
 #include "InputCoreTypes.h"
+#include "Misc/ConfigCacheIni.h"
 
 #if PLATFORM_ANDROID
 #include "Android/AndroidApplication.h"
@@ -48,7 +49,7 @@ void FLightBoxSensorReader::Start()
 	if (bStarted) { return; }
 	bStarted = true;
 	R = FLightBoxSensorReading();
-	LastClaps = -1; BaseLux = -1; NearHeld = 0;
+	LastClaps = -1; BaseLux = -1; DarkHeld = BrightHeld = 0;
 	BaseMagnet = FVector::ZeroVector; BaseMagnetSeconds = 0; BaseMagnetSamples = 0; RawBreath = 0;
 #if PLATFORM_ANDROID
 	CallVoid("AndroidThunkJava_LightBoxSensorsStart");
@@ -75,10 +76,48 @@ void FLightBoxSensorReader::LightLevels(float Lux, float Base, float& OutDarknes
 {
 	OutDarkness = OutBrightness = 0;
 	if (Lux < 0 || Base <= 0) { return; }
-	// Relative to the room: covering the sensor (about 8x darker) or a torch (8x brighter) is full scale.
+	// Relative to the room. A passing shadow or a lamp across the room (under ~3x) is ignored;
+	// covering the sensor or a torch (about 11x) is full scale.
 	const float Stops = FMath::Log2(FMath::Max(Lux, 0.5f) / FMath::Max(Base, 1.f));
-	OutDarkness = FMath::Clamp((-Stops - 0.5f) / 2.5f, 0.f, 1.f);
-	OutBrightness = FMath::Clamp((Stops - 0.5f) / 2.5f, 0.f, 1.f);
+	OutDarkness = FMath::Clamp((-Stops - FMath::Log2(3.f)) / 2.f, 0.f, 1.f);
+	OutBrightness = FMath::Clamp((Stops - FMath::Log2(3.f)) / 2.f, 0.f, 1.f);
+}
+
+namespace { const TCHAR* SensorSection = TEXT("/Script/SpresenseMaze.LightBoxSensors"); }
+
+namespace { const TCHAR* SensorKeys[] = { TEXT("Sound"), TEXT("Warmth"), TEXT("Light"), TEXT("Hand"), TEXT("Magnet"), TEXT("Tilt") }; }
+
+bool FLightBoxSensorReader::IsEnabled(ELightBoxSensor Sensor)
+{
+	// The hand starts off: covering the phone already reads as darkness.
+	bool bOn = Sensor != ELightBoxSensor::Hand;
+	if (GConfig && Sensor < ELightBoxSensor::Count) { GConfig->GetBool(SensorSection, SensorKeys[int32(Sensor)], bOn, GGameUserSettingsIni); }
+	return bOn;
+}
+
+void FLightBoxSensorReader::SetEnabled(ELightBoxSensor Sensor, bool bOn)
+{
+	if (!GConfig || Sensor >= ELightBoxSensor::Count) { return; }
+	GConfig->SetBool(SensorSection, SensorKeys[int32(Sensor)], bOn, GGameUserSettingsIni);
+	GConfig->Flush(false, GGameUserSettingsIni);
+}
+
+void FLightBoxSensorReader::ApplySwitches(FLightBoxSensorReading& R, const bool (&On)[int32(ELightBoxSensor::Count)])
+{
+	if (!On[int32(ELightBoxSensor::Sound)]) { R.Breath = 0; R.bClap = false; }
+	if (!On[int32(ELightBoxSensor::Warmth)]) { R.Warmth = 0; }
+	if (!On[int32(ELightBoxSensor::Light)]) { R.Darkness = R.Brightness = 0; }
+	if (!On[int32(ELightBoxSensor::Hand)]) { R.Near = 0; R.bNearReleased = false; }
+	if (!On[int32(ELightBoxSensor::Magnet)]) { R.Magnet = 0; R.MagnetScreen = FVector2D::ZeroVector; }
+	if (!On[int32(ELightBoxSensor::Tilt)]) { R.Tilt = 0; }
+}
+
+float FLightBoxSensorReader::HandCloseness(bool bProximityNear, float Lux, float BaseLux)
+{
+	if (bProximityNear) { return 1.f; }
+	// Too dim a room gives no usable shadow; otherwise the shade deepens as the hand comes closer.
+	if (Lux < 0 || BaseLux < 8.f) { return 0.f; }
+	return FMath::Clamp((1.f - Lux / BaseLux - .12f) / .70f, 0.f, 1.f) * .92f;
 }
 
 float FLightBoxSensorReader::MagnetStrength(float Magnitude, float BaseMagnitude)
@@ -104,7 +143,7 @@ const FLightBoxSensorReading& FLightBoxSensorReader::Update(float Dt, APlayerCon
 	{
 		Breath = FCString::Atof(*Parts[0]);
 		const int32 Claps = FCString::Atoi(*Parts[1]);
-		if (LastClaps >= 0 && Claps != LastClaps) { R.bClap = true; }
+		if (LastClaps >= 0 && Claps != LastClaps) { R.bClap = true; R.ClapStrength = Parts.Num() >= 12 ? FMath::Clamp(FCString::Atof(*Parts[11]), .2f, 1.f) : .6f; }
 		LastClaps = Claps;
 		Lux = FCString::Atof(*Parts[2]);
 		NearTarget = FCString::Atoi(*Parts[3]) ? 1.f : 0.f;
@@ -126,6 +165,7 @@ const FLightBoxSensorReading& FLightBoxSensorReader::Update(float Dt, APlayerCon
 		Magnet = PC->IsInputKeyDown(EKeys::M) ? FVector(280.f, 200.f, 40.f) : FVector(20.f, 30.f, -35.f);
 		bMagnetValid = true;
 		R.bClap = PC->WasInputKeyJustPressed(EKeys::C);
+		if (R.bClap) { R.ClapStrength = PC->IsInputKeyDown(EKeys::LeftShift) ? 1.f : PC->IsInputKeyDown(EKeys::LeftControl) ? .25f : .6f; }
 	}
 #endif
 
@@ -141,12 +181,17 @@ const FLightBoxSensorReading& FLightBoxSensorReader::Update(float Dt, APlayerCon
 		// Follow the room very slowly, and never while someone is covering or lighting the sensor.
 		if (Darkness == 0 && Brightness == 0) { BaseLux += (FMath::Max(Lux, 1.f) - BaseLux) * (1.f - FMath::Exp(-Dt / 90.f)); }
 	}
-	R.Darkness = Approach(R.Darkness, Darkness, Dt, 0.25f, 0.6f);
-	R.Brightness = Approach(R.Brightness, Brightness, Dt, 0.25f, 0.6f);
+	// Only a change that holds for a moment counts: a hand passing over or a flicker does not.
+	DarkHeld = Darkness > 0 ? DarkHeld + Dt : 0;
+	BrightHeld = Brightness > 0 ? BrightHeld + Dt : 0;
+	R.Darkness = Approach(R.Darkness, DarkHeld > LightHoldSeconds ? Darkness : 0.f, Dt, 0.4f, 0.6f);
+	R.Brightness = Approach(R.Brightness, BrightHeld > LightHoldSeconds ? Brightness : 0.f, Dt, 0.4f, 0.6f);
 
+	R.Lux = Lux; R.BaseLux = BaseLux; R.bProximityNear = NearTarget > .5f; R.Claps = FMath::Max(0, LastClaps);
+	if (!Magnet.IsNearlyZero()) { R.MagnetMicroTesla = float(Magnet.Size()); }
+	NearTarget = HandCloseness(NearTarget > .5f, Lux, BaseLux);
 	const float WasNear = R.Near;
 	R.Near = Approach(R.Near, NearTarget, Dt, 0.15f, 0.25f);
-	NearHeld = NearTarget > 0 ? NearHeld + Dt : 0;
 	if (WasNear > 0.6f && NearTarget == 0 && R.Near <= 0.6f) { R.bNearReleased = true; }
 
 	if (bMagnetValid)
@@ -171,14 +216,14 @@ const FLightBoxSensorReading& FLightBoxSensorReader::Update(float Dt, APlayerCon
 FLightBoxSensorReading FLightBoxSensorReader::ApplyGains(const FLightBoxSensorReading& In, const FLightBoxSensorGains& G)
 {
 	FLightBoxSensorReading Out = In;
-	Out.Breath *= G.Sound;
+	Out.Breath = FMath::Clamp(In.Breath * G.Sound, 0.f, 1.f);
 	Out.bClap = In.bClap && G.Sound > 0;
-	Out.Warmth *= G.Warmth;
-	Out.Darkness *= G.Light;
-	Out.Brightness *= G.Light;
-	Out.Near *= G.Hand;
+	Out.Warmth = FMath::Clamp(In.Warmth * G.Warmth, 0.f, 1.f);
+	Out.Darkness = FMath::Clamp(In.Darkness * G.Light, 0.f, 1.f);
+	Out.Brightness = FMath::Clamp(In.Brightness * G.Light, 0.f, 1.f);
+	Out.Near = FMath::Clamp(In.Near * G.Hand, 0.f, 1.f);
 	Out.bNearReleased = In.bNearReleased && G.Hand > 0;
-	Out.Magnet *= G.Magnet;
+	Out.Magnet = FMath::Clamp(In.Magnet * G.Magnet, 0.f, 1.f);
 	return Out;
 }
 
@@ -189,7 +234,7 @@ FLightBoxEnvironment FLightBoxSensorReader::ToEnvironment(const FLightBoxSensorR
 	E.Wind = Away * S.Breath;
 	E.Flutter = S.Breath;
 	E.Warmth = S.Warmth;
-	E.Gather = FMath::Clamp(S.Darkness * 0.8f + S.Near - S.Brightness * 0.7f, -1.f, 1.f);
+	// Light level and the hand change how the motes look (ALightBoxPawn::ApplySensorLook), not where they go.
 	E.Magnet = (Right * S.MagnetScreen.X + Up * S.MagnetScreen.Y).GetSafeNormal() * S.Magnet;
 	return E;
 }
