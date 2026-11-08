@@ -137,7 +137,7 @@ private:
     /** Token usage of every response in the current operation (initial + repair), for comparisons. */
     TArray<TSharedPtr<FJsonValue>> UsageLog;
 #if !UE_BUILD_SHIPPING
-    struct FBench { FString Dir; TArray<FString> Prompts,Models; int32 Case=-1,Shot=0; double At=0,Started=0; bool bWaiting=false; };
+    struct FBench { FString Dir,InstructionSuffix; TArray<FString> Prompts,Models; int32 Case=-1,Shot=0; double At=0,Started=0; bool bWaiting=false,bResetScene=false; };
     TUniquePtr<FBench> Bench;
     void TickBench();
 #endif

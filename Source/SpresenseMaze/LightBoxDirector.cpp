@@ -100,6 +100,9 @@ void ULightBoxDirector::Initialize(FSubsystemCollectionBase& Collection)
 	if(FParse::Value(FCommandLine::Get(),TEXT("LightBoxBench="),BenchDir)&&FFileHelper::LoadFileToString(BenchJson,*(BenchDir/TEXT("bench.json")))
 		&&FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(BenchJson),BenchSpec)&&BenchSpec.IsValid()){
 		Bench=MakeUnique<FBench>();Bench->Dir=BenchDir;BenchSpec->TryGetStringArrayField(TEXT("prompts"),Bench->Prompts);BenchSpec->TryGetStringArrayField(TEXT("models"),Bench->Models);
+		BenchSpec->TryGetStringField(TEXT("instructionSuffix"),Bench->InstructionSuffix);
+		BenchSpec->TryGetBoolField(TEXT("resetScene"),Bench->bResetScene);
+		double BenchBudget=0;if(BenchSpec->TryGetNumberField(TEXT("pointBudget"),BenchBudget)&&BenchBudget>=256&&BenchBudget<=LightBoxPoints::Maximum)PointBudget=int32(BenchBudget);
 		if(Bench->Prompts.IsEmpty()||Bench->Models.IsEmpty())Bench.Reset();
 		else{bJournalEnabled=false;Journal.bPersistent=false;AutoRefinePasses=0;}
 	}
@@ -312,7 +315,13 @@ void ULightBoxDirector::RequestScene(const FString& Prompt, const FString& Previ
             auto Url=MakeShared<FJsonObject>();Url->SetStringField(TEXT("url"),ReviewImage);Url->SetStringField(TEXT("detail"),TEXT("high"));
             auto Picture=MakeShared<FJsonObject>();Picture->SetStringField(TEXT("type"),TEXT("image_url"));Picture->SetObjectField(TEXT("image_url"),Url);
             Message->SetArrayField(TEXT("content"),{MakeShared<FJsonValueObject>(Words),MakeShared<FJsonValueObject>(Picture)});
-        }else Message->SetStringField(TEXT("content"), I == 0 ? FLightBoxStyle::Instruction(Style,PointBudget) : Prompt);
+		}else {
+			FString Content=I==0?FLightBoxStyle::Instruction(Style,PointBudget):Prompt;
+#if !UE_BUILD_SHIPPING
+			if(I==0&&Bench.IsValid())Content+=Bench->InstructionSuffix;
+#endif
+			Message->SetStringField(TEXT("content"),Content);
+		}
 		Messages.Add(MakeShared<FJsonValueObject>(Message));
 	}
 	if (Attempt > 0)
@@ -571,6 +580,9 @@ void ULightBoxDirector::TickBench()
     }
     if(!EnsureCredential()){--B.Case;return;}
     Model=B.Models[B.Case/B.Prompts.Num()]==TEXT("default")?FString():B.Models[B.Case/B.Prompts.Num()];
+    // Independent subjects must see identical context, rather than the previous
+    // model's answer. This does not touch saved user scenes or preferences.
+    if(B.bResetScene){Style=FLightBoxStyle::Preset(0);Past.Reset();Future.Reset();++Revision;}
     B.Started=Now;B.bWaiting=true;Submit(B.Prompts[B.Case%B.Prompts.Num()]);
 }
 #endif

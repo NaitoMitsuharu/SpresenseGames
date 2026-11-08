@@ -92,3 +92,4 @@ bash start-lightbox.sh
 - [初回セットアップ・トラブル対処・開発手順](Docs/SetupAndDevelopment.md)
 - [粒子の移動・進捗表示・造形の改善と実機映像](Docs/ParticleExperience.md)
 - [操作できること・指示の例](Docs/LightBoxScene.md)
+- [AIモデルと生成指示の品質比較](Docs/ModelQualityReview-2026-11-08.md)

@@ -41,8 +41,9 @@ def main():
             for t in range(4):
                 shot=d/f'{stem}_t{t}.png'
                 if shot.exists():
-                    im=Image.open(shot).convert('RGB');w,h=im.size;im=im.crop((int(w*.17),int(h*.1),int(w*.83),int(h*.9))).resize((300,210))
-                    sheet.paste(im,(t*300,40+m*250))
+                    im=Image.open(shot).convert('RGB');w,h=im.size;im=im.crop((int(w*.17),int(h*.1),int(w*.83),int(h*.9)))
+                    im.thumbnail((300,210)) # Preserve proportions when judging the sculpture.
+                    sheet.paste(im,(t*300+(300-im.width)//2,40+m*250+(210-im.height)//2))
             dr.text((8,40+m*250+212),f"{SHORT[model]}  {'OK' if r['applied'] else 'NG'}  {row['credits']:.2f}cr  {row['seconds']:.0f}s  story{row['storyFrames']}",font=font,fill=(255,220,120))
         sheet.save(d/f'prompt{p:02d}.png')
     json.dump(rows,open(d/'summary.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)
