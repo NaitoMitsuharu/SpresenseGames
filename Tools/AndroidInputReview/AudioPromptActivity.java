@@ -40,6 +40,12 @@ public final class AudioPromptActivity extends Activity {
             int language=speech.setLanguage(Locale.JAPAN);
             android.util.Log.i("LightBoxInputReview","Japanese TTS language status: "+language);
             speech.setSpeechRate(.85f);
+            // Recognition services mute media playback while listening. Use the
+            // alarm stream only for this acoustic test fixture, so the actual
+            // speaker-to-microphone path remains audible during recognition.
+            speech.setAudioAttributes(new android.media.AudioAttributes.Builder()
+                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build());
             speech.setOnUtteranceProgressListener(new UtteranceProgressListener(){
                 public void onStart(String id){android.util.Log.i("LightBoxInputReview","Audio prompt started");}
                 public void onDone(String id){handler.post(()->{speech.shutdown();finish();});}
@@ -47,7 +53,8 @@ public final class AudioPromptActivity extends Activity {
             });
             Intent game=new Intent().setClassName("com.lati.spresensegames","com.epicgames.unreal.GameActivity").addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
             startActivity(game);
-            handler.postDelayed(()->speech.speak(text,TextToSpeech.QUEUE_FLUSH,null,"review"),4500);
+            handler.postDelayed(()->speech.speak(text,TextToSpeech.QUEUE_FLUSH,null,"review"),
+                Math.max(500,Math.min(15000,getIntent().getIntExtra("delay_ms",2000))));
         });
     }
 }
